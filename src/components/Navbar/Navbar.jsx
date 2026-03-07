@@ -26,7 +26,7 @@ const Navbar = ({ activeSection, onSectionChange, user, onAuthClick, cartCount, 
           </button>
 
           <a
-            href="https://discord.gg/brx"
+            href="https://t.me/brxfear"
             target="_blank"
             rel="noopener noreferrer"
             className="nav-capsule"
