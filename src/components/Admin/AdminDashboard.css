@@ -203,19 +203,18 @@
 }
 
 .item-list-block {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 }
 
 .list-item-block {
     background: #0d0d0d;
-    padding: 20px;
+    padding: 15px;
     display: flex;
-    flex-direction: column;
-    gap: 15px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    border-top: 3px solid #333;
+    justify-content: space-between;
+    align-items: center;
+    border-left: 3px solid #333;
     transition: all 0.3s;
 }
 

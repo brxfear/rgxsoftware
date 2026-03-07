@@ -7,6 +7,7 @@
 .main-layout {
   flex: 1;
   margin-top: 100px;
+  width: 100%;
 }
 
 .fade-in {
@@ -99,11 +100,17 @@
   letter-spacing: 4px;
 }
 
+.products-view {
+  padding: 40px 0;
+  width: 100%;
+}
+
 .product-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 25px;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 20px;
   margin-bottom: 80px;
+  width: 100%;
 }
 
 .main-footer {
