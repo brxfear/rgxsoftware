@@ -1,0 +1,132 @@
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.main-layout {
+  flex: 1;
+  margin-top: 100px;
+}
+
+.fade-in {
+  animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hero-section {
+  text-align: center;
+  margin-top: 20vh;
+  margin-bottom: 40px;
+}
+
+.hero-title {
+  font-size: 5rem;
+  font-weight: 900;
+  margin-bottom: 15px;
+  animation: title-glow 2s infinite alternate;
+  letter-spacing: -2px;
+}
+
+.hero-content-wrapper {
+  max-width: 900px;
+  margin: 0 auto 50px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+.hero-block {
+  background: rgba(18, 18, 18, 0.4);
+  padding: 30px;
+  border-left: 2px solid var(--neon-purple);
+  border-radius: 0 12px 12px 0;
+}
+
+.hero-block h2,
+.hero-block h3 {
+  margin-bottom: 20px;
+  font-size: 1.4rem;
+}
+
+.hero-block p {
+  line-height: 1.8;
+  color: var(--text-secondary);
+  font-size: 1rem;
+}
+
+.grid-details {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+}
+
+.detail-item strong {
+  color: var(--neon-purple);
+  display: block;
+  margin-bottom: 5px;
+}
+
+.hero-subtitle {
+  color: var(--text-secondary);
+  font-size: 1.2rem;
+  max-width: 600px;
+  margin: 0 auto 40px;
+}
+
+.hero-cta {
+  margin: 0 auto;
+  padding: 20px 40px;
+  font-size: 1.1rem;
+}
+
+.loading-state {
+  text-align: center;
+  padding: 100px;
+  color: var(--neon-purple);
+  letter-spacing: 4px;
+}
+
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 30px;
+  margin-bottom: 80px;
+}
+
+.main-footer {
+  padding: 40px 0;
+  text-align: center;
+  font-size: 0.7rem;
+  color: #444;
+  letter-spacing: 2px;
+  border-top: 1px solid rgba(255, 255, 255, 0.02);
+}
+
+@keyframes title-glow {
+  from {
+    text-shadow: 0 0 10px rgba(188, 19, 254, 0.5);
+  }
+
+  to {
+    text-shadow: 0 0 40px rgba(188, 19, 254, 0.8);
+  }
+}
+
+@media (max-width: 768px) {
+  .hero-title {
+    font-size: 3rem;
+  }
+}

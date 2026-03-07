@@ -1,0 +1,230 @@
+.admin-dashboard-block {
+    display: flex;
+    min-height: 100vh;
+    background: #0a0a0a;
+}
+
+.admin-sidebar-block {
+    width: 250px;
+    background: #0d0d0d;
+    border-right: 1px solid rgba(188, 19, 254, 0.2);
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-header-block {
+    padding: 30px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+}
+
+.sidebar-nav-block {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.nav-item-block {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 15px;
+    background: transparent;
+    border: none;
+    color: #666;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s;
+    border-radius: 4px;
+}
+
+.nav-item-block:hover {
+    color: #fff;
+    background: rgba(188, 19, 254, 0.05);
+}
+
+.nav-item-block.active {
+    color: var(--neon-purple);
+    background: rgba(188, 19, 254, 0.1);
+    border-left: 3px solid var(--neon-purple);
+}
+
+.exit-block {
+    margin-top: auto;
+    color: #ff4444;
+}
+
+.admin-main-block {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.admin-header-block {
+    padding: 30px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+}
+
+.admin-header-block h1 {
+    font-size: 1rem;
+    color: #444;
+}
+
+.admin-content-scroll {
+    flex: 1;
+    padding: 30px;
+    overflow-y: auto;
+}
+
+.admin-table-block {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.admin-table-block th {
+    text-align: left;
+    padding: 15px;
+    font-size: 0.65rem;
+    color: #444;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.admin-table-block td {
+    padding: 20px 15px;
+    font-size: 0.8rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+}
+
+.cust-block {
+    display: flex;
+    flex-direction: column;
+}
+
+.cust-block small {
+    color: #444;
+    font-size: 0.7rem;
+}
+
+.items-mini-block {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.items-mini-block span {
+    background: #121212;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    color: #666;
+}
+
+.status-pill-block {
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 800;
+}
+
+.status-pill-block.completed {
+    background: rgba(0, 255, 136, 0.1);
+    color: #00ff88;
+}
+
+.status-pill-block.waiting-for-confirmation {
+    background: rgba(188, 19, 254, 0.1);
+    color: var(--neon-purple);
+}
+
+.status-pill-block.canceled {
+    background: rgba(255, 68, 68, 0.1);
+    color: #ff4444;
+}
+
+.status-actions-block {
+    display: flex;
+    gap: 5px;
+}
+
+.act-btn {
+    background: #121212;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    color: #444;
+    padding: 8px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.act-btn.check:hover {
+    color: #00ff88;
+    border-color: #00ff88;
+}
+
+.act-btn.clock:hover {
+    color: var(--neon-purple);
+    border-color: var(--neon-purple);
+}
+
+.act-btn.x:hover {
+    color: #ff4444;
+    border-color: #ff4444;
+}
+
+.admin-grid-block {
+    display: grid;
+    grid-template-columns: 400px 1fr;
+    gap: 30px;
+}
+
+.form-section-block {
+    background: #0d0d0d;
+    padding: 30px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.form-section-block h3 {
+    font-size: 0.8rem;
+    margin-bottom: 20px;
+    color: #666;
+}
+
+.admin-form-block {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.admin-form-block input,
+.admin-form-block textarea,
+.admin-form-block select {
+    width: 100%;
+    margin-bottom: 0;
+}
+
+.item-list-block {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.list-item-block {
+    background: #0d0d0d;
+    padding: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-left: 3px solid #333;
+}
+
+.del-btn {
+    background: none;
+    border: none;
+    color: #444;
+    font-size: 1.2rem;
+    cursor: pointer;
+}
+
+.del-btn:hover {
+    color: #ff4444;
+}
