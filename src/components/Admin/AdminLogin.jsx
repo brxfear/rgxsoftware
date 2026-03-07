@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react'; // useEffect buraya eklendi
 import { useNavigate } from 'react-router-dom';
 import { Lock, Eye, EyeOff, Terminal } from 'lucide-react';
 import { Toaster, toast } from 'react-hot-toast';
