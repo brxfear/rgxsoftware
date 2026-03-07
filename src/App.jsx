@@ -189,32 +189,34 @@ function Store() {
 
         {activeSection === 'products' && (
           <section className="products-view fade-in">
-            <TabSwitcher
-              games={categories}
-              activeTab={activeTab}
-              onTabChange={setActiveTab}
-            />
+            <div className="container">
+              <TabSwitcher
+                games={categories}
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
+              />
 
-            {loading ? (
-              <div className="loading-state cyber-font">{t('products.syncing')}</div>
-            ) : (
-              <div className="product-grid">
-                {filteredProducts.length > 0 ? (
-                  filteredProducts.map(product => (
-                    <ProductCard
-                      key={product.id}
-                      product={{ ...product, image: product.image_url }}
-                      onAddToCart={() => addItem(product)}
-                      onClick={(p) => setSelectedProduct(p)}
-                    />
-                  ))
-                ) : (
-                  <div className="no-products glass-panel cyber-font">
-                    {t('products.nothing_found')}
-                  </div>
-                )}
-              </div>
-            )}
+              {loading ? (
+                <div className="loading-state cyber-font">{t('products.syncing')}</div>
+              ) : (
+                <div className="product-grid">
+                  {filteredProducts.length > 0 ? (
+                    filteredProducts.map(product => (
+                      <ProductCard
+                        key={product.id}
+                        product={{ ...product, image: product.image_url }}
+                        onAddToCart={() => addItem(product)}
+                        onClick={(p) => setSelectedProduct(p)}
+                      />
+                    ))
+                  ) : (
+                    <div className="no-products glass-panel cyber-font">
+                      {t('products.nothing_found')}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </section>
         )}
       </main>

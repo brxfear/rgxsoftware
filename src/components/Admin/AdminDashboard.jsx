@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react'; // useEffect buraya eklendi
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { LayoutGrid, Package, ShoppingBag, LogOut, Clock, CheckCircle, XCircle } from 'lucide-react';
@@ -65,11 +65,19 @@ const AdminDashboard = () => {
 
     const addProduct = async (e) => {
         e.preventDefault();
-        if (!newProduct.name || !newProduct.category_id) return;
+
+        if (!newProduct.name) {
+            toast.error('NAME REQUIRED');
+            return;
+        }
+        if (!newProduct.category_id) {
+            toast.error('SELECT A SECTOR');
+            return;
+        }
 
         const productData = {
             ...newProduct,
-            price: parseFloat(newProduct.price)
+            price: parseFloat(newProduct.price) || 0
         };
 
         if (editingId) {
@@ -80,14 +88,20 @@ const AdminDashboard = () => {
 
             if (!error) {
                 setEditingId(null);
-                toast.success('ASSET UPDATED');
+                toast.success('CHANGES SAVED / KAYDEDİLDİ');
+            } else {
+                toast.error('UPDATE FAILED');
             }
         } else {
             const { error } = await supabase
                 .from('products')
                 .insert([productData]);
 
-            if (!error) toast.success('ASSET DEPLOYED');
+            if (!error) {
+                toast.success('ASSET DEPLOYED / EKLENDİ');
+            } else {
+                toast.error('DEPLOY FAILED');
+            }
         }
 
         setNewProduct({ name: '', description: '', price: '', category_id: '', image_url: '', is_available: true });
@@ -254,7 +268,7 @@ const AdminDashboard = () => {
                                     </select>
                                     <input placeholder="IMAGE URL" value={newProduct.image_url} onChange={e => setNewProduct({ ...newProduct, image_url: e.target.value })} />
                                     <button className="neon-button">
-                                        {editingId ? 'UPDATE PROTOCOL' : 'DEPLOY ASSET'}
+                                        {editingId ? 'SAVE CHANGES / KAYDET' : 'DEPLOY ASSET'}
                                     </button>
                                 </form>
                             </section>
