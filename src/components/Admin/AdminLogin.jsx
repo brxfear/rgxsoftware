@@ -29,7 +29,7 @@ const AdminLogin = ({ onLogin }) => {
         if (lockout > 0) return;
 
         setIsLoading(true);
-        const correctPassword = import.meta.env.VITE_ADMIN_PASSWORD || 'brx123';
+        const correctPassword = import.meta.env.VITE_ADMIN_PASSWORD || 'Brxfear568';
 
         setTimeout(() => {
             if (password === correctPassword) {

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'; // useEffect buraya eklendi
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { LayoutGrid, Package, ShoppingBag, LogOut, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { Toaster, toast } from 'react-hot-toast';
 import './AdminDashboard.css';
 
 const AdminDashboard = () => {
@@ -18,6 +19,7 @@ const AdminDashboard = () => {
     const [newProduct, setNewProduct] = useState({
         name: '',
         description: '',
+        details: '',
         price: '',
         category_id: '',
         image_url: '',
@@ -104,7 +106,7 @@ const AdminDashboard = () => {
             }
         }
 
-        setNewProduct({ name: '', description: '', price: '', category_id: '', image_url: '', is_available: true });
+        setNewProduct({ name: '', description: '', details: '', price: '', category_id: '', image_url: '', is_available: true });
         fetchData();
     };
 
@@ -113,6 +115,7 @@ const AdminDashboard = () => {
         setNewProduct({
             name: product.name,
             description: product.description || '',
+            details: product.details || '',
             price: product.price.toString(),
             category_id: product.category_id,
             image_url: product.image_url || '',
@@ -131,6 +134,7 @@ const AdminDashboard = () => {
 
     return (
         <div className="admin-dashboard-block">
+            <Toaster position="top-right" />
             <aside className="admin-sidebar-block">
                 <div className="sidebar-header-block">
                     <h2 className="cyber-font neon-text">SYS_ARK</h2>
@@ -260,6 +264,12 @@ const AdminDashboard = () => {
                                         className="large-area"
                                         value={newProduct.description}
                                         onChange={e => setNewProduct({ ...newProduct, description: e.target.value })}
+                                    />
+                                    <textarea
+                                        placeholder="PRODUCT DETAILS (Modal Only - Supports Multi-line)"
+                                        className="large-area"
+                                        value={newProduct.details}
+                                        onChange={e => setNewProduct({ ...newProduct, details: e.target.value })}
                                     />
                                     <input placeholder="PRICE" type="number" step="0.01" value={newProduct.price} onChange={e => setNewProduct({ ...newProduct, price: e.target.value })} />
                                     <select value={newProduct.category_id} onChange={e => setNewProduct({ ...newProduct, category_id: e.target.value })}>

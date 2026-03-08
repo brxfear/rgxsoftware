@@ -27,13 +27,16 @@
 .product-modal-content {
     width: 100%;
     max-width: 1000px;
+    max-height: 90vh;
     background: rgba(10, 10, 15, 0.95);
     border: 1px solid rgba(188, 19, 254, 0.4);
     box-shadow: 0 0 50px rgba(0, 0, 0, 0.5), 0 0 20px rgba(188, 19, 254, 0.1);
     padding: 0;
-    overflow: hidden;
     position: relative;
     border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 .close-modal {
@@ -63,7 +66,8 @@
 .modal-grid {
     display: grid;
     grid-template-columns: 1.2fr 1fr;
-    min-height: 600px;
+    flex: 1;
+    min-height: 0;
 }
 
 .modal-image-container {
@@ -109,6 +113,24 @@
     flex-direction: column;
     gap: 30px;
     background: linear-gradient(135deg, rgba(10, 10, 15, 1) 0%, rgba(20, 20, 30, 1) 100%);
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: var(--neon-purple) transparent;
+}
+
+.modal-info::-webkit-scrollbar {
+    width: 6px;
+}
+
+.modal-info::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.modal-info::-webkit-scrollbar-thumb {
+    background-color: var(--neon-purple);
+    border-radius: 20px;
 }
 
 .status-indicator {
@@ -159,6 +181,26 @@
     color: rgba(255, 255, 255, 0.7);
     line-height: 1.6;
     font-size: 0.95rem;
+}
+
+.modal-details-extended {
+    margin-top: 25px;
+    padding-top: 25px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.modal-details-extended h4 {
+    color: var(--neon-purple);
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.modal-details-extended p {
+    color: rgba(255, 255, 255, 0.6);
+    line-height: 1.8;
+    font-size: 0.9rem;
 }
 
 .modal-benefits {

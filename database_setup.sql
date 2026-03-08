@@ -13,6 +13,7 @@ CREATE TABLE products (
   category_id UUID REFERENCES categories(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   description TEXT,
+  details TEXT,
   price NUMERIC(10, 2) NOT NULL,
   image_url TEXT,
   is_available BOOLEAN DEFAULT TRUE,

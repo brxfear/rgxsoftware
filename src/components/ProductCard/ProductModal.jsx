@@ -37,6 +37,15 @@ const ProductModal = ({ isOpen, onClose, product, onAddToCart }) => {
                             </p>
                         </div>
 
+                        {product.details && (
+                            <div className="modal-details-extended">
+                                <h4 className="cyber-font"><Terminal size={14} /> EXTENDED PROTOCOL DETAILS:</h4>
+                                <p style={{ whiteSpace: 'pre-wrap' }}>
+                                    {product.details}
+                                </p>
+                            </div>
+                        )}
+
                         <div className="modal-benefits">
                             <div className="benefit-item">
                                 <Zap size={14} /> <span>Instant Digital Delivery</span>
