@@ -80,9 +80,17 @@ const AdminDashboard = () => {
             return;
         }
 
+        // Sadece veritabanındaki kolonlarla eşleşen verileri gönderelim
         const productData = {
-            ...newProduct,
-            price: parseFloat(newProduct.price) || 0
+            name: newProduct.name,
+            description: newProduct.description,
+            details: newProduct.details,
+            price: parseFloat(newProduct.price) || 0,
+            category_id: newProduct.category_id,
+            image_url: newProduct.image_url,
+            video_url: newProduct.video_url,
+            extra_images: newProduct.extra_images,
+            is_available: newProduct.is_available
         };
 
         if (editingId) {
@@ -95,7 +103,8 @@ const AdminDashboard = () => {
                 setEditingId(null);
                 toast.success('CHANGES SAVED / KAYDEDİLDİ');
             } else {
-                toast.error('UPDATE FAILED');
+                console.error('SUPABASE UPDATE ERROR:', error);
+                toast.error(`UPDATE FAILED: ${error.message}`);
             }
         } else {
             const { error } = await supabase
@@ -105,7 +114,8 @@ const AdminDashboard = () => {
             if (!error) {
                 toast.success('ASSET DEPLOYED / EKLENDİ');
             } else {
-                toast.error('DEPLOY FAILED');
+                console.error('SUPABASE INSERT ERROR:', error);
+                toast.error(`DEPLOY FAILED: ${error.message}`);
             }
         }
 

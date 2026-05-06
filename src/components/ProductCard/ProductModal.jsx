@@ -3,14 +3,9 @@ import { X, ShoppingBag, Terminal, ShieldCheck, Zap, ChevronLeft, ChevronRight, 
 import './ProductModal.css';
 
 const ProductModal = ({ isOpen, onClose, product, onAddToCart }) => {
-    const [currentImageIndex, setCurrentImageIndex] = useState(0);
+    const [currentIndex, setCurrentIndex] = useState(0);
 
     if (!isOpen || !product) return null;
-
-    const allImages = [
-        product.image_url || product.image,
-        ...(product.extra_images || [])
-    ].filter(Boolean);
 
     const getYoutubeEmbedUrl = (url) => {
         if (!url) return null;
@@ -19,16 +14,30 @@ const ProductModal = ({ isOpen, onClose, product, onAddToCart }) => {
         return (match && match[2].length === 11) ? `https://www.youtube.com/embed/${match[2]}` : null;
     };
 
-    const videoEmbedUrl = getYoutubeEmbedUrl(product.video_url);
-    const isDirectVideo = product.video_url && !videoEmbedUrl;
+    // Combine video and images into a single media list
+    const mediaItems = [];
+    if (product.video_url) {
+        mediaItems.push({ type: 'video', url: product.video_url });
+    }
+    if (product.image_url || product.image) {
+        mediaItems.push({ type: 'image', url: product.image_url || product.image });
+    }
+    if (product.extra_images && Array.isArray(product.extra_images)) {
+        product.extra_images.forEach(img => {
+            if (img) mediaItems.push({ type: 'image', url: img });
+        });
+    }
 
-    const nextImage = () => {
-        setCurrentImageIndex((prev) => (prev + 1) % allImages.length);
+    const nextMedia = () => {
+        setCurrentIndex((prev) => (prev + 1) % mediaItems.length);
     };
 
-    const prevImage = () => {
-        setCurrentImageIndex((prev) => (prev - 1 + allImages.length) % allImages.length);
+    const prevMedia = () => {
+        setCurrentIndex((prev) => (prev - 1 + mediaItems.length) % mediaItems.length);
     };
+
+    const currentMedia = mediaItems[currentIndex];
+    const videoEmbedUrl = currentMedia?.type === 'video' ? getYoutubeEmbedUrl(currentMedia.url) : null;
 
     return (
         <div className="modal-overlay" onClick={onClose}>
@@ -36,55 +45,57 @@ const ProductModal = ({ isOpen, onClose, product, onAddToCart }) => {
                 <button className="close-modal" onClick={onClose}><X /></button>
 
                 <div className="modal-scroll-container">
-                    {/* Video Section at Top */}
-                    {product.video_url && (
-                        <div className="modal-video-section">
-                            <div className="video-container-glow">
-                                {videoEmbedUrl ? (
-                                    <iframe
-                                        src={videoEmbedUrl}
-                                        title="Product Video"
-                                        frameBorder="0"
-                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                        allowFullScreen
-                                    ></iframe>
-                                ) : (
-                                    <video controls>
-                                        <source src={product.video_url} type="video/mp4" />
-                                        Your browser does not support the video tag.
-                                    </video>
-                                )}
-                            </div>
-                        </div>
-                    )}
-
                     <div className="modal-grid">
                         <div className="modal-image-gallery">
                             <div className="main-image-slider">
-                                <img src={allImages[currentImageIndex]} alt={product.name} className="modal-image" />
+                                {currentMedia?.type === 'video' ? (
+                                    <div className="video-container-glow slider-video">
+                                        {videoEmbedUrl ? (
+                                            <iframe
+                                                src={videoEmbedUrl}
+                                                title="Product Video"
+                                                frameBorder="0"
+                                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                allowFullScreen
+                                            ></iframe>
+                                        ) : (
+                                            <video controls autoPlay muted loop>
+                                                <source src={currentMedia.url} type="video/mp4" />
+                                            </video>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <img src={currentMedia?.url} alt={product.name} className="modal-image" />
+                                )}
                                 
-                                {allImages.length > 1 && (
+                                {mediaItems.length > 1 && (
                                     <>
-                                        <button className="slider-nav prev" onClick={prevImage}><ChevronLeft /></button>
-                                        <button className="slider-nav next" onClick={nextImage}><ChevronRight /></button>
+                                        <button className="slider-nav prev" onClick={prevMedia}><ChevronLeft /></button>
+                                        <button className="slider-nav next" onClick={nextMedia}><ChevronRight /></button>
                                     </>
                                 )}
                                 
                                 <div className="image-glow"></div>
                                 <div className="image-badge cyber-font">
-                                    <ShieldCheck size={14} /> ENCRYPTED DATA
+                                    <ShieldCheck size={14} /> {currentMedia?.type === 'video' ? 'VIDEO FEED' : 'ENCRYPTED DATA'}
                                 </div>
                             </div>
 
-                            {allImages.length > 1 && (
+                            {mediaItems.length > 1 && (
                                 <div className="thumbnail-strip">
-                                    {allImages.map((img, idx) => (
+                                    {mediaItems.map((item, idx) => (
                                         <div 
                                             key={idx} 
-                                            className={`thumbnail-item ${idx === currentImageIndex ? 'active' : ''}`}
-                                            onClick={() => setCurrentImageIndex(idx)}
+                                            className={`thumbnail-item ${idx === currentIndex ? 'active' : ''} ${item.type === 'video' ? 'video-thumb' : ''}`}
+                                            onClick={() => setCurrentIndex(idx)}
                                         >
-                                            <img src={img} alt={`thumb-${idx}`} />
+                                            {item.type === 'video' ? (
+                                                <div className="thumb-video-placeholder">
+                                                    <Play size={20} />
+                                                </div>
+                                            ) : (
+                                                <img src={item.url} alt={`thumb-${idx}`} />
+                                            )}
                                         </div>
                                     ))}
                                 </div>

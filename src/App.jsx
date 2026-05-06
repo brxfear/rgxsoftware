@@ -30,6 +30,64 @@ const ProtectedAdmin = ({ children }) => {
   return children;
 };
 
+const DigitalSnow = () => {
+  const [particles, setParticles] = useState([]);
+
+  useEffect(() => {
+    const chars = "01/*-+$#%&@<>[]{}";
+    const particleCount = 80;
+    const initialParticles = Array.from({ length: particleCount }).map((_, i) => ({
+      id: i,
+      x: Math.random() * 100,
+      delay: Math.random() * 10,
+      duration: 5 + Math.random() * 10,
+      char: chars[Math.floor(Math.random() * chars.length)],
+      size: 8 + Math.random() * 12
+    }));
+    setParticles(initialParticles);
+  }, []);
+
+  return (
+    <div className="digital-snow">
+      {particles.map(p => (
+        <span
+          key={p.id}
+          className="snow-particle"
+          style={{
+            left: `${p.x}%`,
+            animationDelay: `${p.delay}s`,
+            animationDuration: `${p.duration}s`,
+            fontSize: `${p.size}px`
+          }}
+        >
+          {p.char}
+        </span>
+      ))}
+    </div>
+  );
+};
+
+const CyberCursor = () => {
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      setPosition({ x: e.clientX, y: e.clientY });
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, []);
+
+  return (
+    <div className="custom-cursor-container">
+      <div 
+        className="cursor-core" 
+        style={{ left: `${position.x}px`, top: `${position.y}px` }} 
+      />
+    </div>
+  );
+};
+
 function Store() {
   const [language, setLanguage] = useState(localStorage.getItem('brx_lang') || 'tr');
   const [activeSection, setActiveSection] = useState('home');
@@ -131,6 +189,8 @@ function Store() {
 
   return (
     <div className="app">
+      <DigitalSnow />
+      <CyberCursor />
       <Navbar
         activeSection={activeSection}
         onSectionChange={setActiveSection}
