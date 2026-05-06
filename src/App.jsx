@@ -189,8 +189,6 @@ function Store() {
 
   return (
     <div className="app">
-      <DigitalSnow />
-      <CyberCursor />
       <Navbar
         activeSection={activeSection}
         onSectionChange={setActiveSection}
@@ -340,6 +338,8 @@ function App() {
   return (
     <Router>
       <Toaster position="bottom-right" />
+      <DigitalSnow />
+      <CyberCursor />
       <Routes>
         <Route path="/" element={<Store />} />
         <Route path="/admin" element={
