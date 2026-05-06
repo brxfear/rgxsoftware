@@ -23,6 +23,9 @@ const AdminDashboard = () => {
         price: '',
         category_id: '',
         image_url: '',
+        video_url: '',
+        extra_images: [],
+        media_urls: [],
         is_available: true
     });
 
@@ -106,7 +109,7 @@ const AdminDashboard = () => {
             }
         }
 
-        setNewProduct({ name: '', description: '', details: '', price: '', category_id: '', image_url: '', is_available: true });
+        setNewProduct({ name: '', description: '', details: '', price: '', category_id: '', image_url: '', video_url: '', extra_images: [], media_urls: [], is_available: true });
         fetchData();
     };
 
@@ -119,6 +122,9 @@ const AdminDashboard = () => {
             price: product.price.toString(),
             category_id: product.category_id,
             image_url: product.image_url || '',
+            video_url: product.video_url || '',
+            extra_images: product.extra_images || [],
+            media_urls: product.media_urls || [],
             is_available: product.is_available
         });
         // Scroll to form
@@ -253,7 +259,7 @@ const AdminDashboard = () => {
                                     {editingId && (
                                         <button className="cancel-edit-btn" onClick={() => {
                                             setEditingId(null);
-                                            setNewProduct({ name: '', description: '', price: '', category_id: '', image_url: '', is_available: true });
+                                            setNewProduct({ name: '', description: '', details: '', price: '', category_id: '', image_url: '', video_url: '', extra_images: [], media_urls: [], is_available: true });
                                         }}>CANCEL</button>
                                     )}
                                 </div>
@@ -276,7 +282,44 @@ const AdminDashboard = () => {
                                         <option value="">SELECT SECTOR</option>
                                         {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                     </select>
-                                    <input placeholder="IMAGE URL" value={newProduct.image_url} onChange={e => setNewProduct({ ...newProduct, image_url: e.target.value })} />
+                                    <input placeholder="COVER IMAGE URL (Main Display)" value={newProduct.image_url} onChange={e => setNewProduct({ ...newProduct, image_url: e.target.value })} />
+                                    <input placeholder="VIDEO URL (YouTube or Direct MP4)" value={newProduct.video_url} onChange={e => setNewProduct({ ...newProduct, video_url: e.target.value })} />
+
+                                    <div className="media-urls-section" style={{ marginBottom: '1rem', padding: '1rem', border: '1px solid rgba(188, 19, 254, 0.4)', borderRadius: '8px', background: 'rgba(0, 0, 0, 0.2)', boxShadow: '0 0 10px rgba(188, 19, 254, 0.1)' }}>
+                                        <h4 className="cyber-font" style={{ marginBottom: '1rem', color: '#bc13fe', fontSize: '0.9rem' }}>EXTRA IMAGES</h4>
+                                        {newProduct.extra_images.map((url, index) => (
+                                            <div key={index} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                                                <input
+                                                    placeholder="Image URL"
+                                                    value={url}
+                                                    onChange={e => {
+                                                        const newImages = [...newProduct.extra_images];
+                                                        newImages[index] = e.target.value;
+                                                        setNewProduct({ ...newProduct, extra_images: newImages });
+                                                    }}
+                                                    style={{ flex: 1, marginBottom: 0 }}
+                                                />
+                                                <button
+                                                    type="button"
+                                                    className="del-btn"
+                                                    onClick={() => {
+                                                        const newImages = newProduct.extra_images.filter((_, i) => i !== index);
+                                                        setNewProduct({ ...newProduct, extra_images: newImages });
+                                                    }}
+                                                    style={{ padding: '0 15px' }}
+                                                >×</button>
+                                            </div>
+                                        ))}
+                                        <button
+                                            type="button"
+                                            className="neon-button"
+                                            style={{ padding: '0.5rem', fontSize: '0.8rem', width: 'auto', marginTop: '0.5rem', borderColor: '#bc13fe', color: '#bc13fe' }}
+                                            onClick={() => setNewProduct({ ...newProduct, extra_images: [...newProduct.extra_images, ''] })}
+                                        >
+                                            + ADD EXTRA IMAGE
+                                        </button>
+                                    </div>
+
                                     <button className="neon-button">
                                         {editingId ? 'SAVE CHANGES / KAYDET' : 'DEPLOY ASSET'}
                                     </button>

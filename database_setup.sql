@@ -16,6 +16,9 @@ CREATE TABLE products (
   details TEXT,
   price NUMERIC(10, 2) NOT NULL,
   image_url TEXT,
+  video_url TEXT,
+  extra_images JSONB DEFAULT '[]'::jsonb,
+  media_urls JSONB DEFAULT '[]'::jsonb,
   is_available BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

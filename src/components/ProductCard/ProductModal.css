@@ -63,20 +63,68 @@
     transform: rotate(90deg);
 }
 
-.modal-grid {
-    display: grid;
-    grid-template-columns: 1.2fr 1fr;
-    flex: 1;
-    min-height: 0;
+.modal-scroll-container {
+    overflow-y: auto;
+    overflow-x: hidden;
+    height: 100%;
+    scrollbar-width: thin;
+    scrollbar-color: var(--neon-purple) transparent;
 }
 
-.modal-image-container {
+.modal-scroll-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.modal-scroll-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.modal-scroll-container::-webkit-scrollbar-thumb {
+    background-color: var(--neon-purple);
+    border-radius: 20px;
+}
+
+/* Video Section */
+.modal-video-section {
+    padding: 30px;
+    background: rgba(0, 0, 0, 0.4);
+    border-bottom: 1px solid rgba(188, 19, 254, 0.2);
+}
+
+.video-container-glow {
     position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
     background: #000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    border: 2px solid #bc13fe;
+    box-shadow: 0 0 15px rgba(188, 19, 254, 0.5), inset 0 0 15px rgba(188, 19, 254, 0.3);
+    border-radius: 8px;
     overflow: hidden;
+}
+
+.video-container-glow iframe,
+.video-container-glow video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Image Gallery & Slider */
+.modal-image-gallery {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    padding: 20px;
+}
+
+.main-image-slider {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1/1;
+    background: #000;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid rgba(188, 19, 254, 0.3);
 }
 
 .modal-image {
@@ -86,7 +134,7 @@
     transition: transform 1s ease;
 }
 
-.modal-image-container:hover .modal-image {
+.main-image-slider:hover .modal-image {
     transform: scale(1.1);
 }
 
@@ -107,30 +155,88 @@
     letter-spacing: 2px;
 }
 
+.slider-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid var(--neon-purple);
+    color: var(--neon-purple);
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 5;
+    transition: all 0.3s ease;
+}
+
+.slider-nav:hover {
+    background: var(--neon-purple);
+    color: #fff;
+    box-shadow: 0 0 15px var(--neon-purple);
+}
+
+.slider-nav.prev { left: 10px; }
+.slider-nav.next { right: 10px; }
+
+/* Thumbnail Strip */
+.thumbnail-strip {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding-bottom: 5px;
+    scrollbar-width: none;
+}
+
+.thumbnail-strip::-webkit-scrollbar {
+    display: none;
+}
+
+.thumbnail-item {
+    min-width: 80px;
+    width: 80px;
+    height: 80px;
+    border-radius: 4px;
+    overflow: hidden;
+    cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+    opacity: 0.6;
+}
+
+.thumbnail-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.thumbnail-item:hover {
+    opacity: 1;
+    border-color: var(--neon-purple);
+}
+
+.thumbnail-item.active {
+    opacity: 1;
+    border: 2px solid var(--neon-purple);
+    box-shadow: 0 0 10px var(--neon-purple);
+}
+
+/* Adjustments for existing layout */
+.modal-grid {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    min-height: 500px;
+}
+
 .modal-info {
-    padding: 50px;
+    padding: 40px;
     display: flex;
     flex-direction: column;
-    gap: 30px;
+    gap: 25px;
     background: linear-gradient(135deg, rgba(10, 10, 15, 1) 0%, rgba(20, 20, 30, 1) 100%);
-    height: 100%;
-    overflow-y: auto;
-    overflow-x: hidden;
-    scrollbar-width: thin;
-    scrollbar-color: var(--neon-purple) transparent;
-}
-
-.modal-info::-webkit-scrollbar {
-    width: 6px;
-}
-
-.modal-info::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.modal-info::-webkit-scrollbar-thumb {
-    background-color: var(--neon-purple);
-    border-radius: 20px;
 }
 
 .status-indicator {
@@ -236,13 +342,5 @@
 @media (max-width: 900px) {
     .modal-grid {
         grid-template-columns: 1fr;
-    }
-
-    .modal-image-container {
-        height: 300px;
-    }
-
-    .modal-info {
-        padding: 30px;
     }
 }
