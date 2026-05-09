@@ -42,9 +42,10 @@ const ProductModal = ({ isOpen, onClose, product, onAddToCart }) => {
 
     // Subscription plans
     const plans = [
-        { duration: 1, label: '1 GÜN', price: product.daily_price || product.price || 0 },
-        { duration: 7, label: '7 GÜN', price: product.weekly_price || 0 },
-        { duration: 30, label: '30 GÜN', price: product.monthly_price || 0 },
+        { duration: 1, label: '1 GÜN', price: product.price_1day || product.price || 0 },
+        { duration: 7, label: '7 GÜN', price: product.price_7day || 0 },
+        { duration: 30, label: '30 GÜN', price: product.price_30day || 0 },
+        { duration: 9999, label: 'SINIRSIZ', price: product.price_lifetime || 0 },
     ].filter(p => p.price > 0);
 
     const handleBuy = () => {

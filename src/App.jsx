@@ -296,10 +296,21 @@ function Store() {
         onComplete={async (data) => {
           const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
+          // Her ürünün süre ve fiyat detayını sipariş JSON'una ekle
+          const detailedItems = cart.map(item => ({
+            product_id: item.product_id,
+            name: item.name,
+            price: item.price,
+            duration: item.duration || 1,
+            durationLabel: item.durationLabel || '1 GÜN',
+            quantity: item.quantity,
+            subtotal: item.price * item.quantity
+          }));
+
           const { error } = await supabase.from('orders').insert([{
             user_id: user?.id || null,
             total_amount: totalAmount,
-            items: cart,
+            items: detailedItems,
             subscription_duration: cart[0]?.duration || 1,
             status: 'Waiting for Confirmation',
             customer_name: data.name,

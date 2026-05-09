@@ -15,9 +15,10 @@ CREATE TABLE products (
   description TEXT,
   details TEXT,
   price NUMERIC(10, 2) DEFAULT 0,
-  daily_price NUMERIC(10, 2) DEFAULT 0,
-  weekly_price NUMERIC(10, 2) DEFAULT 0,
-  monthly_price NUMERIC(10, 2) DEFAULT 0,
+  price_1day NUMERIC(10, 2) DEFAULT 0,
+  price_7day NUMERIC(10, 2) DEFAULT 0,
+  price_30day NUMERIC(10, 2) DEFAULT 0,
+  price_lifetime NUMERIC(10, 2) DEFAULT 0,
   image_url TEXT,
   video_url TEXT,
   extra_images JSONB DEFAULT '[]'::jsonb,
@@ -32,6 +33,9 @@ CREATE TABLE cart_items (
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   product_id UUID REFERENCES products(id) ON DELETE CASCADE,
   quantity INTEGER DEFAULT 1,
+  duration INTEGER DEFAULT 1,
+  duration_label TEXT DEFAULT '1 GÜN',
+  selected_price NUMERIC(10, 2) DEFAULT 0,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 

@@ -27,7 +27,9 @@ export const useCartStore = create(
                             id: item.id,
                             product_id: item.product_id,
                             name: item.products.name,
-                            price: item.products.price,
+                            price: item.selected_price || item.products.price,
+                            duration: item.duration || 1,
+                            durationLabel: item.duration_label || '1 GÜN',
                             image: item.products.image_url,
                             quantity: item.quantity
                         }))
@@ -84,6 +86,7 @@ export const useCartStore = create(
                         .select('id, quantity')
                         .eq('user_id', user.id)
                         .eq('product_id', product.id)
+                        .eq('duration', product.selectedDuration || 1)
                         .single();
 
                     if (dbItem) {
@@ -97,7 +100,10 @@ export const useCartStore = create(
                             .insert([{
                                 user_id: user.id,
                                 product_id: product.id,
-                                quantity: 1
+                                quantity: 1,
+                                duration: product.selectedDuration || 1,
+                                duration_label: product.selectedLabel || '1 GÜN',
+                                selected_price: product.selectedPrice || product.price
                             }]);
                     }
                     get().fetchCart(); // Re-sync to get DB IDs

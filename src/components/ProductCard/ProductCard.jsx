@@ -3,9 +3,10 @@ import './ProductCard.css';
 
 const ProductCard = ({ product, onClick }) => {
     const lowestPrice = Math.min(
-        product.daily_price || product.price || Infinity,
-        product.weekly_price || Infinity,
-        product.monthly_price || Infinity
+        product.price_1day || product.price || Infinity,
+        product.price_7day || Infinity,
+        product.price_30day || Infinity,
+        product.price_lifetime || Infinity
     );
 
     return (
