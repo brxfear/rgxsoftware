@@ -151,6 +151,17 @@
     font-size: 0.8rem;
 }
 
+.item-duration {
+    font-size: 0.6rem;
+    color: var(--neon-purple);
+    background: rgba(188, 19, 254, 0.1);
+    padding: 2px 8px;
+    border-radius: 3px;
+    width: fit-content;
+    letter-spacing: 1px;
+    font-weight: 700;
+}
+
 .remove-btn {
     background: transparent;
     border: none;

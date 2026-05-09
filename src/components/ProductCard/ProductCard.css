@@ -73,8 +73,15 @@
 
 .product-price {
     display: flex;
-    align-items: baseline;
-    gap: 2px;
+    flex-direction: column;
+    gap: 0;
+}
+
+.price-from {
+    font-size: 0.6rem;
+    color: rgba(255, 255, 255, 0.4);
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
 .currency {

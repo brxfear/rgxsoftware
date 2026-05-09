@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { X, ShoppingBag, Terminal, ShieldCheck, Zap, ChevronLeft, ChevronRight, Play } from 'lucide-react';
+import { X, ShoppingBag, Terminal, ShieldCheck, Zap, ChevronLeft, ChevronRight, Play, Clock } from 'lucide-react';
 import './ProductModal.css';
 
 const ProductModal = ({ isOpen, onClose, product, onAddToCart }) => {
     const [currentIndex, setCurrentIndex] = useState(0);
+    const [selectedPlan, setSelectedPlan] = useState(null);
 
     if (!isOpen || !product) return null;
 
@@ -38,6 +39,25 @@ const ProductModal = ({ isOpen, onClose, product, onAddToCart }) => {
 
     const currentMedia = mediaItems[currentIndex];
     const videoEmbedUrl = currentMedia?.type === 'video' ? getYoutubeEmbedUrl(currentMedia.url) : null;
+
+    // Subscription plans
+    const plans = [
+        { duration: 1, label: '1 GÜN', price: product.daily_price || product.price || 0 },
+        { duration: 7, label: '7 GÜN', price: product.weekly_price || 0 },
+        { duration: 30, label: '30 GÜN', price: product.monthly_price || 0 },
+    ].filter(p => p.price > 0);
+
+    const handleBuy = () => {
+        if (!selectedPlan) return;
+        onAddToCart({
+            ...product,
+            selectedDuration: selectedPlan.duration,
+            selectedPrice: selectedPlan.price,
+            selectedLabel: selectedPlan.label
+        });
+        setSelectedPlan(null);
+        onClose();
+    };
 
     return (
         <div className="modal-overlay" onClick={onClose}>
@@ -108,9 +128,22 @@ const ProductModal = ({ isOpen, onClose, product, onAddToCart }) => {
                                 <h2 className="cyber-font neon-text">{product.name}</h2>
                             </div>
 
-                            <div className="modal-price">
-                                <span className="price-label cyber-font">PROTOCOL ACCESS FEE:</span>
-                                <span className="amount">₺{product.price}</span>
+                            {/* Subscription Plan Selector */}
+                            <div className="subscription-selector">
+                                <h4 className="cyber-font"><Clock size={14} /> ABONELİK SÜRESİ SEÇ:</h4>
+                                <div className="plan-options">
+                                    {plans.map(plan => (
+                                        <button
+                                            key={plan.duration}
+                                            className={`plan-card ${selectedPlan?.duration === plan.duration ? 'selected' : ''}`}
+                                            onClick={() => setSelectedPlan(plan)}
+                                        >
+                                            <span className="plan-duration cyber-font">{plan.label}</span>
+                                            <span className="plan-price">₺{plan.price}</span>
+                                            {plan.duration === 30 && <span className="plan-badge">POPÜLER</span>}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
 
                             <div className="modal-description">
@@ -140,13 +173,14 @@ const ProductModal = ({ isOpen, onClose, product, onAddToCart }) => {
 
                             <div className="modal-actions">
                                 <button
-                                    className="neon-button buy-now-btn"
-                                    onClick={() => {
-                                        onAddToCart(product);
-                                        onClose();
-                                    }}
+                                    className={`neon-button buy-now-btn ${!selectedPlan ? 'disabled' : ''}`}
+                                    onClick={handleBuy}
+                                    disabled={!selectedPlan}
                                 >
-                                    <ShoppingBag size={20} /> AUTHENTICATE & BUY
+                                    <ShoppingBag size={20} /> 
+                                    {selectedPlan 
+                                        ? `${selectedPlan.label} - ₺${selectedPlan.price} SATIN AL` 
+                                        : 'ÖNCE SÜRE SEÇ'}
                                 </button>
                             </div>
                         </div>

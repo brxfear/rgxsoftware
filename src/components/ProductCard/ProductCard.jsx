@@ -1,7 +1,13 @@
 import React from 'react';
 import './ProductCard.css';
 
-const ProductCard = ({ product, onAddToCart, onClick }) => {
+const ProductCard = ({ product, onClick }) => {
+    const lowestPrice = Math.min(
+        product.daily_price || product.price || Infinity,
+        product.weekly_price || Infinity,
+        product.monthly_price || Infinity
+    );
+
     return (
         <div className="product-card glass-panel" onClick={() => onClick(product)}>
             <div className="product-image">
@@ -16,17 +22,20 @@ const ProductCard = ({ product, onAddToCart, onClick }) => {
                 <p className="product-desc">{product.description}</p>
                 <div className="product-footer">
                     <div className="product-price">
-                        <span className="currency">₺</span>
-                        <span className="amount">{product.price}</span>
+                        <span className="price-from">başlangıç</span>
+                        <div>
+                            <span className="currency">₺</span>
+                            <span className="amount">{lowestPrice === Infinity ? '0' : lowestPrice}</span>
+                        </div>
                     </div>
                     <button
                         className="neon-button buy-btn"
                         onClick={(e) => {
                             e.stopPropagation();
-                            onAddToCart();
+                            onClick(product);
                         }}
                     >
-                        BUY
+                        SEÇ
                     </button>
                 </div>
             </div>

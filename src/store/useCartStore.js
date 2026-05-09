@@ -47,12 +47,12 @@ export const useCartStore = create(
                 const { data: { user } } = await supabase.auth.getUser();
 
                 // Local logic (Persistence handles this)
-                const localExisting = get().cart.find(item => (item.product_id || item.id) === product.id);
+                const localExisting = get().cart.find(item => (item.product_id || item.id) === product.id && item.duration === (product.selectedDuration || 1));
 
                 if (localExisting) {
                     set({
                         cart: get().cart.map(item =>
-                            (item.product_id || item.id) === product.id
+                            (item.product_id || item.id) === product.id && item.duration === (product.selectedDuration || 1)
                                 ? { ...item, quantity: item.quantity + 1 }
                                 : item
                         )
@@ -60,10 +60,12 @@ export const useCartStore = create(
                 } else {
                     set({
                         cart: [...get().cart, {
-                            id: product.id,
+                            id: `${product.id}_${product.selectedDuration || 1}`,
                             product_id: product.id,
                             name: product.name,
-                            price: product.price,
+                            price: product.selectedPrice || product.price,
+                            duration: product.selectedDuration || 1,
+                            durationLabel: product.selectedLabel || '1 GÜN',
                             image: product.image_url || product.image,
                             quantity: 1
                         }]

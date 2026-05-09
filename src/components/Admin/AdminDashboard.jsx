@@ -20,7 +20,9 @@ const AdminDashboard = () => {
         name: '',
         description: '',
         details: '',
-        price: '',
+        daily_price: '',
+        weekly_price: '',
+        monthly_price: '',
         category_id: '',
         image_url: '',
         video_url: '',
@@ -80,12 +82,14 @@ const AdminDashboard = () => {
             return;
         }
 
-        // Sadece veritabanındaki kolonlarla eşleşen verileri gönderelim
         const productData = {
             name: newProduct.name,
             description: newProduct.description,
             details: newProduct.details,
-            price: parseFloat(newProduct.price) || 0,
+            price: parseFloat(newProduct.daily_price) || 0,
+            daily_price: parseFloat(newProduct.daily_price) || 0,
+            weekly_price: parseFloat(newProduct.weekly_price) || 0,
+            monthly_price: parseFloat(newProduct.monthly_price) || 0,
             category_id: newProduct.category_id,
             image_url: newProduct.image_url,
             video_url: newProduct.video_url,
@@ -119,7 +123,7 @@ const AdminDashboard = () => {
             }
         }
 
-        setNewProduct({ name: '', description: '', details: '', price: '', category_id: '', image_url: '', video_url: '', extra_images: [], media_urls: [], is_available: true });
+        setNewProduct({ name: '', description: '', details: '', daily_price: '', weekly_price: '', monthly_price: '', category_id: '', image_url: '', video_url: '', extra_images: [], media_urls: [], is_available: true });
         fetchData();
     };
 
@@ -129,7 +133,9 @@ const AdminDashboard = () => {
             name: product.name,
             description: product.description || '',
             details: product.details || '',
-            price: product.price.toString(),
+            daily_price: (product.daily_price || product.price || 0).toString(),
+            weekly_price: (product.weekly_price || 0).toString(),
+            monthly_price: (product.monthly_price || 0).toString(),
             category_id: product.category_id,
             image_url: product.image_url || '',
             video_url: product.video_url || '',
@@ -198,6 +204,7 @@ const AdminDashboard = () => {
                                         <th>CONTACT</th>
                                         <th>PAYLOAD</th>
                                         <th>TOTAL</th>
+                                        <th>SÜRE</th>
                                         <th>STATUS</th>
                                         <th>PROTOCOL</th>
                                     </tr>
@@ -220,6 +227,11 @@ const AdminDashboard = () => {
                                                 </div>
                                             </td>
                                             <td className="price-col">₺{order.total_amount}</td>
+                                            <td>
+                                                <span className="duration-pill">
+                                                    {order.subscription_duration === 1 ? '1 GÜN' : order.subscription_duration === 7 ? '7 GÜN' : order.subscription_duration === 30 ? '30 GÜN' : `${order.subscription_duration || 1} GÜN`}
+                                                </span>
+                                            </td>
                                             <td>
                                                 <span className={`status-pill-block ${order.status.replace(/\s+/g, '-').toLowerCase()}`}>
                                                     {order.status}
@@ -269,7 +281,7 @@ const AdminDashboard = () => {
                                     {editingId && (
                                         <button className="cancel-edit-btn" onClick={() => {
                                             setEditingId(null);
-                                            setNewProduct({ name: '', description: '', details: '', price: '', category_id: '', image_url: '', video_url: '', extra_images: [], media_urls: [], is_available: true });
+                                            setNewProduct({ name: '', description: '', details: '', daily_price: '', weekly_price: '', monthly_price: '', category_id: '', image_url: '', video_url: '', extra_images: [], media_urls: [], is_available: true });
                                         }}>CANCEL</button>
                                     )}
                                 </div>
@@ -287,7 +299,20 @@ const AdminDashboard = () => {
                                         value={newProduct.details}
                                         onChange={e => setNewProduct({ ...newProduct, details: e.target.value })}
                                     />
-                                    <input placeholder="PRICE" type="number" step="0.01" value={newProduct.price} onChange={e => setNewProduct({ ...newProduct, price: e.target.value })} />
+                                    <div className="subscription-prices-section" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '1rem' }}>
+                                        <div>
+                                            <label style={{ fontSize: '0.65rem', color: '#bc13fe', display: 'block', marginBottom: '4px' }}>DAILY PRICE (₺)</label>
+                                            <input placeholder="1 GÜN" type="number" step="0.01" value={newProduct.daily_price} onChange={e => setNewProduct({ ...newProduct, daily_price: e.target.value })} />
+                                        </div>
+                                        <div>
+                                            <label style={{ fontSize: '0.65rem', color: '#bc13fe', display: 'block', marginBottom: '4px' }}>WEEKLY PRICE (₺)</label>
+                                            <input placeholder="7 GÜN" type="number" step="0.01" value={newProduct.weekly_price} onChange={e => setNewProduct({ ...newProduct, weekly_price: e.target.value })} />
+                                        </div>
+                                        <div>
+                                            <label style={{ fontSize: '0.65rem', color: '#bc13fe', display: 'block', marginBottom: '4px' }}>MONTHLY PRICE (₺)</label>
+                                            <input placeholder="30 GÜN" type="number" step="0.01" value={newProduct.monthly_price} onChange={e => setNewProduct({ ...newProduct, monthly_price: e.target.value })} />
+                                        </div>
+                                    </div>
                                     <select value={newProduct.category_id} onChange={e => setNewProduct({ ...newProduct, category_id: e.target.value })}>
                                         <option value="">SELECT SECTOR</option>
                                         {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -340,7 +365,7 @@ const AdminDashboard = () => {
                                     <div key={p.id} className="list-item-block product-item">
                                         <div className="p-details">
                                             <strong>{p.name}</strong>
-                                            <span>₺{p.price}</span>
+                                            <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)' }}>₺{p.daily_price || p.price}/gün • ₺{p.weekly_price || 0}/hafta • ₺{p.monthly_price || 0}/ay</span>
                                         </div>
                                         <div className="item-actions">
                                             <button onClick={() => startEditing(p)} className="edit-btn">EDIT</button>

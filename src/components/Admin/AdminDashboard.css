@@ -229,3 +229,67 @@
 .del-btn:hover {
     color: #ff4444;
 }
+
+.duration-pill {
+    background: rgba(188, 19, 254, 0.15);
+    color: var(--neon-purple);
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    letter-spacing: 1px;
+    border: 1px solid rgba(188, 19, 254, 0.3);
+}
+
+.form-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.cancel-edit-btn {
+    background: transparent;
+    border: 1px solid #ff4444;
+    color: #ff4444;
+    padding: 6px 15px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.cancel-edit-btn:hover {
+    background: rgba(255, 68, 68, 0.1);
+}
+
+.item-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.edit-btn {
+    background: transparent;
+    border: 1px solid rgba(188, 19, 254, 0.3);
+    color: var(--neon-purple);
+    padding: 5px 12px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.edit-btn:hover {
+    background: rgba(188, 19, 254, 0.1);
+    border-color: var(--neon-purple);
+}
+
+.price-col {
+    color: var(--neon-purple);
+    font-weight: 800;
+}
+
+.large-area {
+    min-height: 80px;
+    resize: vertical;
+}

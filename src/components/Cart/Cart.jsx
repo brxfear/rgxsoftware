@@ -30,6 +30,9 @@ const Cart = ({ isOpen, onClose, onCheckout, t }) => {
                                 </div>
                                 <div className="cart-item-info">
                                     <span className="item-name">{item.name}</span>
+                                    {item.durationLabel && (
+                                        <span className="item-duration">{item.durationLabel}</span>
+                                    )}
                                     <span className="item-price neon-text">₺{item.price}</span>
                                     <div className="quantity-controls">
                                         <button onClick={() => updateQuantity(item.id, -1)} disabled={item.quantity <= 1} className="qty-btn"><Minus size={12} /></button>

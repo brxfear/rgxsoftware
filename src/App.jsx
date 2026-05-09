@@ -263,7 +263,6 @@ function Store() {
                       <ProductCard
                         key={product.id}
                         product={{ ...product, image: product.image_url }}
-                        onAddToCart={() => addItem(product)}
                         onClick={(p) => setSelectedProduct(p)}
                       />
                     ))
@@ -301,6 +300,7 @@ function Store() {
             user_id: user?.id || null,
             total_amount: totalAmount,
             items: cart,
+            subscription_duration: cart[0]?.duration || 1,
             status: 'Waiting for Confirmation',
             customer_name: data.name,
             customer_phone: data.contact,
