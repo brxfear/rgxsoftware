@@ -27,7 +27,7 @@ const STATUS = {
   Canceled: { label: 'İptal edildi', tone: 'bad' },
 };
 const statusOf = (s = '') => STATUS[s] || (s.startsWith('failed') ? { label: 'Ödeme başarısız', tone: 'bad' } : { label: s || '—', tone: 'muted' });
-const tl = (n) => '₺' + (Number(n) || 0).toLocaleString('tr-TR', { maximumFractionDigits: 2 });
+const tl = (n) => '$' + (Number(n) || 0).toLocaleString('en-US', { maximumFractionDigits: 2 });
 const fmt = (v) => toDate(v)?.toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) || '—';
 
 const AccountModal = ({ isOpen, onClose, user, initialTab = 'profile', onProfileUpdated }) => {

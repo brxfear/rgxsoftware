@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import {
   collection,
+  doc,
+  getDoc,
   onSnapshot,
   query,
   orderBy,
@@ -32,11 +34,13 @@ import {
   Menu,
   UserCog,
   ScrollText,
+  CreditCard,
+  Settings,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { auth, db } from '../../lib/firebase';
 import { toDate, getStartPrice, getPlans } from '../../lib/db';
-import { fmtUsd, useUsdTry, usdToTry, fmtTry } from '../../lib/currency';
+import { fmtUsd } from '../../lib/currency';
 import { fileToCompressedDataUrl } from './imageUtils';
 import { loggedWrite, adminIdForEmail, logAdminLogin } from '../../lib/adminLog';
 import './AdminDashboard.css';
@@ -62,7 +66,7 @@ const statusMeta = (value = '') => {
 const REVENUE_STATUSES = ['paid', 'Completed'];
 
 const tl = (n) =>
-  '₺' + (Number(n) || 0).toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  '$' + (Number(n) || 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 
 const fmtDate = (v) => {
   const d = toDate(v);
@@ -426,7 +430,6 @@ const ProductForm = ({ initial, categories, onClose, me }) => {
     plans: initial?.id ? getPlans(initial).map((x) => ({ ...x, price_usd: String(x.price_usd) })) : [],
     featured_plan_id: initial?.featured_plan_id || '',
   }));
-  const rate = useUsdTry();
 
   const setPlan = (i, key, value) =>
     setForm((f) => ({ ...f, plans: f.plans.map((pl, j) => (j === i ? { ...pl, [key]: value } : pl)) }));
@@ -553,7 +556,7 @@ const ProductForm = ({ initial, categories, onClose, me }) => {
           </label>
 
           <div className="adm-field">
-            <span className="adm-label">Planlar — fiyatlar $ olarak girilir, sitede güncel kurla ₺ gösterilir</span>
+            <span className="adm-label">Planlar — fiyatlar $ (USD)</span>
             <div className="adm-plans-editor">
               {form.plans.map((pl, i) => (
                 <div key={pl.id} className="adm-plan-row">
@@ -566,7 +569,6 @@ const ProductForm = ({ initial, categories, onClose, me }) => {
                     <span>$</span>
                     <input className="adm-input" type="number" min="0" step="0.01" inputMode="decimal" placeholder="0" value={pl.price_usd} onChange={(e) => setPlan(i, 'price_usd', e.target.value)} />
                   </label>
-                  <span className="adm-muted adm-plan-try">{rate && parseFloat(pl.price_usd) > 0 ? '≈ ' + fmtTry(usdToTry(pl.price_usd, rate)) : ''}</span>
                   <button
                     type="button"
                     className={`adm-icon-btn ${form.featured_plan_id === pl.id ? 'on' : ''}`}
@@ -993,6 +995,193 @@ const Admins = ({ me, onNickChange }) => {
 };
 
 /* ------------------------------------------------------------------ */
+/* Ödemeler (Shopier logları)                                          */
+/* ------------------------------------------------------------------ */
+const PAY_EVENT = {
+  created: { label: 'Başlatıldı', tone: 'muted' },
+  success: { label: 'Başarılı', tone: 'ok' },
+  failed: { label: 'Başarısız', tone: 'bad' },
+  bad_signature: { label: 'Geçersiz imza', tone: 'bad' },
+  error: { label: 'Hata', tone: 'warn' },
+};
+
+const Payments = ({ orders }) => {
+  const [logs, ready] = useCollection('payment_logs', 'at', 'desc', 500);
+  const [event, setEvent] = useState('');
+  const [search, setSearch] = useState('');
+
+  const paid = orders.filter((o) => o.payment_method === 'shopier' && REVENUE_STATUSES.includes(o.status));
+  const today = new Date().toDateString();
+  const stats = [
+    { label: 'Shopier ciro', value: tl(paid.reduce((s, o) => s + (Number(o.total_amount) || 0), 0)) },
+    { label: 'Başarılı ödeme', value: paid.length },
+    { label: 'Bugün başarısız', value: logs.filter((l) => l.event === 'failed' && toDate(l.at)?.toDateString() === today).length },
+    { label: 'Geçersiz imza', value: logs.filter((l) => l.event === 'bad_signature').length },
+  ];
+
+  const shown = logs.filter(
+    (l) =>
+      (!event || l.event === event) &&
+      (!search || `${l.order_id} ${l.payment_id} ${l.message}`.toLowerCase().includes(search.toLowerCase()))
+  );
+
+  return (
+    <>
+      <div className="adm-stats">
+        {stats.map((s) => (
+          <div key={s.label} className="adm-stat">
+            <span className="adm-stat-label">{s.label}</span>
+            <strong className="adm-stat-value">{s.value}</strong>
+          </div>
+        ))}
+      </div>
+      <section className="adm-card">
+        <header className="adm-card-head adm-card-head-wrap">
+          <div className="adm-toolbar">
+            <label className="adm-search">
+              <Search size={15} />
+              <input placeholder="Sipariş no, Shopier ödeme no…" value={search} onChange={(e) => setSearch(e.target.value)} />
+            </label>
+            <select className="adm-input adm-input-sm" value={event} onChange={(e) => setEvent(e.target.value)}>
+              <option value="">Tüm olaylar</option>
+              {Object.entries(PAY_EVENT).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+            </select>
+          </div>
+          <span className="adm-muted">Sunucu tarafından yazılır · değiştirilemez</span>
+        </header>
+        {!ready ? (
+          <Empty>Yükleniyor…</Empty>
+        ) : shown.length ? (
+          <div className="adm-table-wrap">
+            <table className="adm-table">
+              <thead>
+                <tr><th>Zaman</th><th>Olay</th><th>Sipariş</th><th className="adm-num">Tutar</th><th className="adm-hide-sm">Shopier no</th><th>Açıklama</th></tr>
+              </thead>
+              <tbody>
+                {shown.map((l) => {
+                  const m = PAY_EVENT[l.event] || { label: l.event, tone: 'muted' };
+                  return (
+                    <tr key={l.id}>
+                      <td className="adm-muted adm-nowrap">{fmtDate(l.at)}</td>
+                      <td><span className={`adm-pill adm-pill-${m.tone}`}>{m.label}</span></td>
+                      <td>{l.order_id ? <code>#{l.order_id.slice(-8)}</code> : '—'}</td>
+                      <td className="adm-num">{l.amount != null ? tl(l.amount) : '—'}</td>
+                      <td className="adm-hide-sm"><code>{l.payment_id || '—'}</code></td>
+                      <td>{l.message}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <Empty>Henüz ödeme kaydı yok. Shopier anahtarları girilip ilk ödeme yapılınca burada görünecek.</Empty>
+        )}
+      </section>
+    </>
+  );
+};
+
+/* ------------------------------------------------------------------ */
+/* Ayarlar (IBAN)                                                      */
+/* ------------------------------------------------------------------ */
+const SETTINGS_FIELDS = [
+  ['iban', 'IBAN', 'TR00 0000 0000 0000 0000 0000 00'],
+  ['account_holder', 'Alıcı adı soyadı', 'Ad Soyad'],
+  ['bank_name', 'Banka', 'Banka adı'],
+];
+
+const SettingsView = ({ me }) => {
+  const [form, setForm] = useState(null);
+  const [saved, setSaved] = useState(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    getDoc(doc(db, 'settings', 'payment'))
+      .then((s) => {
+        const d = s.exists() ? s.data() : {};
+        const clean = { iban: d.iban || '', account_holder: d.account_holder || '', bank_name: d.bank_name || '', iban_note: d.iban_note || '' };
+        setForm(clean);
+        setSaved(clean);
+      })
+      .catch((err) => toast.error('Ayarlar okunamadı: ' + err.code));
+  }, []);
+
+  if (!form) return <Empty>Yükleniyor…</Empty>;
+
+  const save = async (e) => {
+    e.preventDefault();
+    const data = {
+      iban: form.iban.replace(/\s+/g, ' ').trim().toUpperCase(),
+      account_holder: form.account_holder.trim(),
+      bank_name: form.bank_name.trim(),
+      iban_note: form.iban_note.trim(),
+      updated_at: serverTimestamp(),
+    };
+    const changed = ['iban', 'account_holder', 'bank_name', 'iban_note'].filter((k) => data[k] !== saved[k]);
+    if (!changed.length) return toast('Değişiklik yok');
+    setSaving(true);
+    try {
+      await loggedWrite({
+        me, mode: 'set', collectionName: 'settings', id: 'payment', targetType: 'settings', action: 'update',
+        data,
+        summary: `Havale/IBAN ayarları güncellendi (${changed.map((k) => ({ iban: 'IBAN', account_holder: 'alıcı', bank_name: 'banka', iban_note: 'not' })[k]).join(', ')})`,
+      });
+      const { updated_at: _u, ...rest } = data;
+      setSaved(rest);
+      setForm(rest);
+      toast.success('Ayarlar kaydedildi');
+    } catch (err) {
+      toast.error('Kaydedilemedi: ' + (err.code || err.message));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="adm-split">
+      <form className="adm-card adm-card-pad" onSubmit={save}>
+        <h2 className="adm-card-title">Havale / EFT bilgileri</h2>
+        <p className="adm-muted adm-help">
+          Müşteri ödeme penceresinde “Havale / EFT” seçip siparişi oluşturunca bu bilgiler gösterilir.
+          IBAN boşsa havale seçeneği kapalı görünür.
+        </p>
+        {SETTINGS_FIELDS.map(([k, label, ph]) => (
+          <label key={k} className="adm-field">
+            <span className="adm-label">{label}</span>
+            <input className="adm-input" value={form[k]} placeholder={ph} onChange={(e) => setForm((f) => ({ ...f, [k]: e.target.value }))} />
+          </label>
+        ))}
+        <label className="adm-field">
+          <span className="adm-label">Müşteriye not (opsiyonel)</span>
+          <textarea className="adm-input" rows={3} value={form.iban_note} placeholder="Ödemeyi yaptıktan sonra dekontu Discord ticket ile ilet…" onChange={(e) => setForm((f) => ({ ...f, iban_note: e.target.value }))} />
+        </label>
+        <div className="adm-form-actions">
+          <button className="adm-btn adm-btn-primary" disabled={saving}>{saving ? 'Kaydediliyor…' : 'Kaydet'}</button>
+        </div>
+      </form>
+
+      <section className="adm-card adm-card-pad">
+        <h2 className="adm-card-title">Shopier</h2>
+        <p className="adm-muted adm-help">
+          Kartla ödemeler Shopier üzerinden alınır. API anahtarları güvenlik için panelde değil, sunucu ortam değişkenlerinde
+          (Vercel → Settings → Environment Variables) tutulur:
+        </p>
+        <ul className="adm-env-list">
+          <li><code>SHOPIER_API_KEY</code> — API kullanıcı</li>
+          <li><code>SHOPIER_API_SECRET</code> — API şifre</li>
+          <li><code>SHOPIER_WEBSITE_INDEX</code> — genelde 1</li>
+          <li><code>SHOPIER_CURRENCY</code> — USD</li>
+        </ul>
+        <p className="adm-muted adm-help">
+          Shopier panelinde geri dönüş adresi: <code>https://ALANADIN/api/shopier-callback</code>. Tüm ödeme olayları “Ödemeler” bölümüne düşer.
+        </p>
+      </section>
+    </div>
+  );
+};
+
+/* ------------------------------------------------------------------ */
 /* Kayıtlar (işlem logu)                                               */
 /* ------------------------------------------------------------------ */
 const ACTION_META = {
@@ -1002,7 +1191,7 @@ const ACTION_META = {
   delete: { label: 'Silme', tone: 'bad' },
   login: { label: 'Giriş', tone: 'muted' },
 };
-const TYPE_LABEL = { product: 'Ürün', category: 'Kategori', order: 'Sipariş', admin: 'Yönetici', session: 'Oturum' };
+const TYPE_LABEL = { product: 'Ürün', category: 'Kategori', order: 'Sipariş', admin: 'Yönetici', session: 'Oturum', settings: 'Ayarlar' };
 
 const Logs = () => {
   const [logs, ready] = useCollection('admin_logs', 'at', 'desc', 500);
@@ -1078,8 +1267,10 @@ const NAV = [
   { id: 'orders', label: 'Siparişler', icon: ShoppingBag },
   { id: 'products', label: 'Ürünler', icon: Package },
   { id: 'categories', label: 'Kategoriler', icon: FolderTree },
+  { id: 'payments', label: 'Ödemeler', icon: CreditCard },
   { id: 'admins', label: 'Yöneticiler', icon: UserCog },
   { id: 'logs', label: 'Kayıtlar', icon: ScrollText },
+  { id: 'settings', label: 'Ayarlar', icon: Settings },
 ];
 
 const AdminDashboard = ({ admin }) => {
@@ -1157,6 +1348,8 @@ const AdminDashboard = ({ admin }) => {
           {view === 'categories' && <Categories categories={categories} products={products} me={me} />}
           {view === 'admins' && <Admins me={me} onNickChange={(nickname) => setMe((m) => ({ ...m, nickname }))} />}
           {view === 'logs' && <Logs />}
+          {view === 'payments' && <Payments orders={orders} />}
+          {view === 'settings' && <SettingsView me={me} />}
         </div>
       </main>
     </div>

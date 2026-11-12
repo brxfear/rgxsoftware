@@ -11,7 +11,7 @@ const HowItWorksSection = () => {
     {
       num: "02",
       title: "Güvenle Öde",
-      desc: "Kredi kartı, banka kartı (3D Secure) veya Kripto yöntemleriyle komisyonsuz, güvenli ödemeni tamamla."
+      desc: "Shopier ile kredi/banka kartından (3D Secure) ya da IBAN ile havale/EFT yaparak güvenle öde."
     },
     {
       num: "03",

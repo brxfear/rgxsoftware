@@ -12,7 +12,7 @@ const defaultFaqs = [
   },
   {
     q: "Hangi ödeme yöntemlerini kabul ediyorsunuz?",
-    a: "Kredi kartı, banka kartı (PayTR güvencesiyle 3D Secure), Havale/EFT ve popüler kripto para birimleri (USDT, BTC, ETH) ile güvenle ödeme yapabilirsiniz."
+    a: "Kredi ve banka kartıyla Shopier güvencesinde (3D Secure) ya da IBAN ile havale/EFT yaparak ödeyebilirsiniz. Kartla ödemeler anında onaylanır; havale/EFT ödemeleri, dekontu sipariş numaranızla birlikte Discord'da ticket açarak ilettiğinizde ekibimiz tarafından onaylanır. Tüm fiyatlar USD ($) olarak gösterilir."
   },
   {
     q: "Yazılımlar tespit ediliyor mu (Undetected)?",

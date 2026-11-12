@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster, toast } from 'react-hot-toast';
-import { Shield, ShieldCheck, Zap, ArrowRight, CreditCard, CheckCircle2, Landmark, Bitcoin } from 'lucide-react';
+import { Shield, ShieldCheck, Zap, ArrowRight, CreditCard, CheckCircle2, Landmark } from 'lucide-react';
 
 import Navbar from './components/Navbar/Navbar';
 import TabSwitcher from './components/TabSwitcher/TabSwitcher';
@@ -20,7 +20,7 @@ import DiscordBanner from './components/Discord/DiscordBanner';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './lib/firebase';
 import { fetchCategories, fetchProducts, createManualOrder, getStartPrice } from './lib/db';
-import { loadUsdTry, usdToTry } from './lib/currency';
+import { roundUsd } from './lib/currency';
 import Price from './components/Price';
 import { useCartStore } from './store/useCartStore';
 import { triggerConfetti } from './utils/celebration';
@@ -29,6 +29,22 @@ import './App.css';
 import './brand.css';
 
 const DISCORD_URL = 'https://discord.gg/rgxsoftware1';
+
+// Shopier ödeme sayfasına imzalı form ile yönlendirir
+const submitShopierForm = (action, fields) => {
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = action;
+  Object.entries(fields).forEach(([name, value]) => {
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = name;
+    input.value = value;
+    form.appendChild(input);
+  });
+  document.body.appendChild(form);
+  form.submit();
+};
 
 const scrollToId = (id) => {
   const el = document.getElementById(id);
@@ -89,7 +105,7 @@ function Store() {
       }
     })();
 
-    // PayTR dönüşü: /?odeme=basarili | /?odeme=basarisiz
+    // Shopier dönüşü: /?odeme=basarili | /?odeme=basarisiz
     const params = new URLSearchParams(window.location.search);
     const payment = params.get('odeme');
     if (payment) {
@@ -170,7 +186,7 @@ function Store() {
 
             <p className="hero-subtext">
               Valorant, CS2, Rust ve daha pek çok popüler oyun için kernel seviyesinde
-              private çözümler. Kart, havale veya kripto ile öde, anahtarın saniyeler içinde gelsin.
+              private çözümler. Shopier ile kartla ya da havale/EFT ile öde, anahtarın hızla gelsin.
             </p>
 
             <div className="hero-cta-group">
@@ -281,13 +297,13 @@ function Store() {
 
         {/* ================= ÖDEME YÖNTEMLERİ ================= */}
         <section className="container section-block">
-          <h2 className="section-title">Kart, havale ve <span className="hero-accent">kripto</span></h2>
-          <p className="section-desc">Her yöntemde anahtarın otomatik olarak teslim edilir.</p>
+          <h2 className="section-title">Shopier ve <span className="hero-accent">havale</span> ile öde</h2>
+          <p className="section-desc">Kartla ödemeler Shopier güvencesiyle anında onaylanır; havale/EFT ödemeleri ekibimiz tarafından onaylanır.</p>
           <div className="payment-grid">
             {[
-              { icon: <CreditCard size={22} />, label: 'Visa / Mastercard', sub: '3D Secure' },
-              { icon: <Landmark size={22} />, label: 'Havale / EFT', sub: 'Tüm bankalar' },
-              { icon: <Bitcoin size={22} />, label: 'Kripto', sub: 'USDT · BTC · ETH' },
+              { icon: <CreditCard size={22} />, label: 'Kredi / Banka Kartı', sub: 'Shopier · 3D Secure' },
+              { icon: <ShieldCheck size={22} />, label: 'Shopier güvencesi', sub: 'Güvenli ödeme altyapısı' },
+              { icon: <Landmark size={22} />, label: 'Havale / EFT', sub: 'IBAN ile, elle onay' },
               { icon: <Zap size={22} />, label: 'Anında teslimat', sub: 'Otomatik key' },
             ].map(({ icon, label, sub }) => (
               <div key={label} className="payment-tile">
@@ -380,79 +396,65 @@ function Store() {
       <CheckoutModal
         isOpen={isCheckoutOpen}
         onClose={() => setIsCheckoutOpen(false)}
-        totalUsd={cart.reduce((sum, item) => sum + (item.price * item.quantity), 0)}
-        t={t}
+        items={cart}
+        user={user}
+        totalUsd={roundUsd(cart.reduce((sum, item) => sum + (item.price * item.quantity), 0))}
         onComplete={async (data) => {
-          // Sepet fiyatları $; sipariş ₺ olarak kaydedilir (güncel kurla, tam liraya yuvarlı)
-          const rate = await loadUsdTry();
-          if (!rate) {
-            toast.error('Döviz kuru alınamadı, lütfen biraz sonra tekrar dene.');
-            throw new Error('fx unavailable');
-          }
-          const detailedItems = cart.map(item => {
-            const unitTry = usdToTry(item.price, rate);
-            return {
-              product_id: item.product_id,
-              name: item.name,
-              plan_id: String(item.duration),
-              durationLabel: item.durationLabel || '',
-              quantity: item.quantity,
-              price_usd: item.price,
-              price: unitTry,
-              subtotal: unitTry * item.quantity,
-            };
-          });
-          const totalAmount = detailedItems.reduce((sum, i) => sum + i.subtotal, 0);
-          const totalUsd = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+          const items = cart.map(item => ({
+            product_id: item.product_id,
+            plan_id: String(item.duration),
+            quantity: item.quantity,
+          }));
 
-          if (data.payment_method === 'paytr') {
-            const idToken = user ? await user.getIdToken() : null;
-            let paytrData = null;
+          // ---- Kart: Shopier (sunucu fiyatı Firestore'dan hesaplar, imzalı formu döner)
+          if (data.payment_method === 'shopier') {
             try {
-              const res = await fetch('/api/paytr-session', {
+              const idToken = user ? await user.getIdToken() : null;
+              const res = await fetch('/api/shopier-session', {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
                   ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
                 },
-                body: JSON.stringify({
-                  items: detailedItems.map(({ product_id, plan_id, quantity }) => ({ product_id, plan_id, quantity })),
-                  customer_name: data.name,
-                  customer_email: user?.email || data.email || '',
-                  customer_phone: data.contact,
-                }),
+                body: JSON.stringify({ items, buyer: { name: data.name, email: data.email, phone: data.phone } }),
               });
-              paytrData = await res.json().catch(() => null);
-              if (!res.ok || !paytrData?.token) throw new Error(paytrData?.error || 'Token alınamadı');
+              const out = await res.json().catch(() => null);
+              if (!res.ok || !out?.action) throw new Error(out?.error || 'sunucuya ulaşılamadı');
+              submitShopierForm(out.action, out.fields);
+              return { type: 'shopier' };
             } catch (err) {
               toast.error('Ödeme başlatılamadı: ' + err.message);
               throw err;
             }
-            return paytrData.token;
           }
 
+          // ---- IBAN: elle onaylanan sipariş
+          const detailedItems = cart.map(item => ({
+            product_id: item.product_id,
+            name: item.name,
+            plan_id: String(item.duration),
+            durationLabel: item.durationLabel || '',
+            quantity: item.quantity,
+            price: item.price,
+            subtotal: roundUsd(item.price * item.quantity),
+          }));
           try {
-            await createManualOrder({
+            const ref = await createManualOrder({
               user_id: user?.uid || null,
-              total_amount: totalAmount,
-              total_usd: Math.round(totalUsd * 100) / 100,
-              fx_rate: rate,
-              currency: 'TRY',
+              total_amount: roundUsd(detailedItems.reduce((s, i) => s + i.subtotal, 0)),
+              currency: 'USD',
               items: detailedItems,
-              payment_method: data.payment_method || 'manual',
+              payment_method: 'iban',
               customer_name: data.name,
-              customer_phone: data.contact,
-              customer_email: user?.email || 'Misafir',
+              customer_phone: data.phone,
+              customer_email: data.email || user?.email || '',
             });
+            await useCartStore.getState().clearCart();
+            return { type: 'iban', orderId: ref.id };
           } catch (err) {
             toast.error('Sipariş oluşturulamadı: ' + err.message);
             throw err;
           }
-          setIsCheckoutOpen(false);
-          triggerConfetti();
-          await useCartStore.getState().clearCart();
-          toast.success('Siparişiniz alındı! Ödemeniz onaylanınca key ve kurulum detayları iletilecek.', { duration: 5000 });
-          return 'success';
         }}
       />
 
@@ -467,10 +469,16 @@ function Store() {
       />
 
       <ProductModal
+        key={selectedProduct?.id || 'none'}
         isOpen={!!selectedProduct}
         onClose={() => setSelectedProduct(null)}
         product={selectedProduct}
         onAddToCart={(p) => addItem(p)}
+        onBuyNow={async (p) => {
+          await addItem(p);
+          setIsCartOpen(true);
+        }}
+        categoryName={categoryName(selectedProduct?.category_id)}
       />
 
       {/* Footer */}

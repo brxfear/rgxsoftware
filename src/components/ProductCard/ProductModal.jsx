@@ -1,198 +1,175 @@
-import React, { useState } from 'react';
-import { X, ShoppingBag, Terminal, ShieldCheck, Zap, ChevronLeft, ChevronRight, Play, Clock } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { X, ShoppingCart, Zap, ShieldCheck, Headphones, ChevronLeft, ChevronRight, Check, Star } from 'lucide-react';
 import { getPlans } from '../../lib/db';
-import { useUsdTry, usdToTry, fmtTry, fmtUsd } from '../../lib/currency';
-import Price from '../Price';
+import { fmtUsd } from '../../lib/currency';
 import './ProductModal.css';
 
-const ProductModal = ({ isOpen, onClose, product, onAddToCart }) => {
-    const [currentIndex, setCurrentIndex] = useState(0);
-    const [selectedPlan, setSelectedPlan] = useState(null);
-    const rate = useUsdTry();
+const youtubeEmbed = (url) => {
+  const m = url?.match(/^.*(youtu\.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/);
+  return m && m[2].length === 11 ? `https://www.youtube.com/embed/${m[2]}` : null;
+};
 
-    if (!isOpen || !product) return null;
+const ProductModal = ({ isOpen, onClose, product, onAddToCart, onBuyNow, categoryName }) => {
+  // App bu bileşeni key={ürün id} ile verir; her ürün açılışında state sıfırdan kurulur.
+  const [index, setIndex] = useState(0);
+  const [planId, setPlanId] = useState(() => {
+    const list = product ? getPlans(product) : [];
+    return (list.find((p) => p.id === product?.featured_plan_id) || list[0])?.id ?? null;
+  });
 
-    const getYoutubeEmbedUrl = (url) => {
-        if (!url) return null;
-        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-        const match = url.match(regExp);
-        return (match && match[2].length === 11) ? `https://www.youtube.com/embed/${match[2]}` : null;
+  const plans = useMemo(() => (product ? getPlans(product) : []), [product]);
+
+  const media = useMemo(() => {
+    if (!product) return [];
+    const list = [];
+    if (product.video_url) list.push({ type: 'video', url: product.video_url });
+    if (product.image_url || product.image) list.push({ type: 'image', url: product.image_url || product.image });
+    (product.extra_images || []).forEach((url) => url && list.push({ type: 'image', url }));
+    if (!list.length) list.push({ type: 'image', url: '/logo.webp', fallback: true });
+    return list;
+  }, [product]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e) => {
+      if (e.key === 'Escape') onClose();
+      if (e.key === 'ArrowRight' && media.length > 1) setIndex((i) => (i + 1) % media.length);
+      if (e.key === 'ArrowLeft' && media.length > 1) setIndex((i) => (i - 1 + media.length) % media.length);
     };
-
-    // Combine video and images into a single media list
-    const mediaItems = [];
-    if (product.video_url) {
-        mediaItems.push({ type: 'video', url: product.video_url });
-    }
-    if (product.image_url || product.image) {
-        mediaItems.push({ type: 'image', url: product.image_url || product.image });
-    }
-    if (product.extra_images && Array.isArray(product.extra_images)) {
-        product.extra_images.forEach(img => {
-            if (img) mediaItems.push({ type: 'image', url: img });
-        });
-    }
-    if (!mediaItems.length) {
-        mediaItems.push({ type: 'image', url: '/logo.webp', fallback: true });
-    }
-
-    const nextMedia = () => {
-        setCurrentIndex((prev) => (prev + 1) % mediaItems.length);
+    window.addEventListener('keydown', onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prev;
     };
+  }, [isOpen, onClose, media.length]);
 
-    const prevMedia = () => {
-        setCurrentIndex((prev) => (prev - 1 + mediaItems.length) % mediaItems.length);
-    };
+  if (!isOpen || !product) return null;
 
-    const currentMedia = mediaItems[currentIndex];
-    const videoEmbedUrl = currentMedia?.type === 'video' ? getYoutubeEmbedUrl(currentMedia.url) : null;
+  const selected = plans.find((p) => p.id === planId) || null;
+  const current = media[index];
+  const embed = current?.type === 'video' ? youtubeEmbed(current.url) : null;
+  const cheapest = plans.length ? Math.min(...plans.map((p) => Number(p.price_usd))) : 0;
 
-    // Subscription plans
-    const plans = getPlans(product);
-    const featuredId = product.featured_plan_id;
+  const payload = () => ({
+    ...product,
+    selectedDuration: selected.id,
+    selectedPrice: Number(selected.price_usd),
+    selectedLabel: selected.label,
+  });
 
-    const handleBuy = () => {
-        if (!selectedPlan) return;
-        onAddToCart({
-            ...product,
-            selectedDuration: selectedPlan.id,
-            selectedPrice: Number(selectedPlan.price_usd),
-            selectedLabel: selectedPlan.label
-        });
-        setSelectedPlan(null);
-        onClose();
-    };
+  const add = () => {
+    if (!selected) return;
+    onAddToCart(payload());
+    onClose();
+  };
 
-    return (
-        <div className="modal-overlay" onClick={onClose}>
-            <div className="glass-panel product-modal-content" onClick={e => e.stopPropagation()}>
-                <button className="close-modal" onClick={onClose}><X /></button>
+  const buy = () => {
+    if (!selected) return;
+    (onBuyNow || onAddToCart)(payload());
+    onClose();
+  };
 
-                <div className="modal-scroll-container">
-                    <div className="modal-grid">
-                        <div className="modal-image-gallery">
-                            <div className="main-image-slider">
-                                {currentMedia?.type === 'video' ? (
-                                    <div className="video-container-glow slider-video">
-                                        {videoEmbedUrl ? (
-                                            <iframe
-                                                src={videoEmbedUrl}
-                                                title="Product Video"
-                                                frameBorder="0"
-                                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                                allowFullScreen
-                                            ></iframe>
-                                        ) : (
-                                            <video controls autoPlay muted loop>
-                                                <source src={currentMedia.url} type="video/mp4" />
-                                            </video>
-                                        )}
-                                    </div>
-                                ) : (
-                                    <img src={currentMedia?.url} alt={product.name} className={`modal-image ${currentMedia?.fallback ? 'modal-image-fallback' : ''}`} />
-                                )}
-                                
-                                {mediaItems.length > 1 && (
-                                    <>
-                                        <button className="slider-nav prev" onClick={prevMedia}><ChevronLeft /></button>
-                                        <button className="slider-nav next" onClick={nextMedia}><ChevronRight /></button>
-                                    </>
-                                )}
-                                
-                                <div className="image-glow"></div>
-                                <div className="image-badge cyber-font">
-                                    <ShieldCheck size={14} /> {currentMedia?.type === 'video' ? 'VİDEO' : 'RGX SOFTWARE'}
-                                </div>
-                            </div>
+  return (
+    <div className="pm-overlay" onClick={onClose}>
+      <div className="pm-modal" role="dialog" aria-modal="true" aria-label={product.name} onClick={(e) => e.stopPropagation()}>
+        <button className="pm-close" onClick={onClose} aria-label="Kapat"><X size={18} /></button>
 
-                            {mediaItems.length > 1 && (
-                                <div className="thumbnail-strip">
-                                    {mediaItems.map((item, idx) => (
-                                        <div 
-                                            key={idx} 
-                                            className={`thumbnail-item ${idx === currentIndex ? 'active' : ''} ${item.type === 'video' ? 'video-thumb' : ''}`}
-                                            onClick={() => setCurrentIndex(idx)}
-                                        >
-                                            {item.type === 'video' ? (
-                                                <div className="thumb-video-placeholder">
-                                                    <Play size={20} />
-                                                </div>
-                                            ) : (
-                                                <img src={item.url} alt={`thumb-${idx}`} />
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="modal-info">
-                            <div className="modal-header">
-                                <span className="status-indicator">UNDETECTED</span>
-                                <h2 className="cyber-font neon-text">{product.name}</h2>
-                            </div>
-
-                            {/* Subscription Plan Selector */}
-                            <div className="subscription-selector">
-                                <h4 className="cyber-font"><Clock size={14} /> PLAN SEÇ</h4>
-                                <div className="plan-options">
-                                    {plans.map(plan => (
-                                        <button
-                                            key={plan.id}
-                                            className={`plan-card ${selectedPlan?.id === plan.id ? 'selected' : ''}`}
-                                            onClick={() => setSelectedPlan(plan)}
-                                        >
-                                            <span className="plan-duration cyber-font">{plan.label}</span>
-                                            <Price usd={plan.price_usd} className="plan-price" />
-                                            {plan.id === featuredId && <span className="plan-badge">POPÜLER</span>}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <div className="modal-description">
-                                <h4 className="cyber-font"><Terminal size={14} /> AÇIKLAMA</h4>
-                                <p style={{ whiteSpace: 'pre-wrap' }}>
-                                    {product.description || 'Açıklama yakında eklenecek.'}
-                                </p>
-                            </div>
-
-                            {product.details && (
-                                <div className="modal-details-extended">
-                                    <h4 className="cyber-font"><Terminal size={14} /> DETAYLAR</h4>
-                                    <p style={{ whiteSpace: 'pre-wrap' }}>
-                                        {product.details}
-                                    </p>
-                                </div>
-                            )}
-
-                            <div className="modal-benefits">
-                                <div className="benefit-item">
-                                    <Zap size={14} /> <span>Anında dijital teslimat</span>
-                                </div>
-                                <div className="benefit-item">
-                                    <ShieldCheck size={14} /> <span>7/24 Türkçe destek</span>
-                                </div>
-                            </div>
-
-                            <div className="modal-actions">
-                                <button
-                                    className={`neon-button buy-now-btn ${!selectedPlan ? 'disabled' : ''}`}
-                                    onClick={handleBuy}
-                                    disabled={!selectedPlan}
-                                >
-                                    <ShoppingBag size={20} /> 
-                                    {selectedPlan 
-                                        ? `${selectedPlan.label} — ${rate ? fmtTry(usdToTry(selectedPlan.price_usd, rate)) : fmtUsd(selectedPlan.price_usd)} SEPETE EKLE` 
-                                        : 'ÖNCE SÜRE SEÇ'}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+        <div className="pm-grid">
+          {/* -------- Sol üst: medya -------- */}
+          <div className="pm-main">
+            <div className="pm-media">
+              {current?.type === 'video' ? (
+                embed ? (
+                  <iframe src={embed} title={product.name} allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+                ) : (
+                  <video src={current.url} controls playsInline />
+                )
+              ) : (
+                <img src={current?.url} alt={product.name} className={current?.fallback ? 'is-fallback' : ''} />
+              )}
+              {media.length > 1 && (
+                <>
+                  <button className="pm-nav prev" onClick={() => setIndex((i) => (i - 1 + media.length) % media.length)} aria-label="Önceki"><ChevronLeft size={18} /></button>
+                  <button className="pm-nav next" onClick={() => setIndex((i) => (i + 1) % media.length)} aria-label="Sonraki"><ChevronRight size={18} /></button>
+                </>
+              )}
             </div>
+
+            {media.length > 1 && (
+              <div className="pm-thumbs">
+                {media.map((m, i) => (
+                  <button key={i} className={i === index ? 'on' : ''} onClick={() => setIndex(i)} aria-label={`Medya ${i + 1}`}>
+                    {m.type === 'video' ? <span className="pm-thumb-video">▶</span> : <img src={m.url} alt="" />}
+                  </button>
+                ))}
+              </div>
+            )}
+
+          </div>
+
+          {/* -------- Sağ: satın alma -------- */}
+          <aside className="pm-buy">
+            <div className="pm-badges">
+              {categoryName && <span className="pm-chip">{categoryName}</span>}
+              <span className="pm-chip pm-chip-ok"><span className="status-dot-green" /> Undetected</span>
+            </div>
+            <h2 className="pm-title">{product.name}</h2>
+            <p className="pm-from">Başlangıç <strong>{fmtUsd(cheapest)}</strong></p>
+
+            <div className="pm-plans" role="radiogroup" aria-label="Plan seç">
+              {plans.map((p) => {
+                const on = p.id === planId;
+                return (
+                  <button key={p.id} role="radio" aria-checked={on} className={`pm-plan ${on ? 'on' : ''}`} onClick={() => setPlanId(p.id)}>
+                    <span className="pm-radio">{on && <Check size={12} strokeWidth={3} />}</span>
+                    <span className="pm-plan-label">
+                      {p.label}
+                      {p.id === product.featured_plan_id && <em><Star size={10} fill="currentColor" /> Popüler</em>}
+                    </span>
+                    <span className="pm-plan-price">{fmtUsd(p.price_usd)}</span>
+                  </button>
+                );
+              })}
+              {!plans.length && <p className="pm-empty">Bu ürün şu an satışta değil.</p>}
+            </div>
+
+            <div className="pm-total">
+              <span>Toplam</span>
+              <strong>{selected ? fmtUsd(selected.price_usd) : '—'}</strong>
+            </div>
+
+            <button className="pm-cta" onClick={buy} disabled={!selected}>
+              <Zap size={17} /> Hemen satın al
+            </button>
+            <button className="pm-cta-secondary" onClick={add} disabled={!selected}>
+              <ShoppingCart size={16} /> Sepete ekle
+            </button>
+
+            <ul className="pm-perks">
+              <li><Zap size={14} /> Anında dijital teslimat</li>
+              <li><ShieldCheck size={14} /> Shopier güvenli ödeme</li>
+              <li><Headphones size={14} /> 7/24 Discord desteği</li>
+            </ul>
+          </aside>
+
+          {/* -------- Sol alt: açıklama -------- */}
+            {(product.description || product.details) && (
+              <div className="pm-info">
+                {product.description && <p className="pm-desc">{product.description}</p>}
+                {product.details && (
+                  <>
+                    <h3>Özellikler</h3>
+                    <div className="pm-details">{product.details}</div>
+                  </>
+                )}
+              </div>
+            )}
         </div>
-    );
+      </div>
+    </div>
+  );
 };
 
 export default ProductModal;

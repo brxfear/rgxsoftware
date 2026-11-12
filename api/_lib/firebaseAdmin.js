@@ -2,7 +2,7 @@
 // Vercel ortam değişkeni: FIREBASE_SERVICE_ACCOUNT = servis hesabı JSON'unun tamamı (tek satır).
 import process from 'node:process';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
 
 const init = () => {
@@ -30,17 +30,13 @@ export const getPlans = (p) => {
 
 export const findPlan = (product, planId) => getPlans(product).find((x) => String(x.id) === String(planId)) || null;
 
-// USD/TRY kuru (istemci ile aynı kaynak). 30 dk bellekte tutulur.
-let fxCache = null;
-export const getUsdTry = async () => {
-  if (fxCache && Date.now() - fxCache.at < 30 * 60 * 1000) return fxCache.rate;
-  const r = await fetch('https://open.er-api.com/v6/latest/USD');
-  const d = await r.json();
-  const rate = Number(d?.rates?.TRY);
-  if (!(rate > 0)) throw new Error('Döviz kuru alınamadı');
-  fxCache = { rate, at: Date.now() };
-  return rate;
-};
+export const roundUsd = (n) => Math.round((Number(n) || 0) * 100) / 100;
 
-// $ → ₺, tam liraya yuvarlı (istemcideki usdToTry ile aynı)
-export const usdToTry = (usd, rate) => Math.round((Number(usd) || 0) * rate);
+/** Sunucu tarafı ödeme logu (payment_logs) — sadece Admin SDK yazar, adminler okur. */
+export const paymentLog = async (db, entry) => {
+  try {
+    await db.collection('payment_logs').add({ provider: 'shopier', ...entry, at: FieldValue.serverTimestamp() });
+  } catch (err) {
+    console.error('payment_logs yazılamadı', err);
+  }
+};

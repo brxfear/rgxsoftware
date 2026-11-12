@@ -522,7 +522,7 @@ select.adm-input option { background: #1a1214; }
 
 /* Plan düzenleyici */
 .adm-plans-editor { display: flex; flex-direction: column; gap: 8px; }
-.adm-plan-row { display: grid; grid-template-columns: 22px minmax(0, 1fr) 120px 76px 34px 34px; gap: 8px; align-items: center; }
+.adm-plan-row { display: grid; grid-template-columns: 22px minmax(0, 1fr) 120px 34px 34px; gap: 8px; align-items: center; }
 .adm-plan-move { display: flex; flex-direction: column; gap: 2px; }
 .adm-plan-move button { height: 17px; border: none; border-radius: 4px; background: rgba(255,255,255,0.05); color: var(--adm-muted); font-size: 8px; cursor: pointer; }
 .adm-plan-move button:disabled { opacity: 0.3; cursor: default; }
@@ -536,3 +536,5 @@ select.adm-input option { background: #1a1214; }
   .adm-plan-row { grid-template-columns: 22px minmax(0, 1fr) 96px 34px 34px; }
   .adm-plan-try { display: none; }
 }
+.adm-env-list { list-style: none; display: flex; flex-direction: column; gap: 6px; margin: 0 0 14px; font-size: 13px; }
+.adm-env-list code { color: var(--adm-red-2); }

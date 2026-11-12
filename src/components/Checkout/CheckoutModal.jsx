@@ -1,218 +1,201 @@
-import Price from '../Price';
-import React, { useState } from 'react';
-import { CreditCard, Wallet, Send, X, ArrowLeft, User, MessageSquare, Copy, Check, Shield } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { doc, getDoc } from 'firebase/firestore';
+import { X, ArrowLeft, ArrowRight, CreditCard, Landmark, Copy, Check, ShieldCheck, MessageCircle, Loader2 } from 'lucide-react';
+import { toast } from 'react-hot-toast';
+import { db } from '../../lib/firebase';
+import { fmtUsd } from '../../lib/currency';
 import './CheckoutModal.css';
 
-const CheckoutModal = ({ isOpen, onClose, totalUsd, onComplete, t }) => {
-    const [step, setStep] = useState(1); // 1: Info Form, 2: Method Selection, 3: Details, 4: iFrame
-    const [method, setMethod] = useState(null);
-    const [copied, setCopied] = useState(false);
-    const [iframeToken, setIframeToken] = useState(null);
-    const [loading, setLoading] = useState(false);
-    const [customerInfo, setCustomerInfo] = useState({
-        name: '',
-        contact: ''
-    });
+const DISCORD_URL = 'https://discord.gg/rgxsoftware1';
 
-    React.useEffect(() => {
-        if (step === 4 && iframeToken) {
-            const script = document.createElement('script');
-            script.src = 'https://www.paytr.com/js/iframeResizer.min.js';
-            script.async = true;
-            script.onload = () => {
-                if (window.iFrameResize) window.iFrameResize({}, '#paytriframe');
-            };
-            document.body.appendChild(script);
+const CopyRow = ({ label, value }) => {
+  const [copied, setCopied] = useState(false);
+  if (!value) return null;
+  return (
+    <div className="co-copy">
+      <span className="co-copy-label">{label}</span>
+      <div className="co-copy-row">
+        <code>{value}</code>
+        <button
+          type="button"
+          onClick={() => {
+            navigator.clipboard?.writeText(value);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1500);
+          }}
+          aria-label={`${label} kopyala`}
+        >
+          {copied ? <Check size={15} /> : <Copy size={15} />}
+        </button>
+      </div>
+    </div>
+  );
+};
 
-            return () => {
-                document.body.removeChild(script);
-            };
-        }
-    }, [step, iframeToken]);
+const CheckoutModal = ({ isOpen, onClose, totalUsd, items = [], user, onComplete }) => {
+  const [step, setStep] = useState('info'); // info → method → iban-done
+  const [info, setInfo] = useState({ name: '', email: '', phone: '' });
+  const [method, setMethod] = useState('shopier');
+  const [busy, setBusy] = useState(false);
+  const [bank, setBank] = useState(null);
+  const [ibanOrder, setIbanOrder] = useState(null);
 
-    if (!isOpen) return null;
+  useEffect(() => {
+    if (!isOpen) return;
+    setStep('info');
+    setIbanOrder(null);
+    setInfo((i) => ({ ...i, name: i.name || user?.displayName || '', email: i.email || user?.email || '' }));
+    getDoc(doc(db, 'settings', 'payment'))
+      .then((s) => setBank(s.exists() ? s.data() : {}))
+      .catch(() => setBank({}));
+  }, [isOpen, user]);
 
-    const handleInfoSubmit = (e) => {
-        e.preventDefault();
-        setStep(2);
-    };
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e) => e.key === 'Escape' && !busy && onClose();
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isOpen, busy, onClose]);
 
-    const handleFinalize = async () => {
-        setLoading(true);
-        try {
-            const token = await onComplete({
-                ...customerInfo,
-                payment_method: method
-            });
-            if (token && token !== 'success') {
-                setIframeToken(token);
-                setStep(4);
-            }
-        } catch (e) {
-            console.error('Payment Error:', e);
-        }
-        setLoading(false);
-    };
+  if (!isOpen) return null;
 
-    const resetAndClose = () => {
-        setStep(1);
-        setMethod(null);
-        setIframeToken(null);
-        setCustomerInfo({ name: '', contact: '' });
-        onClose();
-    };
+  const ibanEnabled = !!bank?.iban;
+  const set = (k) => (e) => setInfo((i) => ({ ...i, [k]: e.target.value }));
 
-    const copyToClipboard = (text) => {
-        navigator.clipboard.writeText(text);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-    };
+  const submitInfo = (e) => {
+    e.preventDefault();
+    if (info.name.trim().split(/\s+/).length < 2) return toast.error('Ad ve soyadını birlikte yaz.');
+    setStep('method');
+  };
 
-    return (
-        <div className="checkout-overlay" onClick={resetAndClose}>
-            <div className="glass-panel checkout-box" onClick={e => e.stopPropagation()}>
-                <div className="checkout-header">
-                    <h2 className="cyber-font">
-                        {step === 1 ? t('checkout.step1_title') : step === 4 ? 'GÜVENLİ ÖDEME' : t('checkout.step2_title')}
-                    </h2>
-                    <button onClick={resetAndClose} className="close-x"><X size={20} /></button>
-                </div>
+  const pay = async () => {
+    setBusy(true);
+    try {
+      const result = await onComplete({ ...info, payment_method: method });
+      if (result?.type === 'iban') {
+        setIbanOrder(result.orderId);
+        setStep('iban-done');
+      }
+      // shopier: sayfa Shopier'a yönlendirilir
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setBusy(false);
+    }
+  };
 
-                {step === 1 && (
-                    <form onSubmit={handleInfoSubmit} className="block-form">
-                        <div className="input-block">
-                            <label className="cyber-font">{t('checkout.name_label')}</label>
-                            <div className="input-wrapper">
-                                <User size={16} />
-                                <input
-                                    type="text"
-                                    required
-                                    placeholder={t('checkout.name_label')}
-                                    value={customerInfo.name}
-                                    onChange={e => setCustomerInfo({ ...customerInfo, name: e.target.value })}
-                                />
-                            </div>
-                        </div>
+  const close = () => !busy && onClose();
 
-                        <div className="input-block">
-                            <label className="cyber-font">{t('checkout.contact_label')}</label>
-                            <div className="input-wrapper">
-                                <MessageSquare size={16} />
-                                <input
-                                    type="text"
-                                    required
-                                    placeholder={t('checkout.contact_label')}
-                                    value={customerInfo.contact}
-                                    onChange={e => setCustomerInfo({ ...customerInfo, contact: e.target.value })}
-                                />
-                            </div>
-                        </div>
+  return (
+    <div className="co-overlay" onClick={close}>
+      <div className="co-modal" role="dialog" aria-modal="true" aria-label="Ödeme" onClick={(e) => e.stopPropagation()}>
+        <header className="co-head">
+          {step === 'method' ? (
+            <button className="co-icon" onClick={() => setStep('info')} aria-label="Geri"><ArrowLeft size={17} /></button>
+          ) : <span />}
+          <div className="co-steps">
+            <span className={step === 'info' ? 'on' : 'done'}>1. Bilgiler</span>
+            <span className={step === 'method' ? 'on' : step === 'iban-done' ? 'done' : ''}>2. Ödeme</span>
+          </div>
+          <button className="co-icon" onClick={close} aria-label="Kapat"><X size={17} /></button>
+        </header>
 
-                        <button type="submit" className="action-button-large">
-                            {t('checkout.next_phase')} <ArrowLeft style={{ transform: 'rotate(180deg)' }} size={16} />
-                        </button>
-                    </form>
-                )}
-
-                {step === 2 && (
-                    <div className="selection-grid fade-in">
-                        <button className="back-link-capsule" onClick={() => setStep(1)}>
-                            <ArrowLeft size={12} /> {t('checkout.back')}
-                        </button>
-                        <p className="instruction-text">{t('checkout.select_vector')}</p>
-                        <div className="methods-container">
-                            <div className="method-card" onClick={() => { setMethod('paytr'); setStep(3); }}>
-                                <CreditCard size={24} />
-                                <span>Kredi / Banka Kartı</span>
-                                <small>PayTR Güvencesiyle</small>
-                            </div>
-                            <div className="method-card" onClick={() => { setMethod('crypto'); setStep(3); }}>
-                                <Wallet size={24} />
-                                <span>{t('checkout.crypto')}</span>
-                                <small>BTC / ETH / LTC</small>
-                            </div>
-                            <div className="method-card" onClick={() => { setMethod('fiat'); setStep(3); }}>
-                                <CreditCard size={24} />
-                                <span>{t('checkout.manual')}</span>
-                                <small>IBAN / PAPARA</small>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {step === 3 && method && (
-                    <div className="transaction-details fade-in">
-                        <div className="total-block">
-                            <span>{t('checkout.total_due')}</span>
-                            <h3 className="neon-text"><Price usd={totalUsd} /></h3>
-                        </div>
-
-                        <div className="data-card">
-                            <p className="card-label cyber-font">
-                                {method === 'paytr' ? 'KREDİ/BANKA KARTI İLE ÖDEME' : method === 'crypto' ? t('checkout.btc_address') : t('checkout.transfer_data')}
-                            </p>
-                            <div className="data-box">
-                                {method === 'paytr' ? (
-                                    <div className="iban-block">
-                                        <p style={{ fontSize: '0.85rem', color: '#fff', textAlign: 'center', margin: '10px 0' }}>
-                                            Onayla butonuna bastıktan sonra 256-bit SSL korumalı PayTR güvenli ödeme sayfasına yönlendirileceksiniz.
-                                        </p>
-                                    </div>
-                                ) : method === 'crypto' ? (
-                                    <div className="copy-field">
-                                        <code>kullanım dışı...</code>
-                                        <button onClick={() => copyToClipboard('TELEGRAM YADA WHATSAPPDAN ULAŞIN t.me/brxfear')}>
-                                            {copied ? <Check size={16} color="#00ff88" /> : <Copy size={16} />}
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <div className="iban-block">
-                                        <div className="copy-field" style={{ marginBottom: '10px' }}>
-                                            <strong>IBAN:</strong>
-                                            <code>TR12..90</code>
-                                            <button onClick={() => copyToClipboard('TR 1234567890')}>
-                                                {copied ? <Check size={16} color="#00ff88" /> : <Copy size={16} />}
-                                            </button>
-                                        </div>
-                                        <div className="iban-info" style={{ fontSize: '0.8rem', color: '#fff', textAlign: 'left' }}>
-                                            <p><strong>ALICI:</strong> "kullanım dışı"</p>
-                                            <p><strong>PAPARA:</strong> "kullanım dışı"</p>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        <div className="discord-alert-block">
-                            <Shield size={20} />
-                            <p>{t('checkout.discord_alert')}</p>
-                        </div>
-
-                        <div className="modal-footer-actions" style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '15px' }}>
-                            <button onClick={handleFinalize} className="action-button-large finalize" disabled={loading}>
-                                {loading ? 'YÜKLENİYOR...' : t('checkout.confirm')} {!loading && <Send size={16} />}
-                            </button>
-
-                            <button className="back-link-capsule" onClick={() => setStep(2)} style={{ alignSelf: 'center' }}>
-                                {t('checkout.back_selection')}
-                            </button>
-                        </div>
-                    </div>
-                )}
-                {step === 4 && iframeToken && (
-                    <div className="paytr-iframe-container fade-in" style={{ width: '100%', height: '600px', overflow: 'hidden', padding: '10px' }}>
-                        <iframe
-                            src={`https://www.paytr.com/odeme/guvenli/${iframeToken}`}
-                            id="paytriframe"
-                            frameBorder="0"
-                            scrolling="no"
-                            style={{ width: '100%', height: '100%' }}
-                        ></iframe>
-                    </div>
-                )}
-            </div>
+        <div className="co-summary">
+          <div className="co-summary-items">
+            {items.map((i) => (
+              <div key={i.id}>
+                <span>{i.name} <em>· {i.durationLabel}{i.quantity > 1 ? ` × ${i.quantity}` : ''}</em></span>
+                <span>{fmtUsd(i.price * i.quantity)}</span>
+              </div>
+            ))}
+          </div>
+          <div className="co-summary-total">
+            <span>Toplam</span>
+            <strong>{fmtUsd(totalUsd)}</strong>
+          </div>
         </div>
-    );
+
+        {step === 'info' && (
+          <form className="co-body" onSubmit={submitInfo}>
+            <label className="co-field">
+              <span>Ad Soyad</span>
+              <input value={info.name} onChange={set('name')} autoComplete="name" placeholder="Ad Soyad" required />
+            </label>
+            <label className="co-field">
+              <span>E-posta <small>key ve fatura buraya gelir</small></span>
+              <input type="email" value={info.email} onChange={set('email')} autoComplete="email" placeholder="ornek@gmail.com" required />
+            </label>
+            <label className="co-field">
+              <span>Telefon</span>
+              <input type="tel" value={info.phone} onChange={set('phone')} autoComplete="tel" placeholder="05xx xxx xx xx" required />
+            </label>
+            <button className="co-cta" type="submit">Devam et <ArrowRight size={16} /></button>
+          </form>
+        )}
+
+        {step === 'method' && (
+          <div className="co-body">
+            <div className="co-methods" role="radiogroup" aria-label="Ödeme yöntemi">
+              <button role="radio" aria-checked={method === 'shopier'} className={`co-method ${method === 'shopier' ? 'on' : ''}`} onClick={() => setMethod('shopier')}>
+                <CreditCard size={20} />
+                <div>
+                  <strong>Kredi / Banka Kartı</strong>
+                  <span>Shopier güvenli ödeme · 3D Secure · anında onay</span>
+                </div>
+              </button>
+              <button
+                role="radio"
+                aria-checked={method === 'iban'}
+                className={`co-method ${method === 'iban' ? 'on' : ''}`}
+                onClick={() => ibanEnabled && setMethod('iban')}
+                disabled={!ibanEnabled}
+              >
+                <Landmark size={20} />
+                <div>
+                  <strong>Havale / EFT (IBAN)</strong>
+                  <span>{ibanEnabled ? 'Elle onay · dekontu Discord ticket ile ilet' : 'Şu an kullanılamıyor'}</span>
+                </div>
+              </button>
+            </div>
+
+            {method === 'shopier' ? (
+              <p className="co-note"><ShieldCheck size={15} /> “Ödemeye geç” dediğinde Shopier'in güvenli ödeme sayfasına yönlendirileceksin. Ödeme onaylanınca siparişin otomatik işlenir.</p>
+            ) : (
+              <p className="co-note"><Landmark size={15} /> Siparişin oluşturulunca IBAN bilgileri ve sipariş numaran gösterilecek.</p>
+            )}
+
+            <button className="co-cta" onClick={pay} disabled={busy || !items.length}>
+              {busy ? <><Loader2 size={16} className="co-spin" /> İşleniyor…</> : method === 'shopier' ? <>Ödemeye geç · {fmtUsd(totalUsd)}</> : <>Siparişi oluştur · {fmtUsd(totalUsd)}</>}
+            </button>
+          </div>
+        )}
+
+        {step === 'iban-done' && (
+          <div className="co-body">
+            <div className="co-success">
+              <Check size={22} />
+              <div>
+                <strong>Siparişin oluşturuldu</strong>
+                <span>Sipariş no: <code>#{ibanOrder?.slice(-8).toUpperCase()}</code></span>
+              </div>
+            </div>
+            <div className="co-bank">
+              <CopyRow label="IBAN" value={bank?.iban} />
+              <CopyRow label="Alıcı" value={bank?.account_holder} />
+              <CopyRow label="Banka" value={bank?.bank_name} />
+              <CopyRow label="Açıklama" value={`#${ibanOrder?.slice(-8).toUpperCase()}`} />
+            </div>
+            <p className="co-note">
+              {bank?.iban_note || `Toplam ${fmtUsd(totalUsd)} tutarındaki ödemeyi yaptıktan sonra dekontu sipariş numaranla birlikte Discord'da ticket açarak ilet.`}
+            </p>
+            <a className="co-cta" href={DISCORD_URL} target="_blank" rel="noopener noreferrer">
+              <MessageCircle size={16} /> Discord'da ticket aç
+            </a>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 };
 
 export default CheckoutModal;
