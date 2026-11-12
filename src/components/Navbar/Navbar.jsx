@@ -1,65 +1,91 @@
 import React from 'react';
-import { ShoppingCart, LogIn, User, Globe, Shield, Terminal } from 'lucide-react';
+import { ShoppingCart, LogIn, User, ShieldCheck, Flame, MessageCircle } from 'lucide-react';
 import './Navbar.css';
 
-const Navbar = ({ activeSection, onSectionChange, user, onAuthClick, cartCount, onCartClick, language, onLanguageToggle, t }) => {
+const Navbar = ({ activeSection, onSectionChange, user, onAuthClick, cartCount, onCartClick, language, onLanguageToggle }) => {
   return (
-    <nav className="navbar-container">
-      <div className="container nav-content">
-        <div className="nav-logo cyber-font neon-text">
-          BRX.STORE
+    <header className="navbar-fixed-container">
+      <div className="glass-bar nav-inner">
+        {/* Logo */}
+        <div className="nav-brand" onClick={() => onSectionChange('home')}>
+          <div className="brand-logo-gem">
+            <span className="gem-text">R</span>
+          </div>
+          <div className="brand-text">
+            <span className="brand-title">RGX SOFTWARE</span>
+            <span className="brand-tag">PRIVATE</span>
+          </div>
         </div>
 
-        <div className="capsule-nav">
+        {/* Navigation Items */}
+        <nav className="nav-menu">
           <button
-            className={`nav-capsule ${activeSection === 'home' ? 'active' : ''}`}
-            onClick={() => onSectionChange('home')}
+            className={`nav-link ${activeSection === 'home' ? 'active' : ''}`}
+            onClick={() => {
+              onSectionChange('home');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
           >
-            <Globe size={16} /> <span>{t('navbar.home')}</span>
+            Ana Sayfa
           </button>
 
           <button
-            className={`nav-capsule ${activeSection === 'products' ? 'active' : ''}`}
+            className={`nav-link ${activeSection === 'products' ? 'active' : ''}`}
             onClick={() => onSectionChange('products')}
           >
-            <Terminal size={16} /> <span>{t('navbar.products')}</span>
+            Ürünler
           </button>
+
+          <a href="#how-it-works" className="nav-link" onClick={() => onSectionChange('home')}>
+            Nasıl Çalışır?
+          </a>
+
+          <a href="#reviews" className="nav-link" onClick={() => onSectionChange('home')}>
+            Yorumlar
+          </a>
+
+          <a href="#faq" className="nav-link" onClick={() => onSectionChange('home')}>
+            SSS
+          </a>
 
           <a
-            href="https://t.me/brxfear"
+            href="https://discord.gg/dQ5u8TRAxr"
             target="_blank"
             rel="noopener noreferrer"
-            className="nav-capsule"
+            className="nav-link nav-discord-link"
           >
-            <Shield size={16} /> <span>{t('navbar.support')}</span>
+            <MessageCircle size={15} /> Discord
           </a>
-        </div>
+        </nav>
 
+        {/* Right Actions */}
         <div className="nav-actions">
-          <button className="lang-capsule" onClick={onLanguageToggle}>
-            <span className={language === 'tr' ? 'active-lang' : ''}>TR</span>
-            <span className="lang-divider">|</span>
-            <span className={language === 'en' ? 'active-lang' : ''}>EN</span>
-          </button>
+          {/* Status Badge */}
+          <div className="nav-status-badge hidden-sm">
+            <span className="status-dot-green"></span>
+            <span>TÜM SİSTEMLER AKTİF</span>
+          </div>
 
+          {/* User Auth */}
           {user ? (
-            <div className="user-capsule">
-              <User size={16} />
-              <span className="user-email">{user.email.split('@')[0]}</span>
+            <div className="user-button">
+              <User size={15} />
+              <span className="user-email-text">{user.email.split('@')[0]}</span>
             </div>
           ) : (
-            <button className="auth-capsule" onClick={onAuthClick}>
-              <LogIn size={16} /> <span>{t('navbar.auth')}</span>
+            <button className="auth-btn" onClick={onAuthClick}>
+              <LogIn size={15} /> <span>Giriş Yap</span>
             </button>
           )}
 
-          <button className="cart-capsule" onClick={onCartClick}>
-            <ShoppingCart size={18} />
-            {cartCount > 0 && <span className="capsule-badge">{cartCount}</span>}
+          {/* Cart Capsule */}
+          <button className="cart-btn" onClick={onCartClick} aria-label="Sepet">
+            <ShoppingCart size={17} />
+            {cartCount > 0 && <span className="cart-badge">{cartCount}</span>}
           </button>
         </div>
       </div>
-    </nav>
+    </header>
   );
 };
 

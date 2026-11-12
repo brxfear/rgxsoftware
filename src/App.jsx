@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster, toast } from 'react-hot-toast';
+import { Sparkles, Shield, Zap, ArrowRight, CreditCard, ChevronRight, CheckCircle2 } from 'lucide-react';
+
 import Navbar from './components/Navbar/Navbar';
 import TabSwitcher from './components/TabSwitcher/TabSwitcher';
 import ProductCard from './components/ProductCard/ProductCard';
@@ -10,13 +12,18 @@ import Cart from './components/Cart/Cart';
 import CheckoutModal from './components/Checkout/CheckoutModal';
 import ProductModal from './components/ProductCard/ProductModal';
 import AuthModal from './components/Auth/AuthModal';
+import FAQSection from './components/FAQ/FAQSection';
+import ReviewsSection from './components/Reviews/ReviewsSection';
+import HowItWorksSection from './components/HowItWorks/HowItWorksSection';
+import DiscordBanner from './components/Discord/DiscordBanner';
+
 import { supabase } from './lib/supabaseClient';
 import { useCartStore } from './store/useCartStore';
 import { triggerConfetti } from './utils/celebration';
 import { translations } from './utils/translations';
 import './App.css';
 
-// Protected Route Shield
+// Admin Shield
 const ProtectedAdmin = ({ children }) => {
   const [isAuth, setIsAuth] = useState(sessionStorage.getItem('admin_session') === 'active');
 
@@ -30,64 +37,6 @@ const ProtectedAdmin = ({ children }) => {
   return children;
 };
 
-const DigitalSnow = () => {
-  const [particles, setParticles] = useState([]);
-
-  useEffect(() => {
-    const chars = "01/*-+$#%&@<>[]{}";
-    const particleCount = 80;
-    const initialParticles = Array.from({ length: particleCount }).map((_, i) => ({
-      id: i,
-      x: Math.random() * 100,
-      delay: Math.random() * 10,
-      duration: 5 + Math.random() * 10,
-      char: chars[Math.floor(Math.random() * chars.length)],
-      size: 8 + Math.random() * 12
-    }));
-    setParticles(initialParticles);
-  }, []);
-
-  return (
-    <div className="digital-snow">
-      {particles.map(p => (
-        <span
-          key={p.id}
-          className="snow-particle"
-          style={{
-            left: `${p.x}%`,
-            animationDelay: `${p.delay}s`,
-            animationDuration: `${p.duration}s`,
-            fontSize: `${p.size}px`
-          }}
-        >
-          {p.char}
-        </span>
-      ))}
-    </div>
-  );
-};
-
-const CyberCursor = () => {
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-
-  useEffect(() => {
-    const handleMouseMove = (e) => {
-      setPosition({ x: e.clientX, y: e.clientY });
-    };
-    window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, []);
-
-  return (
-    <div className="custom-cursor-container">
-      <div 
-        className="cursor-core" 
-        style={{ left: `${position.x}px`, top: `${position.y}px` }} 
-      />
-    </div>
-  );
-};
-
 function Store() {
   const [language, setLanguage] = useState(localStorage.getItem('brx_lang') || 'tr');
   const [activeSection, setActiveSection] = useState('home');
@@ -96,12 +45,20 @@ function Store() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Translation helper
+  // Modal & User states
+  const [user, setUser] = useState(null);
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+
+  const { cart, addItem, fetchCart } = useCartStore();
+
   const t = (path) => {
     const keys = path.split('.');
     let result = translations[language];
     for (const key of keys) {
-      if (result[key]) result = result[key];
+      if (result && result[key]) result = result[key];
       else return path;
     }
     return result;
@@ -112,15 +69,6 @@ function Store() {
     setLanguage(newLang);
     localStorage.setItem('brx_lang', newLang);
   };
-
-  // UI States
-  const [user, setUser] = useState(null);
-  const [isAuthOpen, setIsAuthOpen] = useState(false);
-  const [isCartOpen, setIsCartOpen] = useState(false);
-  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState(null);
-
-  const { cart, addItem, fetchCart } = useCartStore();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -139,145 +87,192 @@ function Store() {
 
     fetchInitialData();
 
-    const categorySubscription = supabase
-      .channel('public:categories')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, () => fetchCategories())
-      .subscribe();
-
-    const productSubscription = supabase
-      .channel('public:products')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => fetchProducts())
-      .subscribe();
-
     return () => {
-      subscription.unsubscribe();
-      supabase.removeChannel(categorySubscription);
-      supabase.removeChannel(productSubscription);
+      subscription?.unsubscribe();
     };
   }, []);
 
   const fetchInitialData = async () => {
     setLoading(true);
-    try {
-      await Promise.all([fetchCategories(), fetchProducts()]);
-    } catch (error) {
-      console.error("Sync Error:", error);
-    } finally {
-      setLoading(false);
-    }
+    await Promise.all([fetchCategories(), fetchProducts()]);
+    setLoading(false);
   };
 
   const fetchCategories = async () => {
-    const { data } = await supabase.from('categories').select('*').order('name');
-    if (data) {
+    const { data, error } = await supabase.from('categories').select('*').order('name');
+    if (!error && data) {
       setCategories(data);
-      if (data.length > 0) {
-        setActiveTab(prev => {
-          if (!prev || !data.find(c => c.id === prev)) return data[0].id;
-          return prev;
-        });
-      }
     }
   };
 
   const fetchProducts = async () => {
-    const { data } = await supabase.from('products').select('*');
-    if (data) setProducts(data);
+    const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false });
+    if (!error && data) {
+      setProducts(data);
+    }
   };
 
-  const filteredProducts = products.filter(p => p.category_id === activeTab);
+  const filteredProducts = activeTab
+    ? products.filter(p => p.category_id === activeTab)
+    : products;
+
+  // Öne çıkan ürünler (ilk 3-4 ürün)
+  const featuredProducts = products.slice(0, 4);
 
   return (
-    <div className="app">
+    <div className="main-wrapper">
+      {/* Mitamers Style Glass Header */}
       <Navbar
         activeSection={activeSection}
         onSectionChange={setActiveSection}
         user={user}
         onAuthClick={() => setIsAuthOpen(true)}
-        cartCount={cart.reduce((sum, item) => sum + item.quantity, 0)}
+        cartCount={cart.reduce((total, item) => total + item.quantity, 0)}
         onCartClick={() => setIsCartOpen(true)}
         language={language}
         onLanguageToggle={toggleLanguage}
-        t={t}
       />
 
-      <main className="container main-layout">
-        {activeSection === 'home' && (
-          <section className="home-view fade-in">
-            <header className="hero-section">
-              <h1 className="hero-title neon-text cyber-font">{t('hero.title')}</h1>
-              <div className="hero-content-wrapper">
-                <section className="hero-block">
-                  <h2 className="neon-text cyber-font">{t('hero.brand_title')}</h2>
-                  <p>{t('hero.brand_desc')}</p>
-                </section>
+      <main>
+        {/* ================= HERO SECTION ================= */}
+        <section className="hero-stage">
+          <div className="hero-beam" aria-hidden="true"></div>
+          <div className="hero-halo" aria-hidden="true"></div>
 
-                <section className="hero-block">
-                  <h3 className="cyber-font">{t('hero.who_we_are_title')}</h3>
-                  <p>{t('hero.who_we_are_desc')}</p>
-                </section>
+          <div className="container relative z-10">
+            <div className="hero-pill-badge">
+              <span className="status-dot-green"></span>
+              <span>7/24 OTOMATİK TESLİMAT & GÜNCEL KERNEL DRIVER</span>
+            </div>
 
-                <section className="hero-block grid-details">
-                  <div className="detail-item">
-                    <h4 className="neon-text cyber-font">{t('hero.why_us_title')}</h4>
-                    <p><strong>{t('hero.why_us_security')}:</strong> {t('hero.why_us_security_desc')}</p>
-                  </div>
-                  <div className="detail-item">
-                    <p><strong>{t('hero.why_us_delivery')}:</strong> {t('hero.why_us_delivery_desc')}</p>
-                  </div>
-                  <div className="detail-item">
-                    <p><strong>{t('hero.why_us_updates')}:</strong> {t('hero.why_us_updates_desc')}</p>
-                  </div>
-                  <div className="detail-item">
-                    <p><strong>{t('hero.why_us_support')}:</strong> {t('hero.why_us_support_desc')}</p>
-                  </div>
-                </section>
+            <h1 className="hero-heading">
+              <span className="hero-title">RGX Software</span> <br />
+              <span className="hero-accent">Private Hileler & Çözümler</span>
+            </h1>
 
-                <section className="hero-block">
-                  <h3 className="cyber-font">{t('hero.vision_title')}</h3>
-                  <p>{t('hero.vision_desc')}</p>
-                </section>
-              </div>
-              <button className="neon-button hero-cta" onClick={() => setActiveSection('products')}>
-                {t('hero.cta')}
+            <p className="hero-subtext">
+              Valorant, CS2, Rust ve daha pek çok popüler oyun için donanım banı riski olmadan, 
+              kernel seviyesinde undetected aimbot, ESP ve HWID Spoofer çözümleri.
+            </p>
+
+            <div className="hero-cta-group">
+              <button 
+                className="btn-primary" 
+                onClick={() => {
+                  const el = document.getElementById('products-section');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  else setActiveSection('products');
+                }}
+              >
+                <span>Ürünleri İncele</span>
+                <ArrowRight size={17} />
               </button>
-            </header>
-          </section>
-        )}
 
-        {activeSection === 'products' && (
-          <section className="products-view fade-in">
-            <div className="container">
-              <TabSwitcher
-                games={categories}
-                activeTab={activeTab}
-                onTabChange={setActiveTab}
-              />
+              <a 
+                href="https://discord.gg/dQ5u8TRAxr" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="btn-secondary"
+              >
+                <span>Discord Topluluğu</span>
+              </a>
+            </div>
 
-              {loading ? (
-                <div className="loading-state cyber-font">{t('products.syncing')}</div>
+            {/* Mitamers Hero Stats Bar */}
+            <div className="hero-stats-bar">
+              <div className="stat-item">
+                <span className="stat-num">%100</span>
+                <span className="stat-label">Undetected Sistem</span>
+              </div>
+              <div className="stat-divider"></div>
+              <div className="stat-item">
+                <span className="stat-num">Anında</span>
+                <span className="stat-label">Otomatik Key Teslimi</span>
+              </div>
+              <div className="stat-divider"></div>
+              <div className="stat-item">
+                <span className="stat-num">7/24</span>
+                <span className="stat-label">Türkçe Canlı Destek</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ================= PAYMENT BADGES ================= */}
+        <div className="container">
+          <div className="payment-bar">
+            <div className="payment-item">
+              <CreditCard size={18} className="text-cyan" />
+              <span>Kredi & Banka Kartı (3D Secure)</span>
+            </div>
+            <div className="payment-item">
+              <Zap size={18} className="text-cyan" />
+              <span>Anında Otomatik Teslimat</span>
+            </div>
+            <div className="payment-item">
+              <Shield size={18} className="text-cyan" />
+              <span>Tüm Bankalar & Havale / EFT</span>
+            </div>
+            <div className="payment-item">
+              <Sparkles size={18} className="text-cyan" />
+              <span>Kripto Para (USDT / BTC / ETH)</span>
+            </div>
+          </div>
+        </div>
+
+        {/* ================= PRODUCTS & GAMES SECTION ================= */}
+        <section id="products-section" className="container" style={{ paddingTop: '70px', paddingBottom: '70px' }}>
+          <div className="section-header-flex">
+            <div>
+              <span className="section-tag">ÖNE ÇIKAN VE TÜM YAZILIMLAR</span>
+              <h2 className="section-title">Oyununu Seç, Ürünleri İncele</h2>
+              <p className="section-desc">Gelişmiş filtreleme ile ihtiyacın olan oyunu seç, süre ve planları karşılaştır.</p>
+            </div>
+          </div>
+
+          <TabSwitcher
+            games={categories}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+          />
+
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '60px 0', color: '#8b95a7' }}>
+              Yazılımlar ve güncel durumlar yükleniyor...
+            </div>
+          ) : (
+            <div className="product-grid">
+              {filteredProducts.length > 0 ? (
+                filteredProducts.map(product => (
+                  <ProductCard
+                    key={product.id}
+                    product={{ ...product, image: product.image_url }}
+                    onClick={(p) => setSelectedProduct(p)}
+                  />
+                ))
               ) : (
-                <div className="product-grid">
-                  {filteredProducts.length > 0 ? (
-                    filteredProducts.map(product => (
-                      <ProductCard
-                        key={product.id}
-                        product={{ ...product, image: product.image_url }}
-                        onClick={(p) => setSelectedProduct(p)}
-                      />
-                    ))
-                  ) : (
-                    <div className="no-products glass-panel cyber-font">
-                      {t('products.nothing_found')}
-                    </div>
-                  )}
+                <div style={{ textAlign: 'center', padding: '60px 0', color: '#8b95a7', gridColumn: '1 / -1' }}>
+                  Bu kategoride henüz aktif ürün bulunmuyor.
                 </div>
               )}
             </div>
-          </section>
-        )}
+          )}
+        </section>
+
+        {/* ================= NASIL ÇALIŞIYORUZ ================= */}
+        <HowItWorksSection />
+
+        {/* ================= MÜŞTERİ YORUMLARI ================= */}
+        <ReviewsSection />
+
+        {/* ================= SIKÇA SORULAN SORULAR ================= */}
+        <FAQSection />
+
+        {/* ================= DISCORD BANNER ================= */}
+        <DiscordBanner />
       </main>
 
+      {/* ================= MODALS ================= */}
       <Cart
         isOpen={isCartOpen}
         onClose={() => setIsCartOpen(false)}
@@ -296,7 +291,6 @@ function Store() {
         onComplete={async (data) => {
           const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
-          // Her ürünün süre ve fiyat detayını sipariş JSON'una ekle
           const detailedItems = cart.map(item => ({
             product_id: item.product_id,
             name: item.name,
@@ -308,24 +302,22 @@ function Store() {
           }));
 
           if (data.payment_method === 'paytr') {
-            // Call Supabase Edge Function
             const { data: paytrData, error } = await supabase.functions.invoke('create-paytr-session', {
               body: {
                 items: detailedItems,
                 total_amount: totalAmount,
                 customer_name: data.name,
-                customer_email: user?.email || 'guest@brx.site',
+                customer_email: user?.email || 'guest@rgxsoftware.com',
                 customer_phone: data.contact
               }
             });
 
             if (error || !paytrData?.token) {
-              toast.error(t('common.error_order') + ' ' + (error?.message || 'PayTR Token Error'));
+              toast.error('Ödeme başlatılamadı: ' + (error?.message || 'Token Hatası'));
               throw new Error('Payment init failed');
             }
-            return paytrData.token; // Return token to display iframe
+            return paytrData.token;
           } else {
-            // Manual order logic
             const { error } = await supabase.from('orders').insert([{
               user_id: user?.id || null,
               total_amount: totalAmount,
@@ -338,13 +330,13 @@ function Store() {
             }]);
 
             if (error) {
-              toast.error(t('common.error_order') + error.message);
+              toast.error('Sipariş oluşturulamadı: ' + error.message);
               throw error;
             } else {
               setIsCheckoutOpen(false);
               triggerConfetti();
               await useCartStore.getState().clearCart();
-              toast.success(t('common.success_order'), { duration: 5000 });
+              toast.success('Siparişiniz başarıyla alındı! Key ve kurulum detayları iletiliyor.', { duration: 5000 });
               return 'success';
             }
           }
@@ -360,8 +352,11 @@ function Store() {
         onAddToCart={(p) => addItem(p)}
       />
 
+      {/* Footer */}
       <footer className="main-footer">
-        <p>&copy; 2026 BRX STORE - DESIGNED FOR BRXFEAR</p>
+        <div className="container">
+          <p>&copy; 2026 RGX SOFTWARE. Tüm Hakları Saklıdır.</p>
+        </div>
       </footer>
     </div>
   );
@@ -371,8 +366,6 @@ function App() {
   return (
     <Router>
       <Toaster position="bottom-right" />
-      <DigitalSnow />
-      <CyberCursor />
       <Routes>
         <Route path="/" element={<Store />} />
         <Route path="/admin" element={

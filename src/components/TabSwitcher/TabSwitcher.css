@@ -1,59 +1,52 @@
-.tab-switcher-container {
-    margin: 120px 0 40px;
-    overflow-x: auto;
-    padding-bottom: 10px;
+.tab-switcher-wrapper {
+  margin: 20px 0 35px 0;
+  display: flex;
+  justify-content: flex-start;
+  overflow-x: auto;
+  padding-bottom: 8px;
 }
 
-.tab-switcher-container::-webkit-scrollbar {
-    height: 4px;
+.tab-switcher-scroll {
+  display: inline-flex;
+  gap: 8px;
+  background: rgba(16, 24, 38, 0.6);
+  backdrop-filter: blur(12px);
+  padding: 6px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.tab-switcher {
-    display: flex;
-    padding: 8px;
-    width: max-content;
-    min-width: 100%;
-    justify-content: center;
-    gap: 10px;
+.tab-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: #8b95a7;
+  padding: 8px 18px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  transition: all 0.2s ease;
 }
 
-.tab-item {
-    background: transparent;
-    border: none;
-    color: var(--text-secondary);
-    padding: 12px 30px;
-    border-radius: 12px;
-    cursor: pointer;
-    transition: var(--transition);
-    font-weight: 700;
-    font-size: 0.9rem;
-    position: relative;
-    white-space: nowrap;
+.tab-btn:hover {
+  color: #f5f7fa;
+  background: rgba(255, 255, 255, 0.04);
 }
 
-.tab-item:hover {
-    color: #fff;
-    background: rgba(255, 255, 255, 0.05);
+.tab-btn.active {
+  background: rgba(26, 200, 242, 0.12);
+  color: #7de4ff;
+  border-color: rgba(26, 200, 242, 0.3);
+  box-shadow: 0 4px 15px rgba(26, 200, 242, 0.15);
 }
 
-.tab-item.active {
-    color: #fff;
-    background: rgba(188, 19, 254, 0.15);
-}
-
-.tab-glow {
-    position: absolute;
-    bottom: 0;
-    left: 20%;
-    right: 20%;
-    height: 2px;
-    background: var(--neon-purple);
-    box-shadow: 0 0 15px var(--neon-purple);
-    border-radius: 2px;
-}
-
-@media (max-width: 768px) {
-    .tab-switcher {
-        justify-content: flex-start;
-    }
+.tab-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #1ac8f2;
 }

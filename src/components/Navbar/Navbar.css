@@ -1,148 +1,206 @@
-.navbar-container {
-    position: fixed;
-    top: 20px;
-    left: 0;
-    width: 100%;
-    z-index: 1000;
+.navbar-fixed-container {
+  position: fixed;
+  top: 14px;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  padding: 0 20px;
+  display: flex;
+  justify-content: center;
 }
 
-.nav-content {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0 20px;
+.nav-inner {
+  width: 100%;
+  max-width: 1240px;
+  height: 60px;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px 0 20px;
+  transition: all 0.3s ease;
 }
 
-.nav-logo {
-    font-size: 1.2rem;
-    font-weight: 900;
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  user-select: none;
 }
 
-.capsule-nav {
-    display: flex;
-    background: rgba(18, 18, 18, 0.8);
-    backdrop-filter: blur(15px);
-    border: 1px solid rgba(188, 19, 254, 0.2);
-    padding: 6px;
-    border-radius: 50px;
-    gap: 5px;
+.brand-logo-gem {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #1ac8f2 0%, #3b82f6 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 16px rgba(26, 200, 242, 0.4);
 }
 
-.nav-capsule {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 20px;
-    border-radius: 50px;
-    border: none;
-    background: transparent;
-    color: rgba(255, 255, 255, 0.6);
-    font-size: 0.75rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    text-decoration: none;
+.gem-text {
+  font-weight: 900;
+  color: #030712;
+  font-size: 17px;
+  font-family: inherit;
 }
 
-.nav-capsule:hover {
-    color: #fff;
-    background: rgba(188, 19, 254, 0.1);
+.brand-text {
+  display: flex;
+  flex-direction: column;
 }
 
-.nav-capsule.active {
-    background: var(--neon-purple);
-    color: #fff;
-    box-shadow: 0 0 15px rgba(188, 19, 254, 0.4);
+.brand-title {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: #f5f7fa;
+}
+
+.brand-tag {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: #1ac8f2;
+}
+
+.nav-menu {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.nav-link {
+  background: transparent;
+  border: none;
+  color: #8b95a7;
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.nav-link:hover {
+  color: #f5f7fa;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.nav-link.active {
+  color: #f5f7fa;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.nav-discord-link {
+  color: #7289da;
+}
+.nav-discord-link:hover {
+  color: #99aab5;
 }
 
 .nav-actions {
-    display: flex;
-    gap: 10px;
-    align-items: center;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
-.auth-capsule,
-.user-capsule,
-.cart-capsule {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 20px;
-    border-radius: 50px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    background: rgba(18, 18, 18, 0.8);
-    backdrop-filter: blur(15px);
-    color: #fff;
-    font-size: 0.75rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    position: relative;
+.nav-status-badge {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 12px;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #34d399;
+  letter-spacing: 0.03em;
 }
 
-.auth-capsule:hover,
-.cart-capsule:hover {
-    border-color: var(--neon-purple);
-    background: rgba(188, 19, 254, 0.1);
+.auth-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #f5f7fa;
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
 }
 
-.user-capsule {
-    color: var(--neon-purple);
-    border-color: rgba(188, 19, 254, 0.3);
+.auth-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
-.capsule-badge {
-    position: absolute;
-    top: -5px;
-    right: -5px;
-    background: var(--neon-purple);
-    color: #fff;
-    font-size: 0.6rem;
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 0 10px var(--neon-purple);
+.user-button {
+  background: rgba(26, 200, 242, 0.1);
+  border: 1px solid rgba(26, 200, 242, 0.3);
+  color: #7de4ff;
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
-.lang-capsule {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    padding: 10px 15px;
-    border-radius: 50px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    background: rgba(18, 18, 18, 0.8);
-    backdrop-filter: blur(15px);
-    color: #444;
-    font-size: 0.65rem;
-    font-weight: 900;
-    cursor: pointer;
-    transition: all 0.3s ease;
+.cart-btn {
+  position: relative;
+  background: linear-gradient(135deg, #1ac8f2 0%, #3b82f6 100%);
+  border: none;
+  color: #030712;
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 10px rgba(26, 200, 242, 0.3);
 }
 
-.lang-capsule:hover {
-    border-color: rgba(188, 19, 254, 0.3);
+.cart-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 15px rgba(26, 200, 242, 0.45);
 }
 
-.active-lang {
-    color: var(--neon-purple);
-    text-shadow: 0 0 10px var(--neon-purple);
+.cart-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: #ef4444;
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.8);
 }
 
-.lang-divider {
-    color: rgba(255, 255, 255, 0.1);
-    font-weight: 100;
-}
-
-@media (max-width: 768px) {
-    .nav-logo {
-        display: none;
-    }
-
-    .capsule-nav {
-        transform: scale(0.9);
-    }
+@media (max-width: 900px) {
+  .nav-menu {
+    display: none;
+  }
+  .hidden-sm {
+    display: none;
+  }
 }

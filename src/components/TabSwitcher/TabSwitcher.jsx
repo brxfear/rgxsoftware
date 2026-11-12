@@ -2,22 +2,29 @@ import React from 'react';
 import './TabSwitcher.css';
 
 const TabSwitcher = ({ games, activeTab, onTabChange }) => {
-    return (
-        <div className="tab-switcher-container">
-            <div className="tab-switcher glass-panel">
-                {games.map((game) => (
-                    <button
-                        key={game.id}
-                        className={`tab-item cyber-font ${activeTab === game.id ? 'active' : ''}`}
-                        onClick={() => onTabChange(game.id)}
-                    >
-                        {game.name}
-                        {activeTab === game.id && <div className="tab-glow"></div>}
-                    </button>
-                ))}
-            </div>
-        </div>
-    );
+  return (
+    <div className="tab-switcher-wrapper">
+      <div className="tab-switcher-scroll">
+        <button
+          className={`tab-btn ${activeTab === '' ? 'active' : ''}`}
+          onClick={() => onTabChange('')}
+        >
+          <span className="tab-dot"></span>
+          <span>Tüm Oyunlar</span>
+        </button>
+
+        {games.map((game) => (
+          <button
+            key={game.id}
+            className={`tab-btn ${activeTab === game.id ? 'active' : ''}`}
+            onClick={() => onTabChange(game.id)}
+          >
+            <span className="tab-game-name">{game.name}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 };
 
 export default TabSwitcher;
