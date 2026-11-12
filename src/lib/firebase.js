@@ -18,6 +18,3 @@ if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
-
-// Google ile giriş Firebase konsolunda açıldıktan sonra .env'de VITE_ENABLE_GOOGLE_LOGIN=true yap.
-export const GOOGLE_LOGIN_ENABLED = import.meta.env.VITE_ENABLE_GOOGLE_LOGIN === 'true';

@@ -3,10 +3,6 @@ import { Link } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import {
   collection,
-  doc,
-  addDoc,
-  updateDoc,
-  deleteDoc,
   onSnapshot,
   query,
   orderBy,
@@ -34,11 +30,14 @@ import {
   Clock,
   CheckCircle2,
   Menu,
+  UserCog,
+  ScrollText,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { auth, db } from '../../lib/firebase';
 import { toDate, getStartPrice } from '../../lib/db';
 import { fileToCompressedDataUrl } from './imageUtils';
+import { loggedWrite, adminIdForEmail, logAdminLogin } from '../../lib/adminLog';
 import './AdminDashboard.css';
 
 /* ------------------------------------------------------------------ */
@@ -80,6 +79,29 @@ const slugify = (s) =>
 
 const docBytes = (obj) => new Blob([JSON.stringify(obj)]).size;
 const MAX_DOC_BYTES = 950 * 1024;
+
+const FIELD_LABELS = {
+  name: 'ad', description: 'açıklama', details: 'detaylar', category_id: 'kategori',
+  price_1day: '1 gün fiyatı', price_7day: '7 gün fiyatı', price_30day: '30 gün fiyatı', price_lifetime: 'sınırsız fiyatı',
+  image_url: 'kapak görseli', video_url: 'video', extra_images: 'ek görseller', is_available: 'satış durumu', slug: 'slug',
+};
+
+/** Değişen alanları okunur bir özete çevirir (görseller için sadece "değişti"). */
+const changeSummary = (before = {}, after = {}) => {
+  const parts = [];
+  Object.keys(FIELD_LABELS).forEach((k) => {
+    if (!(k in after)) return;
+    const a = before[k];
+    const b = after[k];
+    if (JSON.stringify(a ?? '') === JSON.stringify(b ?? '')) return;
+    if (['image_url', 'extra_images', 'details', 'description'].includes(k)) parts.push(`${FIELD_LABELS[k]} değişti`);
+    else if (k === 'is_available') parts.push(b ? 'satışa açıldı' : 'gizlendi');
+    else parts.push(`${FIELD_LABELS[k]}: ${a ?? '—'} → ${b ?? '—'}`);
+  });
+  return parts.join(', ') || 'değişiklik yok';
+};
+
+const orderLabel = (o) => `#${(o.merchant_oid || o.id).slice(-6)} (${o.customer_name || 'isimsiz'}, ${tl(o.total_amount)})`;
 
 const useCollection = (path, order = 'created_at', dir = 'desc', max = 500) => {
   const [rows, setRows] = useState([]);
@@ -236,7 +258,7 @@ const Overview = ({ orders, products, categories, go }) => {
 /* ------------------------------------------------------------------ */
 /* Siparişler                                                          */
 /* ------------------------------------------------------------------ */
-const Orders = ({ orders, initialFilter }) => {
+const Orders = ({ orders, initialFilter, me }) => {
   const [filter, setFilter] = useState(initialFilter || 'all');
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState(null);
@@ -258,19 +280,26 @@ const Orders = ({ orders, initialFilter }) => {
     return hay.includes(search.toLowerCase());
   });
 
-  const setStatus = async (id, status) => {
+  const setStatus = async (o, status) => {
     try {
-      await updateDoc(doc(db, 'orders', id), { status, updated_at: serverTimestamp() });
+      await loggedWrite({
+        me, mode: 'update', collectionName: 'orders', id: o.id, targetType: 'order', action: 'status',
+        data: { status, updated_at: serverTimestamp() },
+        summary: `Sipariş ${orderLabel(o)} durumu: ${statusMeta(o.status).label} → ${statusMeta(status).label}`,
+      });
       toast.success(`Durum: ${statusMeta(status).label}`);
     } catch (err) {
       toast.error('Güncellenemedi: ' + err.code);
     }
   };
 
-  const remove = async (id) => {
+  const remove = async (o) => {
     if (!confirm('Bu sipariş kalıcı olarak silinsin mi?')) return;
     try {
-      await deleteDoc(doc(db, 'orders', id));
+      await loggedWrite({
+        me, mode: 'delete', collectionName: 'orders', id: o.id, current: o, targetType: 'order',
+        summary: `Sipariş ${orderLabel(o)} silindi`,
+      });
       toast.success('Sipariş silindi');
     } catch (err) {
       toast.error('Silinemedi: ' + err.code);
@@ -347,14 +376,14 @@ const Orders = ({ orders, initialFilter }) => {
                           <button
                             key={s.value}
                             className={`adm-chip adm-chip-${s.tone} ${o.status === s.value ? 'on' : ''}`}
-                            onClick={() => setStatus(o.id, s.value)}
+                            onClick={() => setStatus(o, s.value)}
                             disabled={o.status === s.value}
                           >
                             {s.label}
                           </button>
                         ))}
                       </div>
-                      <button className="adm-link-danger" onClick={() => remove(o.id)}>
+                      <button className="adm-link-danger" onClick={() => remove(o)}>
                         <Trash2 size={14} /> Siparişi sil
                       </button>
                     </div>
@@ -389,7 +418,7 @@ const EMPTY_PRODUCT = {
   is_available: true,
 };
 
-const ProductForm = ({ initial, categories, onClose }) => {
+const ProductForm = ({ initial, categories, onClose, me }) => {
   const [form, setForm] = useState(() => ({
     ...EMPTY_PRODUCT,
     ...initial,
@@ -449,11 +478,21 @@ const ProductForm = ({ initial, categories, onClose }) => {
 
     setSaving(true);
     try {
+      const catName = (id) => categories.find((c) => c.id === id)?.name || id;
       if (initial?.id) {
-        await updateDoc(doc(db, 'products', initial.id), data);
+        const before = { ...initial, category_id: catName(initial.category_id) };
+        const after = { ...data, category_id: catName(data.category_id) };
+        await loggedWrite({
+          me, mode: 'update', collectionName: 'products', id: initial.id, targetType: 'product', data,
+          summary: `Ürün "${data.name}" güncellendi: ${changeSummary(before, after)}`,
+        });
         toast.success('Ürün güncellendi');
       } else {
-        await addDoc(collection(db, 'products'), { ...data, created_at: serverTimestamp() });
+        await loggedWrite({
+          me, mode: 'create', collectionName: 'products', targetType: 'product',
+          data: { ...data, created_at: serverTimestamp() },
+          summary: `Ürün "${data.name}" eklendi (${catName(data.category_id)}, başlangıç ${tl(Math.min(...prices.filter((p) => p > 0)))})`,
+        });
         toast.success('Ürün eklendi');
       }
       onClose();
@@ -555,7 +594,7 @@ const ProductForm = ({ initial, categories, onClose }) => {
   );
 };
 
-const Products = ({ products, categories }) => {
+const Products = ({ products, categories, me }) => {
   const [editing, setEditing] = useState(null);
   const [search, setSearch] = useState('');
   const [cat, setCat] = useState('');
@@ -567,7 +606,12 @@ const Products = ({ products, categories }) => {
 
   const toggle = async (p) => {
     try {
-      await updateDoc(doc(db, 'products', p.id), { is_available: p.is_available === false });
+      const next = p.is_available === false;
+      await loggedWrite({
+        me, mode: 'update', collectionName: 'products', id: p.id, targetType: 'product',
+        data: { is_available: next },
+        summary: `Ürün "${p.name}" ${next ? 'satışa açıldı' : 'gizlendi'}`,
+      });
     } catch (err) {
       toast.error('Güncellenemedi: ' + err.code);
     }
@@ -576,7 +620,10 @@ const Products = ({ products, categories }) => {
   const remove = async (p) => {
     if (!confirm(`"${p.name}" silinsin mi? Bu işlem geri alınamaz.`)) return;
     try {
-      await deleteDoc(doc(db, 'products', p.id));
+      await loggedWrite({
+        me, mode: 'delete', collectionName: 'products', id: p.id, current: p, targetType: 'product',
+        summary: `Ürün "${p.name}" silindi`,
+      });
       toast.success('Ürün silindi');
     } catch (err) {
       toast.error('Silinemedi: ' + err.code);
@@ -652,7 +699,7 @@ const Products = ({ products, categories }) => {
         categories.length > 0 && <Empty>Ürün bulunamadı.</Empty>
       )}
 
-      {editing && <ProductForm initial={editing} categories={categories} onClose={() => setEditing(null)} />}
+      {editing && <ProductForm initial={editing} categories={categories} me={me} onClose={() => setEditing(null)} />}
     </section>
   );
 };
@@ -660,7 +707,7 @@ const Products = ({ products, categories }) => {
 /* ------------------------------------------------------------------ */
 /* Kategoriler                                                         */
 /* ------------------------------------------------------------------ */
-const Categories = ({ categories, products }) => {
+const Categories = ({ categories, products, me }) => {
   const empty = { name: '', slug: '', image_url: '' };
   const [form, setForm] = useState(empty);
   const [editId, setEditId] = useState(null);
@@ -674,10 +721,19 @@ const Categories = ({ categories, products }) => {
     setSaving(true);
     try {
       if (editId) {
-        await updateDoc(doc(db, 'categories', editId), { ...data, updated_at: serverTimestamp() });
+        const before = categories.find((c) => c.id === editId) || {};
+        await loggedWrite({
+          me, mode: 'update', collectionName: 'categories', id: editId, targetType: 'category',
+          data: { ...data, updated_at: serverTimestamp() },
+          summary: `Kategori "${data.name}" güncellendi: ${changeSummary(before, data)}`,
+        });
         toast.success('Kategori güncellendi');
       } else {
-        await addDoc(collection(db, 'categories'), { ...data, created_at: serverTimestamp() });
+        await loggedWrite({
+          me, mode: 'create', collectionName: 'categories', targetType: 'category',
+          data: { ...data, created_at: serverTimestamp() },
+          summary: `Kategori "${data.name}" eklendi`,
+        });
         toast.success('Kategori eklendi');
       }
       setForm(empty);
@@ -694,7 +750,10 @@ const Categories = ({ categories, products }) => {
     if (count) return toast.error(`Bu kategoride ${count} ürün var. Önce ürünleri taşı veya sil.`);
     if (!confirm(`"${c.name}" kategorisi silinsin mi?`)) return;
     try {
-      await deleteDoc(doc(db, 'categories', c.id));
+      await loggedWrite({
+        me, mode: 'delete', collectionName: 'categories', id: c.id, current: c, targetType: 'category',
+        summary: `Kategori "${c.name}" silindi`,
+      });
       toast.success('Kategori silindi');
     } catch (err) {
       toast.error('Silinemedi: ' + err.code);
@@ -755,6 +814,230 @@ const Categories = ({ categories, products }) => {
 };
 
 /* ------------------------------------------------------------------ */
+/* Yöneticiler                                                         */
+/* ------------------------------------------------------------------ */
+const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+const NICK_RE = /^.{2,24}$/;
+
+const Admins = ({ me, onNickChange }) => {
+  const [admins, ready] = useCollection('admins', 'created_at', 'asc');
+  const [email, setEmail] = useState('');
+  const [nick, setNick] = useState('');
+  const [myNick, setMyNick] = useState(me.nickname);
+  const [saving, setSaving] = useState(false);
+
+  const add = async (e) => {
+    e.preventDefault();
+    const nickname = nick.trim();
+    if (!EMAIL_RE.test(email.trim())) return toast.error('Geçerli bir Google e-posta adresi yaz.');
+    if (!NICK_RE.test(nickname)) return toast.error('Takma ad 2-24 karakter olmalı.');
+    setSaving(true);
+    try {
+      const id = await adminIdForEmail(email);
+      if (admins.some((a) => a.id === id)) {
+        toast.error('Bu hesap zaten yönetici.');
+        return;
+      }
+      await loggedWrite({
+        me, mode: 'set', collectionName: 'admins', id, targetType: 'admin',
+        data: { nickname, added_by_nick: me.nickname, created_at: serverTimestamp() },
+        summary: `"${nickname}" yönetici olarak eklendi`,
+      });
+      toast.success(`${nickname} yönetici olarak eklendi`);
+      setEmail('');
+      setNick('');
+    } catch (err) {
+      toast.error('Eklenemedi: ' + (err.code || err.message));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const remove = async (a) => {
+    if (!confirm(`"${a.nickname}" yöneticilikten çıkarılsın mı? Panele bir daha giremez.`)) return;
+    try {
+      await loggedWrite({
+        me, mode: 'delete', collectionName: 'admins', id: a.id, current: a, targetType: 'admin',
+        summary: `"${a.nickname}" yöneticilikten çıkarıldı`,
+      });
+      toast.success('Yönetici çıkarıldı');
+    } catch (err) {
+      toast.error('Çıkarılamadı: ' + err.code);
+    }
+  };
+
+  const saveNick = async (e) => {
+    e.preventDefault();
+    const nickname = myNick.trim();
+    if (!NICK_RE.test(nickname)) return toast.error('Takma ad 2-24 karakter olmalı.');
+    if (nickname === me.nickname) return;
+    try {
+      await loggedWrite({
+        me, mode: 'update', collectionName: 'admins', id: me.id, targetType: 'admin',
+        data: { nickname },
+        summary: `Takma adını "${me.nickname}" → "${nickname}" olarak değiştirdi`,
+      });
+      onNickChange(nickname);
+      toast.success('Takma ad güncellendi');
+    } catch (err) {
+      toast.error('Güncellenemedi: ' + err.code);
+    }
+  };
+
+  return (
+    <div className="adm-split">
+      <div className="adm-stack">
+        <form className="adm-card adm-card-pad" onSubmit={add}>
+          <h2 className="adm-card-title">Yönetici ekle</h2>
+          <p className="adm-muted adm-help">
+            Eklediğin Google hesabı <strong>/admin</strong> sayfasında “Google ile giriş yap” dediğinde panele girer.
+            E-posta kaydedilmez; sadece şifrelenmiş özeti tutulur ve panelde takma ad görünür.
+          </p>
+          <label className="adm-field">
+            <span className="adm-label">Google e-posta adresi</span>
+            <input className="adm-input" type="email" autoComplete="off" placeholder="ornek@gmail.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          </label>
+          <label className="adm-field">
+            <span className="adm-label">Takma ad</span>
+            <input className="adm-input" maxLength={24} placeholder="ör. Shadow" value={nick} onChange={(e) => setNick(e.target.value)} required />
+          </label>
+          <div className="adm-form-actions">
+            <button className="adm-btn adm-btn-primary" disabled={saving}>
+              <Plus size={16} /> {saving ? 'Ekleniyor…' : 'Yönetici yap'}
+            </button>
+          </div>
+        </form>
+
+        <form className="adm-card adm-card-pad" onSubmit={saveNick}>
+          <h2 className="adm-card-title">Takma adım</h2>
+          <label className="adm-field">
+            <span className="adm-label">Panelde ve kayıtlarda görünen ad</span>
+            <input className="adm-input" maxLength={24} value={myNick} onChange={(e) => setMyNick(e.target.value)} />
+          </label>
+          <div className="adm-form-actions">
+            <button className="adm-btn adm-btn-ghost" disabled={myNick.trim() === me.nickname}>Kaydet</button>
+          </div>
+        </form>
+      </div>
+
+      <section className="adm-card">
+        <header className="adm-card-head"><h2>Yöneticiler ({admins.length})</h2></header>
+        {!ready ? (
+          <Empty>Yükleniyor…</Empty>
+        ) : (
+          <div className="adm-table-wrap">
+            <table className="adm-table">
+              <thead>
+                <tr><th>Takma ad</th><th className="adm-hide-sm">Ekleyen</th><th className="adm-hide-sm">Tarih</th><th /></tr>
+              </thead>
+              <tbody>
+                {admins.map((a) => (
+                  <tr key={a.id}>
+                    <td>
+                      <div className="adm-user">
+                        <span className="adm-avatar">{a.nickname?.[0]?.toUpperCase()}</span>
+                        <span>{a.nickname}{a.id === me.id && <em className="adm-you"> (sen)</em>}</span>
+                      </div>
+                    </td>
+                    <td className="adm-hide-sm adm-muted">{a.added_by_nick || 'kurulum'}</td>
+                    <td className="adm-hide-sm adm-muted">{fmtDate(a.created_at)}</td>
+                    <td className="adm-row-actions">
+                      {a.id !== me.id && (
+                        <button className="adm-icon-btn danger" onClick={() => remove(a)} aria-label="Yöneticilikten çıkar">
+                          <Trash2 size={15} />
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+    </div>
+  );
+};
+
+/* ------------------------------------------------------------------ */
+/* Kayıtlar (işlem logu)                                               */
+/* ------------------------------------------------------------------ */
+const ACTION_META = {
+  create: { label: 'Ekleme', tone: 'ok' },
+  update: { label: 'Düzenleme', tone: 'info' },
+  status: { label: 'Durum', tone: 'warn' },
+  delete: { label: 'Silme', tone: 'bad' },
+  login: { label: 'Giriş', tone: 'muted' },
+};
+const TYPE_LABEL = { product: 'Ürün', category: 'Kategori', order: 'Sipariş', admin: 'Yönetici', session: 'Oturum' };
+
+const Logs = () => {
+  const [logs, ready] = useCollection('admin_logs', 'at', 'desc', 500);
+  const [actor, setActor] = useState('');
+  const [type, setType] = useState('');
+  const [search, setSearch] = useState('');
+  const actors = [...new Set(logs.map((l) => l.actor_nick))].sort();
+
+  const shown = logs.filter(
+    (l) =>
+      (!actor || l.actor_nick === actor) &&
+      (!type || l.target_type === type) &&
+      (!search || l.summary?.toLowerCase().includes(search.toLowerCase()))
+  );
+
+  return (
+    <section className="adm-card">
+      <header className="adm-card-head adm-card-head-wrap">
+        <div className="adm-toolbar">
+          <label className="adm-search">
+            <Search size={15} />
+            <input placeholder="Kayıtlarda ara…" value={search} onChange={(e) => setSearch(e.target.value)} />
+          </label>
+          <select className="adm-input adm-input-sm" value={actor} onChange={(e) => setActor(e.target.value)}>
+            <option value="">Tüm yöneticiler</option>
+            {actors.map((a) => <option key={a} value={a}>{a}</option>)}
+          </select>
+          <select className="adm-input adm-input-sm" value={type} onChange={(e) => setType(e.target.value)}>
+            <option value="">Tüm türler</option>
+            {Object.entries(TYPE_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+          </select>
+        </div>
+        <span className="adm-muted">Son 500 kayıt · kayıtlar silinemez</span>
+      </header>
+      {!ready ? (
+        <Empty>Yükleniyor…</Empty>
+      ) : shown.length ? (
+        <div className="adm-table-wrap">
+          <table className="adm-table">
+            <thead>
+              <tr><th>Zaman</th><th>Yönetici</th><th>İşlem</th><th>Açıklama</th></tr>
+            </thead>
+            <tbody>
+              {shown.map((l) => {
+                const m = ACTION_META[l.action] || { label: l.action, tone: 'muted' };
+                return (
+                  <tr key={l.id}>
+                    <td className="adm-muted adm-nowrap">{fmtDate(l.at)}</td>
+                    <td><strong>{l.actor_nick}</strong></td>
+                    <td className="adm-nowrap">
+                      <span className={`adm-pill adm-pill-${m.tone}`}>{m.label}</span>{' '}
+                      <span className="adm-muted">{TYPE_LABEL[l.target_type] || l.target_type}</span>
+                    </td>
+                    <td>{l.summary}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <Empty>Kayıt yok.</Empty>
+      )}
+    </section>
+  );
+};
+
+/* ------------------------------------------------------------------ */
 /* Kabuk                                                               */
 /* ------------------------------------------------------------------ */
 const NAV = [
@@ -762,9 +1045,16 @@ const NAV = [
   { id: 'orders', label: 'Siparişler', icon: ShoppingBag },
   { id: 'products', label: 'Ürünler', icon: Package },
   { id: 'categories', label: 'Kategoriler', icon: FolderTree },
+  { id: 'admins', label: 'Yöneticiler', icon: UserCog },
+  { id: 'logs', label: 'Kayıtlar', icon: ScrollText },
 ];
 
-const AdminDashboard = ({ user }) => {
+const AdminDashboard = ({ admin }) => {
+  const [me, setMe] = useState(admin);
+  useEffect(() => {
+    logAdminLogin(admin).catch((err) => console.error('Giriş logu yazılamadı', err));
+  }, [admin]);
+
   const [view, setView] = useState(() => sessionStorage.getItem('adm_view') || 'overview');
   const [orderFilter, setOrderFilter] = useState(null);
   const [navOpen, setNavOpen] = useState(false);
@@ -805,8 +1095,8 @@ const AdminDashboard = ({ user }) => {
         <div className="adm-side-foot">
           <Link to="/" className="adm-nav-link"><ExternalLink size={15} /> Siteyi aç</Link>
           <div className="adm-user">
-            <span className="adm-avatar">{user.email?.[0]?.toUpperCase()}</span>
-            <span className="adm-ellipsis">{user.email}</span>
+            <span className="adm-avatar">{me.nickname?.[0]?.toUpperCase()}</span>
+            <span className="adm-ellipsis">{me.nickname}</span>
           </div>
           <button className="adm-btn adm-btn-ghost adm-btn-block" onClick={() => signOut(auth)}>
             <LogOut size={15} /> Çıkış
@@ -829,9 +1119,11 @@ const AdminDashboard = ({ user }) => {
 
         <div className="adm-content">
           {view === 'overview' && <Overview orders={orders} products={products} categories={categories} go={go} />}
-          {view === 'orders' && <Orders key={orderFilter || 'all'} orders={orders} initialFilter={orderFilter} />}
-          {view === 'products' && <Products products={products} categories={categories} />}
-          {view === 'categories' && <Categories categories={categories} products={products} />}
+          {view === 'orders' && <Orders key={orderFilter || 'all'} orders={orders} initialFilter={orderFilter} me={me} />}
+          {view === 'products' && <Products products={products} categories={categories} me={me} />}
+          {view === 'categories' && <Categories categories={categories} products={products} me={me} />}
+          {view === 'admins' && <Admins me={me} onNickChange={(nickname) => setMe((m) => ({ ...m, nickname }))} />}
+          {view === 'logs' && <Logs />}
         </div>
       </main>
     </div>

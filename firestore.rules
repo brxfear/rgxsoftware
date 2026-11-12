@@ -1,7 +1,17 @@
 rules_version = '2';
 
 // RGX Software — Firestore güvenlik kuralları
-// Koleksiyonlar: categories, products, orders, carts/{uid}/items, admins/{uid}
+//
+// Koleksiyonlar:
+//   categories, products        herkes okur, sadece yönetici yazar (loglu)
+//   orders                      müşteri "onay bekliyor" sipariş açar; yönetici okur / günceller (loglu)
+//   carts/{uid}/items           sadece sahibi
+//   admins/{sha256(e-posta)}    yönetici listesi — e-posta saklanmaz, sadece özeti; { nickname, ... }
+//   admin_logs/{id}             yönetici işlem kayıtları — sadece eklenir, asla değiştirilmez/silinmez
+//
+// Log zorunluluğu: yöneticinin her yazma işlemi aynı batch içinde bir admin_logs kaydı oluşturmak
+// ZORUNDADIR. Hedef belgenin last_log_id alanı o kayda işaret eder; silmede kayıt kimliği
+// "del_" + last_log_id (yoksa "del_" + belge id) olur. Log'suz yazma reddedilir.
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -9,38 +19,109 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Admin = admins/{uid} veya admins/{doğrulanmış e-posta} belgesi olan kullanıcı.
-    // Bu belgeleri sadece konsol / Admin SDK ekler.
-    function verifiedEmail() {
-      return ('email' in request.auth.token) && request.auth.token.get('email_verified', false) == true;
+    // ---------- Yönetici kimliği ----------
+    function googleUser() {
+      return signedIn()
+        && request.auth.token.firebase.sign_in_provider == 'google.com'
+        && ('email' in request.auth.token)
+        && request.auth.token.get('email_verified', false) == true;
+    }
+
+    function myAdminId() {
+      return hashing.sha256(request.auth.token.email.lower()).toHexString().lower();
+    }
+
+    function adminPath(id) {
+      return /databases/$(database)/documents/admins/$(id);
     }
 
     function isAdmin() {
-      return signedIn() && (
-        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
-        || (verifiedEmail() && exists(/databases/$(database)/documents/admins/$(request.auth.token.email)))
-      );
+      return googleUser() && exists(adminPath(myAdminId()));
     }
 
+    function myNick() {
+      return get(adminPath(myAdminId())).data.nickname;
+    }
+
+    function validNick(n) {
+      return n is string && n.size() >= 2 && n.size() <= 24;
+    }
+
+    // ---------- Zorunlu log ----------
+    function logPath(id) {
+      return /databases/$(database)/documents/admin_logs/$(id);
+    }
+
+    // Oluşturma / güncelleme: belge last_log_id ile bu istekte yazılan log'a işaret etmeli.
+    function loggedWrite(targetId) {
+      let log = getAfter(logPath(request.resource.data.last_log_id));
+      return log.data.target_id == targetId
+        && log.data.actor_uid == request.auth.uid
+        && log.data.at == request.time;
+    }
+
+    // Silme: "del_" + mevcut last_log_id (yoksa belge id) kimlikli log aynı istekte yazılmalı.
+    function loggedDelete(targetId) {
+      let log = getAfter(logPath('del_' + resource.data.get('last_log_id', targetId)));
+      return log.data.target_id == targetId
+        && log.data.action == 'delete'
+        && log.data.actor_uid == request.auth.uid
+        && log.data.at == request.time;
+    }
+
+    match /admin_logs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasOnly(['actor_uid', 'actor_nick', 'action', 'target_type', 'target_id', 'summary', 'at'])
+        && request.resource.data.actor_uid == request.auth.uid
+        && request.resource.data.actor_nick == myNick()
+        && request.resource.data.action in ['create', 'update', 'delete', 'status', 'login']
+        && request.resource.data.target_type in ['product', 'category', 'order', 'admin', 'session']
+        && request.resource.data.target_id is string
+        && request.resource.data.summary is string
+        && request.resource.data.summary.size() <= 500
+        && request.resource.data.at == request.time;
+      allow update, delete: if false;
+    }
+
+    // ---------- Yöneticiler ----------
     match /admins/{id} {
-      allow read: if signedIn() && (request.auth.uid == id || (verifiedEmail() && request.auth.token.email == id));
-      allow write: if false;
+      allow read: if isAdmin() || (googleUser() && id == myAdminId());
+      allow create: if isAdmin()
+        && id.matches('^[0-9a-f]{64}$')
+        && request.resource.data.keys().hasOnly(['nickname', 'added_by_nick', 'created_at', 'last_log_id'])
+        && validNick(request.resource.data.nickname)
+        && request.resource.data.added_by_nick == myNick()
+        && request.resource.data.created_at == request.time
+        && loggedWrite(id);
+      // Herkes sadece kendi takma adını değiştirebilir.
+      allow update: if isAdmin()
+        && id == myAdminId()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nickname', 'last_log_id'])
+        && validNick(request.resource.data.nickname)
+        && loggedWrite(id);
+      // Kimse kendini çıkaramaz (panel yöneticisiz kalmasın).
+      allow delete: if isAdmin() && id != myAdminId() && loggedDelete(id);
     }
 
+    // ---------- Mağaza ----------
     match /categories/{id} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow create, update: if isAdmin() && loggedWrite(id);
+      allow delete: if isAdmin() && loggedDelete(id);
     }
 
     match /products/{id} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow create, update: if isAdmin() && loggedWrite(id);
+      allow delete: if isAdmin() && loggedDelete(id);
     }
 
     match /orders/{id} {
       // Havale / kripto siparişi: müşteri sadece "onay bekliyor" durumunda oluşturabilir.
       // Kartla ödeme siparişleri sunucuda (Admin SDK) oluşturulur ve bu kurallara takılmaz.
       allow create: if request.resource.data.status == 'Waiting for Confirmation'
+        && !('last_log_id' in request.resource.data)
         && request.resource.data.total_amount is number
         && request.resource.data.items is list
         && request.resource.data.items.size() > 0
@@ -50,7 +131,8 @@ service cloud.firestore {
           || (!signedIn() && request.resource.data.user_id == null)
         );
       allow read: if isAdmin() || (signedIn() && resource.data.user_id == request.auth.uid);
-      allow update, delete: if isAdmin();
+      allow update: if isAdmin() && loggedWrite(id);
+      allow delete: if isAdmin() && loggedDelete(id);
     }
 
     match /carts/{uid}/items/{itemId} {

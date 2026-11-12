@@ -43,19 +43,8 @@ export const createManualOrder = (order) =>
     created_at: serverTimestamp(),
   });
 
-export const isAdminUser = async (user) => {
-  if (!user) return false;
-  const ids = [user.uid];
-  if (user.email && user.emailVerified) ids.push(user.email.toLowerCase());
-  for (const id of ids) {
-    try {
-      if ((await getDoc(doc(db, 'admins', id))).exists()) return true;
-    } catch {
-      /* izin yok = admin değil */
-    }
-  }
-  return false;
-};
+/** Google ile girmiş ve e-postası admins listesinde olan kullanıcı mı? */
+export const isGoogleUser = (user) => !!user?.providerData?.some((p) => p.providerId === 'google.com');
 
 /** Bir ürünün başlangıç (en düşük) fiyatı. */
 export const getStartPrice = (p) => {

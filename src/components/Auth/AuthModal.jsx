@@ -8,7 +8,7 @@ import {
   GoogleAuthProvider,
 } from 'firebase/auth';
 import { toast } from 'react-hot-toast';
-import { auth, GOOGLE_LOGIN_ENABLED } from '../../lib/firebase';
+import { auth } from '../../lib/firebase';
 import { authErrorMessage } from '../../lib/authErrors';
 import GoogleIcon from '../GoogleIcon';
 import './AuthModal.css';
@@ -74,14 +74,10 @@ const AuthModal = ({ isOpen, onClose }) => {
           <button onClick={onClose} className="close-btn" aria-label="Kapat"><X /></button>
         </div>
 
-        {GOOGLE_LOGIN_ENABLED && (
-          <>
-            <button type="button" className="auth-google-btn" onClick={handleGoogle} disabled={loading}>
-              <GoogleIcon /> Google ile devam et
-            </button>
-            <div className="auth-or"><span>veya e-posta ile</span></div>
-          </>
-        )}
+        <button type="button" className="auth-google-btn" onClick={handleGoogle} disabled={loading}>
+          <GoogleIcon /> Google ile devam et
+        </button>
+        <div className="auth-or"><span>veya e-posta ile</span></div>
 
         <form onSubmit={handleAuth} className="auth-form">
           <div className="input-group">

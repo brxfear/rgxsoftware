@@ -515,3 +515,7 @@ select.adm-input option { background: #1a1214; }
 .adm-google { height: 44px; gap: 10px; }
 .adm-or { display: flex; align-items: center; gap: 10px; color: var(--adm-muted); font-size: 12px; }
 .adm-or::before, .adm-or::after { content: ''; flex: 1; height: 1px; background: var(--adm-line); }
+.adm-help { margin: -6px 0 16px; line-height: 1.55; }
+.adm-you { font-style: normal; color: var(--adm-red-2); font-size: 12px; }
+.adm-stack { display: flex; flex-direction: column; gap: 20px; }
+.adm-nowrap { white-space: nowrap; }
