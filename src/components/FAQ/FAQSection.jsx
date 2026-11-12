@@ -50,7 +50,7 @@ const FAQSection = () => {
               <h4>Aklında başka bir soru mu var?</h4>
               <p>Destek ekibimiz Discord üzerinde 7/24 Türkçe ve anlık yanıt veriyor.</p>
               <a 
-                href="https://discord.gg/dQ5u8TRAxr" 
+                href="https://discord.gg/rgxsoftware1" 
                 target="_blank" 
                 rel="noopener noreferrer" 
                 className="btn-primary support-btn"

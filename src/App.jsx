@@ -26,7 +26,7 @@ import { translations } from './utils/translations';
 import './App.css';
 import './brand.css';
 
-const DISCORD_URL = 'https://discord.gg/dQ5u8TRAxr';
+const DISCORD_URL = 'https://discord.gg/rgxsoftware1';
 
 const scrollToId = (id) => {
   const el = document.getElementById(id);

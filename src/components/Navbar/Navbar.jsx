@@ -112,7 +112,7 @@ const Navbar = ({ activeSection, onSectionChange, user, onAuthClick, onAccountCl
           </a>
 
           <a
-            href="https://discord.gg/dQ5u8TRAxr"
+            href="https://discord.gg/rgxsoftware1"
             target="_blank"
             rel="noopener noreferrer"
             className="nav-link nav-discord-link"

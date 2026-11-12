@@ -33,7 +33,7 @@ const ReviewsSection = () => {
             <p className="section-desc">Müşterilerimizin sipariş sonrasında Discord sunucumuzda paylaştığı gerçek geri bildirimler.</p>
           </div>
           <a 
-            href="https://discord.gg/dQ5u8TRAxr" 
+            href="https://discord.gg/rgxsoftware1" 
             target="_blank" 
             rel="noopener noreferrer" 
             className="btn-secondary"

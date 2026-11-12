@@ -1,7 +1,7 @@
 import React from 'react';
 import { MessageCircle, Users, Headphones } from 'lucide-react';
 
-const DISCORD_URL = 'https://discord.gg/dQ5u8TRAxr';
+const DISCORD_URL = 'https://discord.gg/rgxsoftware1';
 
 const DiscordBanner = () => {
   return (
