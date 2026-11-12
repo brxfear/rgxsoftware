@@ -108,6 +108,15 @@ const changeSummary = (before = {}, after = {}) => {
 
 const money = (amount, currency) => fmtMoney(amount, currency || 'USD');
 
+/** Yönetici API çağrısı (Firebase ID token ile). */
+const adminApi = async (method, path) => {
+  const token = await auth.currentUser?.getIdToken();
+  const r = await fetch(path, { method, headers: token ? { Authorization: `Bearer ${token}` } : {} });
+  const data = await r.json().catch(() => null);
+  if (!r.ok) throw new Error(data?.error || `İstek başarısız (${r.status})`);
+  return data;
+};
+
 /** Siparişleri para birimine göre toplayıp "$120 · ₺4.520" gibi gösterir. */
 const sumByCurrency = (orders) => {
   const sums = {};
@@ -1029,6 +1038,58 @@ const PAY_EVENT = {
   failed: { label: 'Başarısız', tone: 'bad' },
   bad_signature: { label: 'Geçersiz imza', tone: 'bad' },
   error: { label: 'Hata', tone: 'warn' },
+  shopier_order: { label: 'Shopier siparişi', tone: 'info' },
+  refund: { label: 'İade', tone: 'warn' },
+  shopier_event: { label: 'Shopier olayı', tone: 'muted' },
+};
+
+const ShopierOrders = () => {
+  const [state, setState] = useState({ loading: false, orders: null, error: null });
+  const load = async () => {
+    setState((s) => ({ ...s, loading: true, error: null }));
+    try {
+      const { orders } = await adminApi('GET', '/api/shopier-orders?limit=50');
+      setState({ loading: false, orders, error: null });
+    } catch (err) {
+      setState({ loading: false, orders: null, error: err.message });
+    }
+  };
+  return (
+    <section className="adm-card">
+      <header className="adm-card-head">
+        <h2>Shopier mağaza siparişleri</h2>
+        <button className="adm-btn adm-btn-ghost" onClick={load} disabled={state.loading}>
+          {state.loading ? 'Yükleniyor…' : state.orders ? 'Yenile' : "Shopier'den getir"}
+        </button>
+      </header>
+      {state.error && <Empty>Alınamadı: {state.error}</Empty>}
+      {!state.error && !state.orders && <Empty>Shopier mağazandaki son 50 siparişi görmek için “Shopier'den getir”e bas.</Empty>}
+      {state.orders && (
+        state.orders.length ? (
+          <div className="adm-table-wrap">
+            <table className="adm-table">
+              <thead>
+                <tr><th>Tarih</th><th>Shopier no</th><th>Müşteri</th><th>Ürünler</th><th className="adm-num">Tutar</th><th>Ödeme</th><th className="adm-hide-sm">Durum</th></tr>
+              </thead>
+              <tbody>
+                {state.orders.map((o) => (
+                  <tr key={o.id}>
+                    <td className="adm-muted adm-nowrap">{fmtDate(o.date)}</td>
+                    <td><code>{o.id}</code></td>
+                    <td>{o.buyer || '—'}<div className="adm-muted">{o.email}</div></td>
+                    <td>{o.items.map((i) => `${i.title}${i.quantity > 1 ? ` x${i.quantity}` : ''}`).join(', ')}</td>
+                    <td className="adm-num">{money(o.total, o.currency)}</td>
+                    <td><span className={`adm-pill adm-pill-${o.paymentStatus === 'paid' ? 'ok' : 'warn'}`}>{o.paymentStatus === 'paid' ? 'Ödendi' : o.paymentStatus}</span></td>
+                    <td className="adm-hide-sm adm-muted">{o.status === 'fulfilled' ? 'Teslim edildi' : o.status === 'unfulfilled' ? 'Bekliyor' : o.status}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : <Empty>Shopier mağazasında sipariş yok.</Empty>
+      )}
+    </section>
+  );
 };
 
 const Payments = ({ orders }) => {
@@ -1101,10 +1162,88 @@ const Payments = ({ orders }) => {
             </table>
           </div>
         ) : (
-          <Empty>Henüz ödeme kaydı yok. Shopier anahtarları girilip ilk ödeme yapılınca burada görünecek.</Empty>
+          <Empty>Henüz ödeme kaydı yok. Shopier webhook'u kurulunca her yeni sipariş burada görünecek.</Empty>
         )}
       </section>
+      <ShopierOrders />
     </>
+  );
+};
+
+/* ------------------------------------------------------------------ */
+/* Shopier bağlantısı (webhook)                                        */
+/* ------------------------------------------------------------------ */
+const ShopierConnection = () => {
+  const [st, setSt] = useState({ loading: true, data: null, error: null });
+  const [busy, setBusy] = useState(false);
+
+  const load = async () => {
+    setSt((s) => ({ ...s, loading: true }));
+    try {
+      setSt({ loading: false, data: await adminApi('GET', '/api/shopier-setup'), error: null });
+    } catch (err) {
+      setSt({ loading: false, data: null, error: err.message });
+    }
+  };
+  useEffect(() => {
+    load();
+  }, []);
+
+  const act = async (method) => {
+    if (method === 'DELETE' && !confirm('Shopier webhook kaldırılsın mı? Yeni siparişler artık otomatik loglanmaz.')) return;
+    setBusy(true);
+    try {
+      const r = await adminApi(method, '/api/shopier-setup');
+      toast.success(method === 'POST' ? `Webhook kuruldu${r.created?.length ? ` (${r.created.join(', ')})` : ' (zaten kuruluydu)'}` : 'Webhook kaldırıldı');
+      await load();
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const d = st.data;
+  const connected = d?.webhooks?.some((w) => w.event === 'order.created');
+  return (
+    <section className="adm-card adm-card-pad">
+      <h2 className="adm-card-title">Shopier</h2>
+      {st.loading ? (
+        <p className="adm-muted">Bağlantı kontrol ediliyor…</p>
+      ) : st.error ? (
+        <>
+          <p className="adm-muted adm-help">Shopier'e ulaşılamadı: {st.error}</p>
+          <p className="adm-muted adm-help">
+            Sunucu ortam değişkenlerinde (Vercel → Settings → Environment Variables) <code>SHOPIER_PAT</code> ve <code>SITE_URL</code> tanımlı olmalı.
+            Yerel geliştirmede bu bölüm çalışmaz.
+          </p>
+          <button className="adm-btn adm-btn-ghost" onClick={load}>Tekrar dene</button>
+        </>
+      ) : (
+        <>
+          <ul className="adm-env-list">
+            <li>Mağaza: <a href={d.shop?.url} target="_blank" rel="noopener noreferrer">{d.shop?.url}</a></li>
+            <li>Webhook adresi: <code>{d.hookUrl}</code></li>
+            <li>
+              Durum:{' '}
+              <span className={`adm-pill adm-pill-${connected ? 'ok' : 'warn'}`}>
+                {connected ? `Bağlı (${d.webhooks.map((w) => w.event).join(', ')})` : 'Webhook kurulu değil'}
+              </span>
+            </li>
+            {d.otherWebhooks > 0 && <li className="adm-muted">Mağazada başka adreslere giden {d.otherWebhooks} webhook var (dokunulmaz).</li>}
+          </ul>
+          <p className="adm-muted adm-help">
+            Webhook kurulunca Shopier'deki her yeni sipariş ve iade otomatik olarak “Ödemeler” bölümüne loglanır.
+          </p>
+          <div className="adm-form-actions">
+            {connected && <button className="adm-btn adm-btn-ghost" onClick={() => act('DELETE')} disabled={busy}>Kaldır</button>}
+            <button className="adm-btn adm-btn-primary" onClick={() => act('POST')} disabled={busy}>
+              {busy ? 'İşleniyor…' : connected ? 'Eksikleri kur' : "Webhook'u kur"}
+            </button>
+          </div>
+        </>
+      )}
+    </section>
   );
 };
 
@@ -1187,22 +1326,7 @@ const SettingsView = ({ me }) => {
         </div>
       </form>
 
-      <section className="adm-card adm-card-pad">
-        <h2 className="adm-card-title">Shopier</h2>
-        <p className="adm-muted adm-help">
-          Kartla ödemeler Shopier üzerinden alınır. API anahtarları güvenlik için panelde değil, sunucu ortam değişkenlerinde
-          (Vercel → Settings → Environment Variables) tutulur:
-        </p>
-        <ul className="adm-env-list">
-          <li><code>SHOPIER_API_KEY</code> — API kullanıcı</li>
-          <li><code>SHOPIER_API_SECRET</code> — API şifre</li>
-          <li><code>SHOPIER_WEBSITE_INDEX</code> — genelde 1</li>
-          <li><code>SHOPIER_CURRENCY</code> — USD</li>
-        </ul>
-        <p className="adm-muted adm-help">
-          Shopier panelinde geri dönüş adresi: <code>https://ALANADIN/api/shopier-callback</code>. Tüm ödeme olayları “Ödemeler” bölümüne düşer.
-        </p>
-      </section>
+      <ShopierConnection />
     </div>
   );
 };
