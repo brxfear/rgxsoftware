@@ -1,8 +1,8 @@
 import React from 'react';
-import { ShieldCheck, Eye, Zap, ChevronRight } from 'lucide-react';
+import { ChevronRight, Star } from 'lucide-react';
 import './ProductCard.css';
 
-const ProductCard = ({ product, onClick }) => {
+const ProductCard = ({ product, onClick, highlight = false }) => {
   const lowestPrice = Math.min(
     product.price_1day || product.price || Infinity,
     product.price_7day || Infinity,
@@ -11,20 +11,24 @@ const ProductCard = ({ product, onClick }) => {
   );
 
   const displayPrice = lowestPrice === Infinity ? (product.price || 290) : lowestPrice;
+  const planCount = [product.price_1day || product.price, product.price_7day, product.price_30day, product.price_lifetime].filter(Boolean).length || 1;
 
   return (
     <div className="product-card glass-card" onClick={() => onClick(product)}>
       <div className="product-card-top">
         <div className="product-image-wrap">
           <img 
-            src={product.image || product.image_url || '/favicon.png'} 
+            src={product.image || product.image_url || '/logo.webp'} 
             alt={product.name} 
             className="product-img"
             onError={(e) => {
-              e.target.src = 'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=600&q=80';
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = '/logo.webp';
+              e.currentTarget.classList.add('product-img-fallback');
             }}
           />
           <div className="product-floating-badges">
+            {highlight && <span className="badge-recommended"><Star size={11} fill="currentColor" /> Ekip önerisi</span>}
             <span className="status-badge-undetected">
               <span className="status-dot-green"></span>
               UNDETECTED
@@ -36,7 +40,7 @@ const ProductCard = ({ product, onClick }) => {
       <div className="product-card-body">
         <div className="product-meta">
           <span className="product-category-tag">{product.category_name || 'Özel Yazılım'}</span>
-          <span className="product-features-count">4 Plan Mevcut</span>
+          <span className="product-features-count">{planCount} plan</span>
         </div>
 
         <h3 className="product-title">{product.name}</h3>

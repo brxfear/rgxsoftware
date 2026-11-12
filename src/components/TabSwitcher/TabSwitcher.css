@@ -9,7 +9,7 @@
 .tab-switcher-scroll {
   display: inline-flex;
   gap: 8px;
-  background: rgba(16, 24, 38, 0.6);
+  background: rgba(24, 17, 19, 0.6);
   backdrop-filter: blur(12px);
   padding: 6px;
   border-radius: 14px;
@@ -19,7 +19,7 @@
 .tab-btn {
   background: transparent;
   border: 1px solid transparent;
-  color: #8b95a7;
+  color: #9b9497;
   padding: 8px 18px;
   border-radius: 10px;
   font-size: 13.5px;
@@ -38,15 +38,15 @@
 }
 
 .tab-btn.active {
-  background: rgba(26, 200, 242, 0.12);
-  color: #7de4ff;
-  border-color: rgba(26, 200, 242, 0.3);
-  box-shadow: 0 4px 15px rgba(26, 200, 242, 0.15);
+  background: rgba(224, 38, 47, 0.12);
+  color: #ff6166;
+  border-color: rgba(224, 38, 47, 0.3);
+  box-shadow: 0 4px 15px rgba(224, 38, 47, 0.15);
 }
 
 .tab-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #1ac8f2;
+  background: #e0262f;
 }

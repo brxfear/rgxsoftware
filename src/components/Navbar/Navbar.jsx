@@ -8,12 +8,10 @@ const Navbar = ({ activeSection, onSectionChange, user, onAuthClick, cartCount, 
       <div className="glass-bar nav-inner">
         {/* Logo */}
         <div className="nav-brand" onClick={() => onSectionChange('home')}>
-          <div className="brand-logo-gem">
-            <span className="gem-text">R</span>
-          </div>
+          <img src="/logo.webp" alt="RGX Software" className="brand-logo-img" width="40" height="40" />
           <div className="brand-text">
-            <span className="brand-title">RGX SOFTWARE</span>
-            <span className="brand-tag">PRIVATE</span>
+            <span className="brand-title">RGX</span>
+            <span className="brand-tag">SOFTWARE</span>
           </div>
         </div>
 
@@ -31,7 +29,10 @@ const Navbar = ({ activeSection, onSectionChange, user, onAuthClick, cartCount, 
 
           <button
             className={`nav-link ${activeSection === 'products' ? 'active' : ''}`}
-            onClick={() => onSectionChange('products')}
+            onClick={() => {
+              onSectionChange('products');
+              document.getElementById('products-section')?.scrollIntoView({ behavior: 'smooth' });
+            }}
           >
             Ürünler
           </button>

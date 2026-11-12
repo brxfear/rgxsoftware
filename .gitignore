@@ -27,3 +27,8 @@ dist-ssr
 .env
 .env*.local
 mitamers*
+
+# Local tooling
+.claude/
+.firebase/
+firebase-debug.log

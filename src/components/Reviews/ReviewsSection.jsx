@@ -70,3 +70,4 @@ const ReviewsSection = () => {
 };
 
 export default ReviewsSection;
+

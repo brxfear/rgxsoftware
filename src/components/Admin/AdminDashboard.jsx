@@ -1,390 +1,841 @@
-import React, { useState, useEffect } from 'react'; // useEffect buraya eklendi
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '../../lib/supabaseClient';
-import { LayoutGrid, Package, ShoppingBag, LogOut, Clock, CheckCircle, XCircle } from 'lucide-react';
-import { Toaster, toast } from 'react-hot-toast';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { signOut } from 'firebase/auth';
+import {
+  collection,
+  doc,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  onSnapshot,
+  query,
+  orderBy,
+  limit,
+  serverTimestamp,
+} from 'firebase/firestore';
+import {
+  LayoutDashboard,
+  ShoppingBag,
+  Package,
+  FolderTree,
+  LogOut,
+  ExternalLink,
+  Plus,
+  Pencil,
+  Trash2,
+  Search,
+  X,
+  Upload,
+  Link2,
+  Eye,
+  EyeOff,
+  ChevronDown,
+  Wallet,
+  Clock,
+  CheckCircle2,
+  Menu,
+} from 'lucide-react';
+import { toast } from 'react-hot-toast';
+import { auth, db } from '../../lib/firebase';
+import { toDate, getStartPrice } from '../../lib/db';
+import { fileToCompressedDataUrl } from './imageUtils';
 import './AdminDashboard.css';
 
-const AdminDashboard = () => {
-    const navigate = useNavigate();
-    const [activeView, setActiveView] = useState('orders'); // Default to orders
-    const [categories, setCategories] = useState([]);
-    const [products, setProducts] = useState([]);
-    const [orders, setOrders] = useState([]);
-    const [loading, setLoading] = useState(false);
+/* ------------------------------------------------------------------ */
+/* Sabitler & yardımcılar                                              */
+/* ------------------------------------------------------------------ */
+const ORDER_STATUSES = [
+  { value: 'Waiting for Confirmation', label: 'Onay bekliyor', tone: 'warn' },
+  { value: 'pending_payment', label: 'Ödeme bekleniyor', tone: 'muted' },
+  { value: 'paid', label: 'Ödendi', tone: 'info' },
+  { value: 'Completed', label: 'Teslim edildi', tone: 'ok' },
+  { value: 'Canceled', label: 'İptal', tone: 'bad' },
+];
 
-    // Form States
-    const [newCategory, setNewCategory] = useState({ name: '', slug: '', image_url: '' });
-    const [editingId, setEditingId] = useState(null);
-    const [newProduct, setNewProduct] = useState({
-        name: '',
-        description: '',
-        details: '',
-        price_1day: '',
-        price_7day: '',
-        price_30day: '',
-        price_lifetime: '',
-        category_id: '',
-        image_url: '',
-        video_url: '',
-        extra_images: [],
-        media_urls: [],
-        is_available: true
-    });
+const statusMeta = (value = '') => {
+  const found = ORDER_STATUSES.find((s) => s.value === value);
+  if (found) return found;
+  if (value.startsWith('failed')) return { value, label: 'Ödeme başarısız', tone: 'bad' };
+  return { value, label: value || '—', tone: 'muted' };
+};
 
-    useEffect(() => {
-        fetchData();
-        // ... (subscriptions remain same)
-    }, []);
+const REVENUE_STATUSES = ['paid', 'Completed'];
 
-    const fetchData = async () => {
-        setLoading(true);
-        const [catRes, prodRes, orderRes] = await Promise.all([
-            supabase.from('categories').select('*').order('name'),
-            supabase.from('products').select('*').order('created_at', { ascending: false }),
-            supabase.from('orders').select('*').order('created_at', { ascending: false })
-        ]);
+const tl = (n) =>
+  '₺' + (Number(n) || 0).toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 
-        setCategories(catRes.data || []);
-        setProducts(prodRes.data || []);
-        setOrders(orderRes.data || []);
-        setLoading(false);
-    };
+const fmtDate = (v) => {
+  const d = toDate(v);
+  return d
+    ? d.toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+    : '—';
+};
 
-    const updateOrderStatus = async (orderId, newStatus) => {
-        await supabase.from('orders').update({ status: newStatus }).eq('id', orderId);
-        fetchData();
-    };
+const slugify = (s) =>
+  s
+    .toLocaleLowerCase('tr-TR')
+    .replace(/ı/g, 'i').replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ş/g, 's').replace(/ö/g, 'o').replace(/ç/g, 'c')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 
-    const addCategory = async (e) => {
-        e.preventDefault();
-        if (!newCategory.name || !newCategory.slug) return;
-        await supabase.from('categories').insert([newCategory]);
-        setNewCategory({ name: '', slug: '', image_url: '' });
-        fetchData();
-    };
+const docBytes = (obj) => new Blob([JSON.stringify(obj)]).size;
+const MAX_DOC_BYTES = 950 * 1024;
 
-    const deleteCategory = async (id) => {
-        if (confirm('Delete sector?')) {
-            await supabase.from('categories').delete().eq('id', id);
-            fetchData();
-        }
-    };
-
-    const addProduct = async (e) => {
-        e.preventDefault();
-
-        if (!newProduct.name) {
-            toast.error('NAME REQUIRED');
-            return;
-        }
-        if (!newProduct.category_id) {
-            toast.error('SELECT A SECTOR');
-            return;
-        }
-
-        const productData = {
-            name: newProduct.name,
-            description: newProduct.description,
-            details: newProduct.details,
-            price: parseFloat(newProduct.price_1day) || 0,
-            price_1day: parseFloat(newProduct.price_1day) || 0,
-            price_7day: parseFloat(newProduct.price_7day) || 0,
-            price_30day: parseFloat(newProduct.price_30day) || 0,
-            price_lifetime: parseFloat(newProduct.price_lifetime) || 0,
-            category_id: newProduct.category_id,
-            image_url: newProduct.image_url,
-            video_url: newProduct.video_url,
-            extra_images: newProduct.extra_images,
-            is_available: newProduct.is_available
-        };
-
-        if (editingId) {
-            const { error } = await supabase
-                .from('products')
-                .update(productData)
-                .eq('id', editingId);
-
-            if (!error) {
-                setEditingId(null);
-                toast.success('CHANGES SAVED / KAYDEDİLDİ');
-            } else {
-                console.error('SUPABASE UPDATE ERROR:', error);
-                toast.error(`UPDATE FAILED: ${error.message}`);
-            }
-        } else {
-            const { error } = await supabase
-                .from('products')
-                .insert([productData]);
-
-            if (!error) {
-                toast.success('ASSET DEPLOYED / EKLENDİ');
-            } else {
-                console.error('SUPABASE INSERT ERROR:', error);
-                toast.error(`DEPLOY FAILED: ${error.message}`);
-            }
-        }
-
-        setNewProduct({ name: '', description: '', details: '', price_1day: '', price_7day: '', price_30day: '', price_lifetime: '', category_id: '', image_url: '', video_url: '', extra_images: [], media_urls: [], is_available: true });
-        fetchData();
-    };
-
-    const startEditing = (product) => {
-        setEditingId(product.id);
-        setNewProduct({
-            name: product.name,
-            description: product.description || '',
-            details: product.details || '',
-            price_1day: (product.price_1day || product.price || 0).toString(),
-            price_7day: (product.price_7day || 0).toString(),
-            price_30day: (product.price_30day || 0).toString(),
-            price_lifetime: (product.price_lifetime || 0).toString(),
-            category_id: product.category_id,
-            image_url: product.image_url || '',
-            video_url: product.video_url || '',
-            extra_images: product.extra_images || [],
-            media_urls: product.media_urls || [],
-            is_available: product.is_available
-        });
-        // Scroll to form
-        document.querySelector('.form-section-block')?.scrollIntoView({ behavior: 'smooth' });
-    };
-
-    const deleteProduct = async (id) => {
-        if (confirm('Delete asset?')) {
-            await supabase.from('products').delete().eq('id', id);
-            fetchData();
-        }
-    };
-
-    return (
-        <div className="admin-dashboard-block">
-            <Toaster position="top-right" />
-            <aside className="admin-sidebar-block">
-                <div className="sidebar-header-block">
-                    <h2 className="cyber-font neon-text">SYS_ARK</h2>
-                </div>
-                <nav className="sidebar-nav-block">
-                    <button
-                        className={`nav-item-block ${activeView === 'orders' ? 'active' : ''}`}
-                        onClick={() => setActiveView('orders')}
-                    >
-                        <ShoppingBag size={18} /> <span>ORDERS</span>
-                    </button>
-                    <button
-                        className={`nav-item-block ${activeView === 'categories' ? 'active' : ''}`}
-                        onClick={() => setActiveView('categories')}
-                    >
-                        <LayoutGrid size={18} /> <span>SECTORS</span>
-                    </button>
-                    <button
-                        className={`nav-item-block ${activeView === 'products' ? 'active' : ''}`}
-                        onClick={() => setActiveView('products')}
-                    >
-                        <Package size={18} /> <span>ASSETS</span>
-                    </button>
-                    <button className="nav-item-block exit-block" onClick={() => navigate('/')}>
-                        <LogOut size={18} /> <span>EXIT</span>
-                    </button>
-                </nav>
-            </aside>
-
-            <main className="admin-main-block">
-                <header className="admin-header-block">
-                    <h1 className="cyber-font">
-                        {activeView === 'orders' ? 'STREAM: LIVE_ORDERS' :
-                            activeView === 'categories' ? 'DATABASE: SECTORS' : 'DATABASE: ASSETS'}
-                    </h1>
-                </header>
-
-                <div className="admin-content-scroll">
-                    {activeView === 'orders' && (
-                        <div className="table-block">
-                            <table className="admin-table-block">
-                                <thead>
-                                    <tr>
-                                        <th>CUSTOMER</th>
-                                        <th>CONTACT</th>
-                                        <th>PAYLOAD</th>
-                                        <th>TOTAL</th>
-                                        <th>STATUS</th>
-                                        <th>PROTOCOL</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {orders.map(order => (
-                                        <tr key={order.id}>
-                                            <td>
-                                                <div className="cust-block">
-                                                    <strong>{order.customer_name}</strong>
-                                                    <small>{order.customer_email}</small>
-                                                </div>
-                                            </td>
-                                            <td className="neon-text" style={{ fontSize: '0.7rem' }}>{order.customer_phone}</td>
-                                            <td>
-                                                <div className="items-detail-block">
-                                                    {order.items.map((item, i) => (
-                                                        <div key={i} className="order-item-row">
-                                                            <span className="order-item-name">{item.name}</span>
-                                                            <span className="duration-pill">{item.durationLabel || `${item.duration || 1} GÜN`}</span>
-                                                            <span className="order-item-price">₺{item.price} × {item.quantity}</span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </td>
-                                            <td className="price-col">₺{order.total_amount}</td>
-                                            <td>
-                                                <span className={`status-pill-block ${order.status.replace(/\s+/g, '-').toLowerCase()}`}>
-                                                    {order.status}
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <div className="status-actions-block">
-                                                    <button onClick={() => updateOrderStatus(order.id, 'Completed')} className="act-btn check"><CheckCircle size={16} /></button>
-                                                    <button onClick={() => updateOrderStatus(order.id, 'Waiting for Confirmation')} className="act-btn clock"><Clock size={16} /></button>
-                                                    <button onClick={() => updateOrderStatus(order.id, 'Canceled')} className="act-btn x"><XCircle size={16} /></button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-
-                    {activeView === 'categories' && (
-                        <div className="admin-grid-block">
-                            <section className="form-section-block">
-                                <h3 className="cyber-font">NEW SECTOR</h3>
-                                <form onSubmit={addCategory} className="admin-form-block">
-                                    <input placeholder="NAME" value={newCategory.name} onChange={e => setNewCategory({ ...newCategory, name: e.target.value })} />
-                                    <input placeholder="SLUG" value={newCategory.slug} onChange={e => setNewCategory({ ...newCategory, slug: e.target.value })} />
-                                    <input placeholder="IMAGE URL" value={newCategory.image_url} onChange={e => setNewCategory({ ...newCategory, image_url: e.target.value })} />
-                                    <button className="neon-button">INITIALIZE</button>
-                                </form>
-                            </section>
-                            <div className="item-list-block">
-                                {categories.map(c => (
-                                    <div key={c.id} className="list-item-block">
-                                        <span>{c.name}</span>
-                                        <button onClick={() => deleteCategory(c.id)} className="del-btn">×</button>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {activeView === 'products' && (
-                        <div className="admin-grid-block">
-                            <section className="form-section-block">
-                                <div className="form-header-row">
-                                    <h3 className="cyber-font">{editingId ? 'UPDATE ASSET' : 'NEW ASSET'}</h3>
-                                    {editingId && (
-                                        <button className="cancel-edit-btn" onClick={() => {
-                                            setEditingId(null);
-                                            setNewProduct({ name: '', description: '', details: '', price_1day: '', price_7day: '', price_30day: '', price_lifetime: '', category_id: '', image_url: '', video_url: '', extra_images: [], media_urls: [], is_available: true });
-                                        }}>CANCEL</button>
-                                    )}
-                                </div>
-                                <form onSubmit={addProduct} className="admin-form-block">
-                                    <input placeholder="NAME" value={newProduct.name} onChange={e => setNewProduct({ ...newProduct, name: e.target.value })} />
-                                    <textarea
-                                        placeholder="DESCRIPTION (Supports Multi-line)"
-                                        className="large-area"
-                                        value={newProduct.description}
-                                        onChange={e => setNewProduct({ ...newProduct, description: e.target.value })}
-                                    />
-                                    <textarea
-                                        placeholder="PRODUCT DETAILS (Modal Only - Supports Multi-line)"
-                                        className="large-area"
-                                        value={newProduct.details}
-                                        onChange={e => setNewProduct({ ...newProduct, details: e.target.value })}
-                                    />
-                                    <div className="subscription-prices-section" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '10px', marginBottom: '1rem' }}>
-                                        <div>
-                                            <label style={{ fontSize: '0.65rem', color: '#bc13fe', display: 'block', marginBottom: '4px' }}>1 DAY PRICE (₺)</label>
-                                            <input placeholder="1 GÜN" type="number" step="0.01" value={newProduct.price_1day} onChange={e => setNewProduct({ ...newProduct, price_1day: e.target.value })} />
-                                        </div>
-                                        <div>
-                                            <label style={{ fontSize: '0.65rem', color: '#bc13fe', display: 'block', marginBottom: '4px' }}>7 DAY PRICE (₺)</label>
-                                            <input placeholder="7 GÜN" type="number" step="0.01" value={newProduct.price_7day} onChange={e => setNewProduct({ ...newProduct, price_7day: e.target.value })} />
-                                        </div>
-                                        <div>
-                                            <label style={{ fontSize: '0.65rem', color: '#bc13fe', display: 'block', marginBottom: '4px' }}>30 DAY PRICE (₺)</label>
-                                            <input placeholder="30 GÜN" type="number" step="0.01" value={newProduct.price_30day} onChange={e => setNewProduct({ ...newProduct, price_30day: e.target.value })} />
-                                        </div>
-                                        <div>
-                                            <label style={{ fontSize: '0.65rem', color: '#bc13fe', display: 'block', marginBottom: '4px' }}>LIFETIME (₺)</label>
-                                            <input placeholder="SINIRSIZ" type="number" step="0.01" value={newProduct.price_lifetime} onChange={e => setNewProduct({ ...newProduct, price_lifetime: e.target.value })} />
-                                        </div>
-                                    </div>
-                                    <select value={newProduct.category_id} onChange={e => setNewProduct({ ...newProduct, category_id: e.target.value })}>
-                                        <option value="">SELECT SECTOR</option>
-                                        {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                    </select>
-                                    <input placeholder="COVER IMAGE URL (Main Display)" value={newProduct.image_url} onChange={e => setNewProduct({ ...newProduct, image_url: e.target.value })} />
-                                    <input placeholder="VIDEO URL (YouTube or Direct MP4)" value={newProduct.video_url} onChange={e => setNewProduct({ ...newProduct, video_url: e.target.value })} />
-
-                                    <div className="media-urls-section" style={{ marginBottom: '1rem', padding: '1rem', border: '1px solid rgba(188, 19, 254, 0.4)', borderRadius: '8px', background: 'rgba(0, 0, 0, 0.2)', boxShadow: '0 0 10px rgba(188, 19, 254, 0.1)' }}>
-                                        <h4 className="cyber-font" style={{ marginBottom: '1rem', color: '#bc13fe', fontSize: '0.9rem' }}>EXTRA IMAGES</h4>
-                                        {newProduct.extra_images.map((url, index) => (
-                                            <div key={index} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                                                <input
-                                                    placeholder="Image URL"
-                                                    value={url}
-                                                    onChange={e => {
-                                                        const newImages = [...newProduct.extra_images];
-                                                        newImages[index] = e.target.value;
-                                                        setNewProduct({ ...newProduct, extra_images: newImages });
-                                                    }}
-                                                    style={{ flex: 1, marginBottom: 0 }}
-                                                />
-                                                <button
-                                                    type="button"
-                                                    className="del-btn"
-                                                    onClick={() => {
-                                                        const newImages = newProduct.extra_images.filter((_, i) => i !== index);
-                                                        setNewProduct({ ...newProduct, extra_images: newImages });
-                                                    }}
-                                                    style={{ padding: '0 15px' }}
-                                                >×</button>
-                                            </div>
-                                        ))}
-                                        <button
-                                            type="button"
-                                            className="neon-button"
-                                            style={{ padding: '0.5rem', fontSize: '0.8rem', width: 'auto', marginTop: '0.5rem', borderColor: '#bc13fe', color: '#bc13fe' }}
-                                            onClick={() => setNewProduct({ ...newProduct, extra_images: [...newProduct.extra_images, ''] })}
-                                        >
-                                            + ADD EXTRA IMAGE
-                                        </button>
-                                    </div>
-
-                                    <button className="neon-button">
-                                        {editingId ? 'SAVE CHANGES / KAYDET' : 'DEPLOY ASSET'}
-                                    </button>
-                                </form>
-                            </section>
-                            <div className="item-list-block">
-                                {products.map(p => (
-                                    <div key={p.id} className="list-item-block product-item">
-                                        <div className="p-details">
-                                            <strong>{p.name}</strong>
-                                            <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)' }}>₺{p.price_1day || p.price}/gün • ₺{p.price_7day || 0}/hafta • ₺{p.price_30day || 0}/ay • ₺{p.price_lifetime || 0}/sınırsız</span>
-                                        </div>
-                                        <div className="item-actions">
-                                            <button onClick={() => startEditing(p)} className="edit-btn">EDIT</button>
-                                            <button onClick={() => deleteProduct(p.id)} className="del-btn">×</button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-                </div>
-            </main>
-        </div>
+const useCollection = (path, order = 'created_at', dir = 'desc', max = 500) => {
+  const [rows, setRows] = useState([]);
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    const q = query(collection(db, path), orderBy(order, dir), limit(max));
+    return onSnapshot(
+      q,
+      (snap) => {
+        setRows(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+        setReady(true);
+      },
+      (err) => {
+        console.error(path, err);
+        toast.error(`${path} okunamadı: ${err.code || err.message}`);
+        setReady(true);
+      }
     );
+  }, [path, order, dir, max]);
+  return [rows, ready];
+};
+
+/* ------------------------------------------------------------------ */
+/* Küçük UI parçaları                                                  */
+/* ------------------------------------------------------------------ */
+const StatusPill = ({ status }) => {
+  const m = statusMeta(status);
+  return <span className={`adm-pill adm-pill-${m.tone}`}>{m.label}</span>;
+};
+
+const Empty = ({ children }) => <div className="adm-empty">{children}</div>;
+
+const ImageField = ({ label, value, onChange, hint }) => {
+  const fileRef = useRef(null);
+  const [busy, setBusy] = useState(false);
+  const [mode, setMode] = useState(value && !value.startsWith('data:') ? 'url' : 'upload');
+
+  const onFile = async (file) => {
+    if (!file) return;
+    setBusy(true);
+    try {
+      onChange(await fileToCompressedDataUrl(file));
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="adm-field">
+      <span className="adm-label">{label}</span>
+      <div className="adm-image-field">
+        <div className="adm-image-preview">
+          {value ? <img src={value} alt="" /> : <span>Görsel yok</span>}
+        </div>
+        <div className="adm-image-actions">
+          <div className="adm-seg">
+            <button type="button" className={mode === 'upload' ? 'on' : ''} onClick={() => setMode('upload')}>
+              <Upload size={13} /> Yükle
+            </button>
+            <button type="button" className={mode === 'url' ? 'on' : ''} onClick={() => setMode('url')}>
+              <Link2 size={13} /> URL
+            </button>
+          </div>
+          {mode === 'upload' ? (
+            <>
+              <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => onFile(e.target.files?.[0])} />
+              <button type="button" className="adm-btn adm-btn-ghost" disabled={busy} onClick={() => fileRef.current?.click()}>
+                {busy ? 'İşleniyor…' : 'Dosya seç'}
+              </button>
+            </>
+          ) : (
+            <input
+              className="adm-input"
+              placeholder="https://…"
+              value={value?.startsWith('data:') ? '' : value || ''}
+              onChange={(e) => onChange(e.target.value.trim())}
+            />
+          )}
+          {value && (
+            <button type="button" className="adm-link-danger" onClick={() => onChange('')}>
+              Görseli kaldır
+            </button>
+          )}
+          {hint && <small className="adm-muted">{hint}</small>}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ------------------------------------------------------------------ */
+/* Genel bakış                                                         */
+/* ------------------------------------------------------------------ */
+const Overview = ({ orders, products, categories, go }) => {
+  const revenue = orders.filter((o) => REVENUE_STATUSES.includes(o.status)).reduce((s, o) => s + (Number(o.total_amount) || 0), 0);
+  const waiting = orders.filter((o) => o.status === 'Waiting for Confirmation' || o.status === 'paid');
+  const today = new Date().toDateString();
+  const todayCount = orders.filter((o) => toDate(o.created_at)?.toDateString() === today).length;
+
+  const cards = [
+    { icon: Wallet, label: 'Toplam ciro', value: tl(revenue), sub: 'Ödenen + teslim edilen' },
+    { icon: Clock, label: 'İşlem bekleyen', value: waiting.length, sub: 'Onay / teslim bekliyor', action: () => go('orders', 'action') },
+    { icon: ShoppingBag, label: 'Bugünkü sipariş', value: todayCount, sub: `Toplam ${orders.length} sipariş` },
+    { icon: Package, label: 'Ürün', value: products.length, sub: `${categories.length} kategori` },
+  ];
+
+  return (
+    <>
+      <div className="adm-stats">
+        {cards.map(({ icon: Icon, label, value, sub, action }) => (
+          <button key={label} className={`adm-stat ${action ? 'clickable' : ''}`} onClick={action} disabled={!action}>
+            <span className="adm-stat-icon"><Icon size={18} /></span>
+            <span className="adm-stat-label">{label}</span>
+            <strong className="adm-stat-value">{value}</strong>
+            <span className="adm-stat-sub">{sub}</span>
+          </button>
+        ))}
+      </div>
+
+      <section className="adm-card">
+        <header className="adm-card-head">
+          <h2>İşlem bekleyen siparişler</h2>
+          <button className="adm-btn adm-btn-ghost" onClick={() => go('orders')}>Tüm siparişler</button>
+        </header>
+        {waiting.length ? (
+          <div className="adm-table-wrap">
+            <table className="adm-table">
+              <tbody>
+                {waiting.slice(0, 8).map((o) => (
+                  <tr key={o.id}>
+                    <td>
+                      <strong>{o.customer_name || '—'}</strong>
+                      <div className="adm-muted">{o.customer_email}</div>
+                    </td>
+                    <td>{(o.items || []).map((i) => `${i.name} (${i.durationLabel})`).join(', ')}</td>
+                    <td className="adm-num">{tl(o.total_amount)}</td>
+                    <td><StatusPill status={o.status} /></td>
+                    <td className="adm-muted">{fmtDate(o.created_at)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <Empty>Bekleyen sipariş yok. 🎉</Empty>
+        )}
+      </section>
+    </>
+  );
+};
+
+/* ------------------------------------------------------------------ */
+/* Siparişler                                                          */
+/* ------------------------------------------------------------------ */
+const Orders = ({ orders, initialFilter }) => {
+  const [filter, setFilter] = useState(initialFilter || 'all');
+  const [search, setSearch] = useState('');
+  const [open, setOpen] = useState(null);
+
+  const counts = useMemo(() => {
+    const c = { all: orders.length, action: 0 };
+    orders.forEach((o) => {
+      c[o.status] = (c[o.status] || 0) + 1;
+      if (o.status === 'Waiting for Confirmation' || o.status === 'paid') c.action++;
+    });
+    return c;
+  }, [orders]);
+
+  const shown = orders.filter((o) => {
+    if (filter === 'action' && !(o.status === 'Waiting for Confirmation' || o.status === 'paid')) return false;
+    if (filter !== 'all' && filter !== 'action' && o.status !== filter) return false;
+    if (!search) return true;
+    const hay = `${o.id} ${o.customer_name} ${o.customer_email} ${o.customer_phone} ${(o.items || []).map((i) => i.name).join(' ')}`.toLowerCase();
+    return hay.includes(search.toLowerCase());
+  });
+
+  const setStatus = async (id, status) => {
+    try {
+      await updateDoc(doc(db, 'orders', id), { status, updated_at: serverTimestamp() });
+      toast.success(`Durum: ${statusMeta(status).label}`);
+    } catch (err) {
+      toast.error('Güncellenemedi: ' + err.code);
+    }
+  };
+
+  const remove = async (id) => {
+    if (!confirm('Bu sipariş kalıcı olarak silinsin mi?')) return;
+    try {
+      await deleteDoc(doc(db, 'orders', id));
+      toast.success('Sipariş silindi');
+    } catch (err) {
+      toast.error('Silinemedi: ' + err.code);
+    }
+  };
+
+  const chips = [
+    { value: 'all', label: 'Tümü' },
+    { value: 'action', label: 'İşlem bekleyen' },
+    ...ORDER_STATUSES,
+  ];
+
+  return (
+    <section className="adm-card">
+      <header className="adm-card-head adm-card-head-wrap">
+        <div className="adm-chips">
+          {chips.map((c) => (
+            <button key={c.value} className={`adm-chip ${filter === c.value ? 'on' : ''}`} onClick={() => setFilter(c.value)}>
+              {c.label} <span>{counts[c.value] || 0}</span>
+            </button>
+          ))}
+        </div>
+        <label className="adm-search">
+          <Search size={15} />
+          <input placeholder="Müşteri, e-posta, ürün, sipariş no…" value={search} onChange={(e) => setSearch(e.target.value)} />
+        </label>
+      </header>
+
+      {shown.length ? (
+        <div className="adm-orders">
+          {shown.map((o) => {
+            const isOpen = open === o.id;
+            return (
+              <article key={o.id} className={`adm-order ${isOpen ? 'open' : ''}`}>
+                <button className="adm-order-row" onClick={() => setOpen(isOpen ? null : o.id)}>
+                  <div className="adm-order-main">
+                    <strong>{o.customer_name || 'İsimsiz'}</strong>
+                    <span className="adm-muted">{o.customer_email} · {o.customer_phone}</span>
+                  </div>
+                  <span className="adm-order-items">{(o.items || []).length} ürün</span>
+                  <span className="adm-num">{tl(o.total_amount)}</span>
+                  <StatusPill status={o.status} />
+                  <span className="adm-muted adm-hide-sm">{fmtDate(o.created_at)}</span>
+                  <ChevronDown size={16} className="adm-chevron" />
+                </button>
+
+                {isOpen && (
+                  <div className="adm-order-detail">
+                    <div className="adm-order-meta">
+                      <div><span className="adm-label">Sipariş no</span><code>{o.merchant_oid || o.id}</code></div>
+                      <div><span className="adm-label">Ödeme</span>{o.payment_method || '—'}</div>
+                      <div><span className="adm-label">Tarih</span>{fmtDate(o.created_at)}</div>
+                      <div><span className="adm-label">Kullanıcı</span>{o.user_id ? <code>{o.user_id}</code> : 'Misafir'}</div>
+                    </div>
+                    <table className="adm-table adm-table-compact">
+                      <thead>
+                        <tr><th>Ürün</th><th>Plan</th><th>Adet</th><th className="adm-num">Tutar</th></tr>
+                      </thead>
+                      <tbody>
+                        {(o.items || []).map((i, idx) => (
+                          <tr key={idx}>
+                            <td>{i.name}</td>
+                            <td>{i.durationLabel}</td>
+                            <td>{i.quantity}</td>
+                            <td className="adm-num">{tl(i.subtotal ?? i.price * i.quantity)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    <div className="adm-order-actions">
+                      <span className="adm-label">Durumu değiştir</span>
+                      <div className="adm-chips">
+                        {ORDER_STATUSES.map((s) => (
+                          <button
+                            key={s.value}
+                            className={`adm-chip adm-chip-${s.tone} ${o.status === s.value ? 'on' : ''}`}
+                            onClick={() => setStatus(o.id, s.value)}
+                            disabled={o.status === s.value}
+                          >
+                            {s.label}
+                          </button>
+                        ))}
+                      </div>
+                      <button className="adm-link-danger" onClick={() => remove(o.id)}>
+                        <Trash2 size={14} /> Siparişi sil
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </article>
+            );
+          })}
+        </div>
+      ) : (
+        <Empty>Bu filtrede sipariş yok.</Empty>
+      )}
+    </section>
+  );
+};
+
+/* ------------------------------------------------------------------ */
+/* Ürünler                                                             */
+/* ------------------------------------------------------------------ */
+const EMPTY_PRODUCT = {
+  name: '',
+  description: '',
+  details: '',
+  category_id: '',
+  price_1day: '',
+  price_7day: '',
+  price_30day: '',
+  price_lifetime: '',
+  image_url: '',
+  video_url: '',
+  extra_images: [],
+  is_available: true,
+};
+
+const ProductForm = ({ initial, categories, onClose }) => {
+  const [form, setForm] = useState(() => ({
+    ...EMPTY_PRODUCT,
+    ...initial,
+    price_1day: String(initial?.price_1day || initial?.price || ''),
+    price_7day: String(initial?.price_7day || ''),
+    price_30day: String(initial?.price_30day || ''),
+    price_lifetime: String(initial?.price_lifetime || ''),
+    extra_images: initial?.extra_images || [],
+  }));
+  const [saving, setSaving] = useState(false);
+  const extraRef = useRef(null);
+
+  useEffect(() => {
+    const onKey = (e) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e?.target ? (e.target.type === 'checkbox' ? e.target.checked : e.target.value) : e }));
+
+  const addExtraFiles = async (files) => {
+    for (const file of Array.from(files || [])) {
+      try {
+        const url = await fileToCompressedDataUrl(file, 960);
+        setForm((f) => ({ ...f, extra_images: [...f.extra_images, url] }));
+      } catch (err) {
+        toast.error(err.message);
+      }
+    }
+  };
+
+  const save = async (e) => {
+    e.preventDefault();
+    if (!form.name.trim()) return toast.error('Ürün adı gerekli.');
+    if (!form.category_id) return toast.error('Kategori seç.');
+    const prices = ['price_1day', 'price_7day', 'price_30day', 'price_lifetime'].map((k) => parseFloat(form[k]) || 0);
+    if (!prices.some((p) => p > 0)) return toast.error('En az bir plan fiyatı gir.');
+
+    const data = {
+      name: form.name.trim(),
+      description: form.description.trim(),
+      details: form.details,
+      category_id: form.category_id,
+      price_1day: prices[0],
+      price_7day: prices[1],
+      price_30day: prices[2],
+      price_lifetime: prices[3],
+      price: prices.find((p) => p > 0),
+      image_url: form.image_url || '',
+      video_url: form.video_url.trim(),
+      extra_images: form.extra_images,
+      is_available: !!form.is_available,
+      updated_at: serverTimestamp(),
+    };
+    if (docBytes(data) > MAX_DOC_BYTES) {
+      return toast.error('Görseller çok büyük (1 MB sınırı). Bazı ek görselleri kaldır ya da URL kullan.');
+    }
+
+    setSaving(true);
+    try {
+      if (initial?.id) {
+        await updateDoc(doc(db, 'products', initial.id), data);
+        toast.success('Ürün güncellendi');
+      } else {
+        await addDoc(collection(db, 'products'), { ...data, created_at: serverTimestamp() });
+        toast.success('Ürün eklendi');
+      }
+      onClose();
+    } catch (err) {
+      toast.error('Kaydedilemedi: ' + (err.code || err.message));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="adm-drawer-backdrop" onClick={onClose}>
+      <form className="adm-drawer" onClick={(e) => e.stopPropagation()} onSubmit={save}>
+        <header className="adm-drawer-head">
+          <h2>{initial?.id ? 'Ürünü düzenle' : 'Yeni ürün'}</h2>
+          <button type="button" className="adm-icon-btn" onClick={onClose} aria-label="Kapat"><X size={18} /></button>
+        </header>
+
+        <div className="adm-drawer-body">
+          <div className="adm-grid-2">
+            <label className="adm-field">
+              <span className="adm-label">Ürün adı *</span>
+              <input className="adm-input" value={form.name} onChange={set('name')} required />
+            </label>
+            <label className="adm-field">
+              <span className="adm-label">Kategori *</span>
+              <select className="adm-input" value={form.category_id} onChange={set('category_id')} required>
+                <option value="">Seç…</option>
+                {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </label>
+          </div>
+
+          <label className="adm-field">
+            <span className="adm-label">Kısa açıklama</span>
+            <input className="adm-input" value={form.description} onChange={set('description')} maxLength={160} />
+          </label>
+
+          <label className="adm-field">
+            <span className="adm-label">Detaylar / özellikler</span>
+            <textarea className="adm-input" rows={6} value={form.details} onChange={set('details')} placeholder={'- Aimbot\n- ESP\n- …'} />
+          </label>
+
+          <div className="adm-field">
+            <span className="adm-label">Plan fiyatları (₺) — boş bırakılan plan satılmaz</span>
+            <div className="adm-grid-4">
+              {[
+                ['price_1day', '1 Gün'],
+                ['price_7day', '7 Gün'],
+                ['price_30day', '30 Gün'],
+                ['price_lifetime', 'Sınırsız'],
+              ].map(([k, l]) => (
+                <label key={k} className="adm-price-input">
+                  <small>{l}</small>
+                  <input className="adm-input" type="number" min="0" step="0.01" inputMode="decimal" value={form[k]} onChange={set(k)} />
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <ImageField label="Kapak görseli" value={form.image_url} onChange={set('image_url')} hint="Otomatik WebP'ye küçültülür." />
+
+          <div className="adm-field">
+            <span className="adm-label">Ek görseller</span>
+            <div className="adm-thumbs">
+              {form.extra_images.map((src, i) => (
+                <div key={i} className="adm-thumb">
+                  <img src={src} alt="" />
+                  <button type="button" onClick={() => setForm((f) => ({ ...f, extra_images: f.extra_images.filter((_, j) => j !== i) }))} aria-label="Kaldır">
+                    <X size={12} />
+                  </button>
+                </div>
+              ))}
+              <button type="button" className="adm-thumb adm-thumb-add" onClick={() => extraRef.current?.click()}>
+                <Plus size={18} />
+              </button>
+              <input ref={extraRef} type="file" accept="image/*" multiple hidden onChange={(e) => { addExtraFiles(e.target.files); e.target.value = ''; }} />
+            </div>
+          </div>
+
+          <label className="adm-field">
+            <span className="adm-label">Video URL (YouTube / mp4)</span>
+            <input className="adm-input" value={form.video_url} onChange={set('video_url')} placeholder="https://…" />
+          </label>
+
+          <label className="adm-switch">
+            <input type="checkbox" checked={form.is_available} onChange={set('is_available')} />
+            <span className="adm-switch-track"><span /></span>
+            Satışta (sitede görünsün)
+          </label>
+        </div>
+
+        <footer className="adm-drawer-foot">
+          <button type="button" className="adm-btn adm-btn-ghost" onClick={onClose}>Vazgeç</button>
+          <button className="adm-btn adm-btn-primary" disabled={saving}>{saving ? 'Kaydediliyor…' : 'Kaydet'}</button>
+        </footer>
+      </form>
+    </div>
+  );
+};
+
+const Products = ({ products, categories }) => {
+  const [editing, setEditing] = useState(null);
+  const [search, setSearch] = useState('');
+  const [cat, setCat] = useState('');
+  const catName = (id) => categories.find((c) => c.id === id)?.name || '—';
+
+  const shown = products.filter(
+    (p) => (!cat || p.category_id === cat) && (!search || p.name?.toLowerCase().includes(search.toLowerCase()))
+  );
+
+  const toggle = async (p) => {
+    try {
+      await updateDoc(doc(db, 'products', p.id), { is_available: p.is_available === false });
+    } catch (err) {
+      toast.error('Güncellenemedi: ' + err.code);
+    }
+  };
+
+  const remove = async (p) => {
+    if (!confirm(`"${p.name}" silinsin mi? Bu işlem geri alınamaz.`)) return;
+    try {
+      await deleteDoc(doc(db, 'products', p.id));
+      toast.success('Ürün silindi');
+    } catch (err) {
+      toast.error('Silinemedi: ' + err.code);
+    }
+  };
+
+  return (
+    <section className="adm-card">
+      <header className="adm-card-head adm-card-head-wrap">
+        <div className="adm-toolbar">
+          <label className="adm-search">
+            <Search size={15} />
+            <input placeholder="Ürün ara…" value={search} onChange={(e) => setSearch(e.target.value)} />
+          </label>
+          <select className="adm-input adm-input-sm" value={cat} onChange={(e) => setCat(e.target.value)}>
+            <option value="">Tüm kategoriler</option>
+            {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        </div>
+        <button className="adm-btn adm-btn-primary" onClick={() => setEditing({})} disabled={!categories.length}>
+          <Plus size={16} /> Yeni ürün
+        </button>
+      </header>
+      {!categories.length && <Empty>Önce bir kategori ekle, sonra ürün ekleyebilirsin.</Empty>}
+
+      {shown.length ? (
+        <div className="adm-table-wrap">
+          <table className="adm-table">
+            <thead>
+              <tr>
+                <th>Ürün</th>
+                <th>Kategori</th>
+                <th className="adm-hide-sm">Planlar</th>
+                <th className="adm-num">Başlangıç</th>
+                <th>Durum</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {shown.map((p) => (
+                <tr key={p.id} className={p.is_available === false ? 'adm-row-dim' : ''}>
+                  <td>
+                    <div className="adm-prod">
+                      <img src={p.image_url || '/logo.webp'} alt="" />
+                      <div>
+                        <strong>{p.name}</strong>
+                        <div className="adm-muted adm-ellipsis">{p.description}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td>{catName(p.category_id)}</td>
+                  <td className="adm-hide-sm adm-plans">
+                    {[['1G', p.price_1day || p.price], ['7G', p.price_7day], ['30G', p.price_30day], ['∞', p.price_lifetime]]
+                      .filter(([, v]) => v > 0)
+                      .map(([k, v]) => <span key={k}>{k} {tl(v)}</span>)}
+                  </td>
+                  <td className="adm-num">{tl(getStartPrice(p))}</td>
+                  <td>
+                    <button className={`adm-pill adm-pill-${p.is_available === false ? 'muted' : 'ok'} adm-pill-btn`} onClick={() => toggle(p)} title="Satış durumunu değiştir">
+                      {p.is_available === false ? <><EyeOff size={12} /> Gizli</> : <><Eye size={12} /> Satışta</>}
+                    </button>
+                  </td>
+                  <td className="adm-row-actions">
+                    <button className="adm-icon-btn" onClick={() => setEditing(p)} aria-label="Düzenle"><Pencil size={15} /></button>
+                    <button className="adm-icon-btn danger" onClick={() => remove(p)} aria-label="Sil"><Trash2 size={15} /></button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        categories.length > 0 && <Empty>Ürün bulunamadı.</Empty>
+      )}
+
+      {editing && <ProductForm initial={editing} categories={categories} onClose={() => setEditing(null)} />}
+    </section>
+  );
+};
+
+/* ------------------------------------------------------------------ */
+/* Kategoriler                                                         */
+/* ------------------------------------------------------------------ */
+const Categories = ({ categories, products }) => {
+  const empty = { name: '', slug: '', image_url: '' };
+  const [form, setForm] = useState(empty);
+  const [editId, setEditId] = useState(null);
+  const [saving, setSaving] = useState(false);
+
+  const save = async (e) => {
+    e.preventDefault();
+    if (!form.name.trim()) return toast.error('Kategori adı gerekli.');
+    const data = { name: form.name.trim(), slug: form.slug.trim() || slugify(form.name), image_url: form.image_url || '' };
+    if (docBytes(data) > MAX_DOC_BYTES) return toast.error('Görsel çok büyük.');
+    setSaving(true);
+    try {
+      if (editId) {
+        await updateDoc(doc(db, 'categories', editId), { ...data, updated_at: serverTimestamp() });
+        toast.success('Kategori güncellendi');
+      } else {
+        await addDoc(collection(db, 'categories'), { ...data, created_at: serverTimestamp() });
+        toast.success('Kategori eklendi');
+      }
+      setForm(empty);
+      setEditId(null);
+    } catch (err) {
+      toast.error('Kaydedilemedi: ' + (err.code || err.message));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const remove = async (c) => {
+    const count = products.filter((p) => p.category_id === c.id).length;
+    if (count) return toast.error(`Bu kategoride ${count} ürün var. Önce ürünleri taşı veya sil.`);
+    if (!confirm(`"${c.name}" kategorisi silinsin mi?`)) return;
+    try {
+      await deleteDoc(doc(db, 'categories', c.id));
+      toast.success('Kategori silindi');
+    } catch (err) {
+      toast.error('Silinemedi: ' + err.code);
+    }
+  };
+
+  return (
+    <div className="adm-split">
+      <form className="adm-card adm-card-pad" onSubmit={save}>
+        <h2 className="adm-card-title">{editId ? 'Kategoriyi düzenle' : 'Yeni kategori / oyun'}</h2>
+        <label className="adm-field">
+          <span className="adm-label">Ad *</span>
+          <input
+            className="adm-input"
+            value={form.name}
+            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value, slug: editId ? f.slug : slugify(e.target.value) }))}
+            placeholder="Valorant"
+            required
+          />
+        </label>
+        <label className="adm-field">
+          <span className="adm-label">Slug</span>
+          <input className="adm-input" value={form.slug} onChange={(e) => setForm((f) => ({ ...f, slug: slugify(e.target.value) }))} placeholder="valorant" />
+        </label>
+        <ImageField label="Oyun görseli (kart)" value={form.image_url} onChange={(v) => setForm((f) => ({ ...f, image_url: v }))} />
+        <div className="adm-form-actions">
+          {editId && (
+            <button type="button" className="adm-btn adm-btn-ghost" onClick={() => { setEditId(null); setForm(empty); }}>Vazgeç</button>
+          )}
+          <button className="adm-btn adm-btn-primary" disabled={saving}>{saving ? 'Kaydediliyor…' : editId ? 'Güncelle' : 'Ekle'}</button>
+        </div>
+      </form>
+
+      <section className="adm-card">
+        <header className="adm-card-head"><h2>Kategoriler ({categories.length})</h2></header>
+        {categories.length ? (
+          <div className="adm-cat-grid">
+            {categories.map((c) => (
+              <div key={c.id} className={`adm-cat ${editId === c.id ? 'on' : ''}`}>
+                <div className="adm-cat-img">{c.image_url ? <img src={c.image_url} alt="" /> : <img src="/logo.webp" alt="" className="contain" />}</div>
+                <div className="adm-cat-body">
+                  <strong>{c.name}</strong>
+                  <span className="adm-muted">{products.filter((p) => p.category_id === c.id).length} ürün · /{c.slug}</span>
+                </div>
+                <div className="adm-row-actions">
+                  <button className="adm-icon-btn" onClick={() => { setEditId(c.id); setForm({ name: c.name, slug: c.slug || '', image_url: c.image_url || '' }); }} aria-label="Düzenle"><Pencil size={15} /></button>
+                  <button className="adm-icon-btn danger" onClick={() => remove(c)} aria-label="Sil"><Trash2 size={15} /></button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <Empty>Henüz kategori yok.</Empty>
+        )}
+      </section>
+    </div>
+  );
+};
+
+/* ------------------------------------------------------------------ */
+/* Kabuk                                                               */
+/* ------------------------------------------------------------------ */
+const NAV = [
+  { id: 'overview', label: 'Genel bakış', icon: LayoutDashboard },
+  { id: 'orders', label: 'Siparişler', icon: ShoppingBag },
+  { id: 'products', label: 'Ürünler', icon: Package },
+  { id: 'categories', label: 'Kategoriler', icon: FolderTree },
+];
+
+const AdminDashboard = ({ user }) => {
+  const [view, setView] = useState(() => sessionStorage.getItem('adm_view') || 'overview');
+  const [orderFilter, setOrderFilter] = useState(null);
+  const [navOpen, setNavOpen] = useState(false);
+
+  const [orders, ordersReady] = useCollection('orders', 'created_at', 'desc', 500);
+  const [products] = useCollection('products', 'created_at', 'desc');
+  const [categories] = useCollection('categories', 'name', 'asc');
+
+  const go = (v, filter = null) => {
+    setView(v);
+    setOrderFilter(filter);
+    setNavOpen(false);
+    sessionStorage.setItem('adm_view', v);
+  };
+
+  const actionCount = orders.filter((o) => o.status === 'Waiting for Confirmation' || o.status === 'paid').length;
+  const current = NAV.find((n) => n.id === view) || NAV[0];
+
+  return (
+    <div className="adm-shell">
+      <aside className={`adm-side ${navOpen ? 'open' : ''}`}>
+        <div className="adm-brand">
+          <img src="/logo.webp" alt="" />
+          <div>
+            <strong>RGX</strong>
+            <span>Yönetim</span>
+          </div>
+        </div>
+        <nav className="adm-nav">
+          {NAV.map(({ id, label, icon: Icon }) => (
+            <button key={id} className={view === id ? 'on' : ''} onClick={() => go(id)}>
+              <Icon size={17} />
+              <span>{label}</span>
+              {id === 'orders' && actionCount > 0 && <em>{actionCount}</em>}
+            </button>
+          ))}
+        </nav>
+        <div className="adm-side-foot">
+          <Link to="/" className="adm-nav-link"><ExternalLink size={15} /> Siteyi aç</Link>
+          <div className="adm-user">
+            <span className="adm-avatar">{user.email?.[0]?.toUpperCase()}</span>
+            <span className="adm-ellipsis">{user.email}</span>
+          </div>
+          <button className="adm-btn adm-btn-ghost adm-btn-block" onClick={() => signOut(auth)}>
+            <LogOut size={15} /> Çıkış
+          </button>
+        </div>
+      </aside>
+      {navOpen && <div className="adm-side-backdrop" onClick={() => setNavOpen(false)} />}
+
+      <main className="adm-main">
+        <header className="adm-top">
+          <button className="adm-icon-btn adm-menu-btn" onClick={() => setNavOpen(true)} aria-label="Menü"><Menu size={18} /></button>
+          <h1>{current.label}</h1>
+          {!ordersReady && <span className="adm-muted">Yükleniyor…</span>}
+          {ordersReady && view !== 'orders' && actionCount > 0 && (
+            <button className="adm-pill adm-pill-warn adm-pill-btn" onClick={() => go('orders', 'action')}>
+              <CheckCircle2 size={13} /> {actionCount} sipariş işlem bekliyor
+            </button>
+          )}
+        </header>
+
+        <div className="adm-content">
+          {view === 'overview' && <Overview orders={orders} products={products} categories={categories} go={go} />}
+          {view === 'orders' && <Orders key={orderFilter || 'all'} orders={orders} initialFilter={orderFilter} />}
+          {view === 'products' && <Products products={products} categories={categories} />}
+          {view === 'categories' && <Categories categories={categories} products={products} />}
+        </div>
+      </main>
+    </div>
+  );
 };
 
 export default AdminDashboard;

@@ -2,7 +2,7 @@ import confetti from 'canvas-confetti';
 
 export const triggerConfetti = () => {
     const end = Date.now() + 3 * 1000;
-    const colors = ['#bc13fe', '#7d12ff', '#ffffff'];
+    const colors = ['#e0262f', '#7d12ff', '#ffffff'];
 
     (function frame() {
         confetti({

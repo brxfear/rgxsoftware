@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster, toast } from 'react-hot-toast';
-import { Sparkles, Shield, Zap, ArrowRight, CreditCard, ChevronRight, CheckCircle2 } from 'lucide-react';
+import { Shield, ShieldCheck, Zap, ArrowRight, CreditCard, CheckCircle2, Landmark, Bitcoin } from 'lucide-react';
 
 import Navbar from './components/Navbar/Navbar';
 import TabSwitcher from './components/TabSwitcher/TabSwitcher';
 import ProductCard from './components/ProductCard/ProductCard';
-import AdminDashboard from './components/Admin/AdminDashboard';
-import AdminLogin from './components/Admin/AdminLogin';
+import AdminGate from './components/Admin/AdminGate';
 import Cart from './components/Cart/Cart';
 import CheckoutModal from './components/Checkout/CheckoutModal';
 import ProductModal from './components/ProductCard/ProductModal';
@@ -17,24 +16,20 @@ import ReviewsSection from './components/Reviews/ReviewsSection';
 import HowItWorksSection from './components/HowItWorks/HowItWorksSection';
 import DiscordBanner from './components/Discord/DiscordBanner';
 
-import { supabase } from './lib/supabaseClient';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from './lib/firebase';
+import { fetchCategories, fetchProducts, createManualOrder, getStartPrice } from './lib/db';
 import { useCartStore } from './store/useCartStore';
 import { triggerConfetti } from './utils/celebration';
 import { translations } from './utils/translations';
 import './App.css';
+import './brand.css';
 
-// Admin Shield
-const ProtectedAdmin = ({ children }) => {
-  const [isAuth, setIsAuth] = useState(sessionStorage.getItem('admin_session') === 'active');
+const DISCORD_URL = 'https://discord.gg/dQ5u8TRAxr';
 
-  if (!isAuth) {
-    return <AdminLogin onLogin={() => {
-      sessionStorage.setItem('admin_session', 'active');
-      setIsAuth(true);
-      toast.success('DECRYPTION COMPLETE. ACCESS GRANTED.');
-    }} />;
-  }
-  return children;
+const scrollToId = (id) => {
+  const el = document.getElementById(id);
+  if (el) el.scrollIntoView({ behavior: 'smooth' });
 };
 
 function Store() {
@@ -71,53 +66,53 @@ function Store() {
   };
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      if (session?.user) fetchCart();
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setUser(firebaseUser);
+      if (firebaseUser) {
         fetchCart();
       } else {
         useCartStore.setState({ cart: [] });
       }
     });
 
-    fetchInitialData();
+    (async () => {
+      setLoading(true);
+      try {
+        const [cats, prods] = await Promise.all([fetchCategories(), fetchProducts()]);
+        setCategories(cats);
+        setProducts(prods.filter(p => p.is_available !== false));
+      } catch (err) {
+        console.error('Veriler yüklenemedi:', err);
+        toast.error('Ürünler yüklenemedi, sayfayı yenile.');
+      } finally {
+        setLoading(false);
+      }
+    })();
 
-    return () => {
-      subscription?.unsubscribe();
-    };
+    // PayTR dönüşü: /?odeme=basarili | /?odeme=basarisiz
+    const params = new URLSearchParams(window.location.search);
+    const payment = params.get('odeme');
+    if (payment) {
+      if (payment === 'basarili') {
+        triggerConfetti();
+        useCartStore.getState().clearCart();
+        toast.success('Ödemen alındı! Key ve kurulum detayları e-postana gönderilecek.', { duration: 6000 });
+      } else {
+        toast.error('Ödeme tamamlanamadı. Tekrar deneyebilir veya destekle iletişime geçebilirsin.', { duration: 6000 });
+      }
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+
+    return unsubscribe;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const fetchInitialData = async () => {
-    setLoading(true);
-    await Promise.all([fetchCategories(), fetchProducts()]);
-    setLoading(false);
-  };
-
-  const fetchCategories = async () => {
-    const { data, error } = await supabase.from('categories').select('*').order('name');
-    if (!error && data) {
-      setCategories(data);
-    }
-  };
-
-  const fetchProducts = async () => {
-    const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false });
-    if (!error && data) {
-      setProducts(data);
-    }
-  };
 
   const filteredProducts = activeTab
     ? products.filter(p => p.category_id === activeTab)
     : products;
 
-  // Öne çıkan ürünler (ilk 3-4 ürün)
   const featuredProducts = products.slice(0, 4);
+  const categoryName = (id) => categories.find(c => c.id === id)?.name;
 
   return (
     <div className="main-wrapper">
@@ -134,124 +129,202 @@ function Store() {
       />
 
       <main>
-        {/* ================= HERO SECTION ================= */}
+        {/* ================= HERO ================= */}
         <section className="hero-stage">
+          <div className="hero-texture" aria-hidden="true"></div>
           <div className="hero-beam" aria-hidden="true"></div>
           <div className="hero-halo" aria-hidden="true"></div>
 
-          <div className="container relative z-10">
+          <div className="container hero-inner">
             <div className="hero-pill-badge">
               <span className="status-dot-green"></span>
-              <span>7/24 OTOMATİK TESLİMAT & GÜNCEL KERNEL DRIVER</span>
+              <span>Anında otomatik teslimat</span>
             </div>
 
             <h1 className="hero-heading">
               <span className="hero-title">RGX Software</span> <br />
-              <span className="hero-accent">Private Hileler & Çözümler</span>
+              <span className="hero-accent">Private Yazılımlar</span>
             </h1>
 
+            {/* Showcase panel */}
+            <div className="hero-showcase">
+              <div className="showcase-topbar">
+                <span className="showcase-chip showcase-chip-live">UNDETECTED</span>
+                <span className="showcase-chip">7/24 Destek</span>
+                <span className="showcase-chip">{categories.length || '—'} Oyun</span>
+                <span className="showcase-rec">
+                  <span className="rec-dot"></span> RGX
+                </span>
+              </div>
+              <video
+                className="showcase-video"
+                src="/media/hero-loop.mp4"
+                poster="/media/hero-loop-poster.webp"
+                autoPlay
+                muted
+                loop
+                playsInline
+                preload="metadata"
+              />
+              <div className="showcase-vignette" aria-hidden="true"></div>
+            </div>
+
             <p className="hero-subtext">
-              Valorant, CS2, Rust ve daha pek çok popüler oyun için donanım banı riski olmadan, 
-              kernel seviyesinde undetected aimbot, ESP ve HWID Spoofer çözümleri.
+              Valorant, CS2, Rust ve daha pek çok popüler oyun için kernel seviyesinde
+              private çözümler. Kart, havale veya kripto ile öde, anahtarın saniyeler içinde gelsin.
             </p>
 
             <div className="hero-cta-group">
-              <button 
-                className="btn-primary" 
-                onClick={() => {
-                  const el = document.getElementById('products-section');
-                  if (el) el.scrollIntoView({ behavior: 'smooth' });
-                  else setActiveSection('products');
-                }}
-              >
-                <span>Ürünleri İncele</span>
+              <button className="btn-primary btn-lg" onClick={() => scrollToId('products-section')}>
+                <span>Mağazaya göz at</span>
                 <ArrowRight size={17} />
               </button>
-
-              <a 
-                href="https://discord.gg/dQ5u8TRAxr" 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="btn-secondary"
-              >
+              <a href={DISCORD_URL} target="_blank" rel="noopener noreferrer" className="btn-secondary btn-lg">
                 <span>Discord Topluluğu</span>
               </a>
             </div>
 
-            {/* Mitamers Hero Stats Bar */}
             <div className="hero-stats-bar">
               <div className="stat-item">
-                <span className="stat-num">%100</span>
-                <span className="stat-label">Undetected Sistem</span>
+                <span className="stat-num">{products.length || '—'}</span>
+                <span className="stat-label">Aktif ürün</span>
+              </div>
+              <div className="stat-divider"></div>
+              <div className="stat-item">
+                <span className="stat-num">{categories.length || '—'}</span>
+                <span className="stat-label">Desteklenen oyun</span>
               </div>
               <div className="stat-divider"></div>
               <div className="stat-item">
                 <span className="stat-num">Anında</span>
-                <span className="stat-label">Otomatik Key Teslimi</span>
+                <span className="stat-label">Otomatik key teslimi</span>
               </div>
               <div className="stat-divider"></div>
               <div className="stat-item">
                 <span className="stat-num">7/24</span>
-                <span className="stat-label">Türkçe Canlı Destek</span>
+                <span className="stat-label">Türkçe destek</span>
               </div>
             </div>
           </div>
         </section>
 
-        {/* ================= PAYMENT BADGES ================= */}
-        <div className="container">
-          <div className="payment-bar">
-            <div className="payment-item">
-              <CreditCard size={18} className="text-cyan" />
-              <span>Kredi & Banka Kartı (3D Secure)</span>
+        {/* ================= ÖNE ÇIKANLAR ================= */}
+        {featuredProducts.length > 0 && (
+          <section className="container section-block">
+            <div className="section-header-flex">
+              <div>
+                <h2 className="section-title">Öne çıkanlar</h2>
+                <p className="section-desc">Ekibimizin önerdiği ürünler; her birinin durumu canlı olarak görünür.</p>
+              </div>
+              <button className="link-arrow" onClick={() => scrollToId('products-section')}>
+                Tümünü gör <ArrowRight size={15} />
+              </button>
             </div>
-            <div className="payment-item">
-              <Zap size={18} className="text-cyan" />
-              <span>Anında Otomatik Teslimat</span>
+            <div className="product-grid product-grid-4">
+              {featuredProducts.map((product, i) => (
+                <ProductCard
+                  key={product.id}
+                  product={{ ...product, image: product.image_url, category_name: categoryName(product.category_id) }}
+                  onClick={(p) => setSelectedProduct(p)}
+                  highlight={i === 0}
+                />
+              ))}
             </div>
-            <div className="payment-item">
-              <Shield size={18} className="text-cyan" />
-              <span>Tüm Bankalar & Havale / EFT</span>
-            </div>
-            <div className="payment-item">
-              <Sparkles size={18} className="text-cyan" />
-              <span>Kripto Para (USDT / BTC / ETH)</span>
-            </div>
-          </div>
-        </div>
+          </section>
+        )}
 
-        {/* ================= PRODUCTS & GAMES SECTION ================= */}
-        <section id="products-section" className="container" style={{ paddingTop: '70px', paddingBottom: '70px' }}>
+        {/* ================= OYUNLAR ================= */}
+        {categories.length > 0 && (
+          <section className="container section-block">
+            <div className="section-header-flex">
+              <div>
+                <h2 className="section-title">Oyunlar</h2>
+                <p className="section-desc">{categories.length} oyun için yazılımlar. Oyununu seç, tüm ürünleri yan yana karşılaştır.</p>
+              </div>
+            </div>
+            <div className="games-grid">
+              {categories.map((cat) => {
+                const catProducts = products.filter(p => p.category_id === cat.id);
+                const minPrice = catProducts.length ? Math.min(...catProducts.map(getStartPrice)) : null;
+                return (
+                  <button
+                    key={cat.id}
+                    className="game-card"
+                    onClick={() => {
+                      setActiveTab(cat.id);
+                      scrollToId('products-section');
+                    }}
+                  >
+                    <div className="game-card-media">
+                      {cat.image_url ? (
+                        <img src={cat.image_url} alt={cat.name} loading="lazy" />
+                      ) : (
+                        <div className="game-card-fallback">
+                          <img src="/logo.webp" alt="" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="game-card-body">
+                      <span className="game-card-name">{cat.name}</span>
+                      <div className="game-card-meta">
+                        <span>{catProducts.length} ürün</span>
+                        {minPrice !== null && (
+                          <span>Başlangıç <strong>₺{minPrice.toLocaleString('tr-TR')}</strong></span>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* ================= ÖDEME YÖNTEMLERİ ================= */}
+        <section className="container section-block">
+          <h2 className="section-title">Kart, havale ve <span className="hero-accent">kripto</span></h2>
+          <p className="section-desc">Her yöntemde anahtarın otomatik olarak teslim edilir.</p>
+          <div className="payment-grid">
+            {[
+              { icon: <CreditCard size={22} />, label: 'Visa / Mastercard', sub: '3D Secure' },
+              { icon: <Landmark size={22} />, label: 'Havale / EFT', sub: 'Tüm bankalar' },
+              { icon: <Bitcoin size={22} />, label: 'Kripto', sub: 'USDT · BTC · ETH' },
+              { icon: <Zap size={22} />, label: 'Anında teslimat', sub: 'Otomatik key' },
+            ].map(({ icon, label, sub }) => (
+              <div key={label} className="payment-tile">
+                {icon}
+                <span className="payment-tile-label">{label}</span>
+                <span className="payment-tile-sub">{sub}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ================= TÜM ÜRÜNLER ================= */}
+        <section id="products-section" className="container section-block">
           <div className="section-header-flex">
             <div>
-              <span className="section-tag">ÖNE ÇIKAN VE TÜM YAZILIMLAR</span>
-              <h2 className="section-title">Oyununu Seç, Ürünleri İncele</h2>
-              <p className="section-desc">Gelişmiş filtreleme ile ihtiyacın olan oyunu seç, süre ve planları karşılaştır.</p>
+              <h2 className="section-title">Tüm ürünler</h2>
+              <p className="section-desc">Oyununu seç, süre ve planları karşılaştır.</p>
             </div>
           </div>
 
-          <TabSwitcher
-            games={categories}
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-          />
+          <TabSwitcher games={categories} activeTab={activeTab} onTabChange={setActiveTab} />
 
           {loading ? (
-            <div style={{ textAlign: 'center', padding: '60px 0', color: '#8b95a7' }}>
-              Yazılımlar ve güncel durumlar yükleniyor...
-            </div>
+            <div className="empty-state">Yazılımlar ve güncel durumlar yükleniyor...</div>
           ) : (
             <div className="product-grid">
               {filteredProducts.length > 0 ? (
                 filteredProducts.map(product => (
                   <ProductCard
                     key={product.id}
-                    product={{ ...product, image: product.image_url }}
+                    product={{ ...product, image: product.image_url, category_name: categoryName(product.category_id) }}
                     onClick={(p) => setSelectedProduct(p)}
                   />
                 ))
               ) : (
-                <div style={{ textAlign: 'center', padding: '60px 0', color: '#8b95a7', gridColumn: '1 / -1' }}>
+                <div className="empty-state" style={{ gridColumn: '1 / -1' }}>
                   Bu kategoride henüz aktif ürün bulunmuyor.
                 </div>
               )}
@@ -259,16 +332,38 @@ function Store() {
           )}
         </section>
 
-        {/* ================= NASIL ÇALIŞIYORUZ ================= */}
         <HowItWorksSection />
-
-        {/* ================= MÜŞTERİ YORUMLARI ================= */}
         <ReviewsSection />
 
-        {/* ================= SIKÇA SORULAN SORULAR ================= */}
-        <FAQSection />
+        {/* ================= HAKKIMIZDA ================= */}
+        <section className="container section-block">
+          <div className="about-panel">
+            <div className="about-bg" aria-hidden="true"></div>
+            <div className="about-content">
+              <span className="section-tag">Hakkımızda</span>
+              <h2 className="section-title">Her üründe elde ettikleriniz</h2>
+              <p className="section-desc">Tüm RGX ürünlerinde güvenli teslimat, düzenli güncellemeler, gerçek destek ve anında erişim.</p>
+            </div>
+            <div className="about-features">
+              {[
+                { icon: <ShieldCheck size={18} />, title: 'Güvenli ve undetected', desc: 'Sistemlerimiz maksimum güvenlik ve düşük tespit riski için kurgulanır.' },
+                { icon: <CheckCircle2 size={18} />, title: 'Sahada test edilmiş', desc: 'Her sürüm, yayın öncesi gerçek oturumlarda denenir.' },
+                { icon: <Shield size={18} />, title: 'Güvenli ödeme', desc: 'Tüm işlemler güvenilir ödeme altyapıları üzerinden korunur.' },
+                { icon: <Zap size={18} />, title: 'Anında teslimat', desc: 'Başarılı ödeme sonrası erişim anında iletilir.' },
+              ].map(({ icon, title, desc }) => (
+                <div key={title} className="about-feature">
+                  <div className="about-feature-icon">{icon}</div>
+                  <div>
+                    <h3>{title}</h3>
+                    <p>{desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
 
-        {/* ================= DISCORD BANNER ================= */}
+        <FAQSection />
         <DiscordBanner />
       </main>
 
@@ -302,44 +397,51 @@ function Store() {
           }));
 
           if (data.payment_method === 'paytr') {
-            const { data: paytrData, error } = await supabase.functions.invoke('create-paytr-session', {
-              body: {
-                items: detailedItems,
-                total_amount: totalAmount,
-                customer_name: data.name,
-                customer_email: user?.email || 'guest@rgxsoftware.com',
-                customer_phone: data.contact
-              }
-            });
-
-            if (error || !paytrData?.token) {
-              toast.error('Ödeme başlatılamadı: ' + (error?.message || 'Token Hatası'));
-              throw new Error('Payment init failed');
+            const idToken = user ? await user.getIdToken() : null;
+            let paytrData = null;
+            try {
+              const res = await fetch('/api/paytr-session', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
+                },
+                body: JSON.stringify({
+                  items: detailedItems.map(({ product_id, duration, quantity }) => ({ product_id, duration, quantity })),
+                  customer_name: data.name,
+                  customer_email: user?.email || data.email || '',
+                  customer_phone: data.contact,
+                }),
+              });
+              paytrData = await res.json().catch(() => null);
+              if (!res.ok || !paytrData?.token) throw new Error(paytrData?.error || 'Token alınamadı');
+            } catch (err) {
+              toast.error('Ödeme başlatılamadı: ' + err.message);
+              throw err;
             }
             return paytrData.token;
-          } else {
-            const { error } = await supabase.from('orders').insert([{
-              user_id: user?.id || null,
+          }
+
+          try {
+            await createManualOrder({
+              user_id: user?.uid || null,
               total_amount: totalAmount,
               items: detailedItems,
               subscription_duration: cart[0]?.duration || 1,
-              status: 'Waiting for Confirmation',
+              payment_method: data.payment_method || 'manual',
               customer_name: data.name,
               customer_phone: data.contact,
-              customer_email: user?.email || 'Guest'
-            }]);
-
-            if (error) {
-              toast.error('Sipariş oluşturulamadı: ' + error.message);
-              throw error;
-            } else {
-              setIsCheckoutOpen(false);
-              triggerConfetti();
-              await useCartStore.getState().clearCart();
-              toast.success('Siparişiniz başarıyla alındı! Key ve kurulum detayları iletiliyor.', { duration: 5000 });
-              return 'success';
-            }
+              customer_email: user?.email || 'Misafir',
+            });
+          } catch (err) {
+            toast.error('Sipariş oluşturulamadı: ' + err.message);
+            throw err;
           }
+          setIsCheckoutOpen(false);
+          triggerConfetti();
+          await useCartStore.getState().clearCart();
+          toast.success('Siparişiniz alındı! Ödemeniz onaylanınca key ve kurulum detayları iletilecek.', { duration: 5000 });
+          return 'success';
         }}
       />
 
@@ -354,8 +456,24 @@ function Store() {
 
       {/* Footer */}
       <footer className="main-footer">
-        <div className="container">
-          <p>&copy; 2026 RGX SOFTWARE. Tüm Hakları Saklıdır.</p>
+        <div className="container footer-inner">
+          <div className="footer-brand">
+            <img src="/logo.webp" alt="RGX Software" width="56" height="56" />
+            <div>
+              <strong>RGX SOFTWARE</strong>
+              <p>Private yazılımlar, anında teslimat ve 7/24 Türkçe destek.</p>
+            </div>
+          </div>
+          <nav className="footer-links">
+            <a href="#products-section">Ürünler</a>
+            <a href="#how-it-works">Nasıl çalışır</a>
+            <a href="#reviews">Yorumlar</a>
+            <a href="#faq">SSS</a>
+            <a href={DISCORD_URL} target="_blank" rel="noopener noreferrer">Discord</a>
+          </nav>
+        </div>
+        <div className="container footer-bottom">
+          <p>&copy; {new Date().getFullYear()} RGX SOFTWARE. Tüm hakları saklıdır.</p>
         </div>
       </footer>
     </div>
@@ -368,11 +486,7 @@ function App() {
       <Toaster position="bottom-right" />
       <Routes>
         <Route path="/" element={<Store />} />
-        <Route path="/admin" element={
-          <ProtectedAdmin>
-            <AdminDashboard />
-          </ProtectedAdmin>
-        } />
+        <Route path="/admin" element={<AdminGate />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </Router>

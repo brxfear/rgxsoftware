@@ -29,8 +29,8 @@
     max-width: 1000px;
     max-height: 90vh;
     background: rgba(10, 10, 15, 0.95);
-    border: 1px solid rgba(188, 19, 254, 0.4);
-    box-shadow: 0 0 50px rgba(0, 0, 0, 0.5), 0 0 20px rgba(188, 19, 254, 0.1);
+    border: 1px solid rgba(224, 38, 47, 0.4);
+    box-shadow: 0 0 50px rgba(0, 0, 0, 0.5), 0 0 20px rgba(224, 38, 47, 0.1);
     padding: 0;
     position: relative;
     border-radius: 12px;
@@ -122,8 +122,8 @@
     background: #000;
     border-radius: 8px;
     overflow: hidden;
-    border: 2px solid #bc13fe;
-    box-shadow: 0 0 20px rgba(188, 19, 254, 0.3);
+    border: 2px solid #e0262f;
+    box-shadow: 0 0 20px rgba(224, 38, 47, 0.3);
 }
 
 .modal-image {
@@ -141,7 +141,7 @@
     position: absolute;
     bottom: 20px;
     left: 20px;
-    background: rgba(188, 19, 254, 0.2);
+    background: rgba(224, 38, 47, 0.2);
     backdrop-filter: blur(10px);
     border: 1px solid var(--neon-purple);
     padding: 8px 15px;
@@ -222,7 +222,7 @@
 }
 
 .video-thumb {
-    border-color: #bc13fe;
+    border-color: #e0262f;
 }
 
 .thumb-video-placeholder {
@@ -232,7 +232,7 @@
     align-items: center;
     justify-content: center;
     background: linear-gradient(45deg, #1a1a1a, #000);
-    color: #bc13fe;
+    color: #e0262f;
 }
 
 .thumbnail-item:hover {
@@ -372,7 +372,7 @@
 /* Subscription Plan Selector */
 .subscription-selector {
     background: rgba(0, 0, 0, 0.3);
-    border: 1px solid rgba(188, 19, 254, 0.2);
+    border: 1px solid rgba(224, 38, 47, 0.2);
     border-radius: 12px;
     padding: 20px;
 }
@@ -420,8 +420,8 @@
 }
 
 .plan-card:hover {
-    border-color: rgba(188, 19, 254, 0.4);
-    background: rgba(188, 19, 254, 0.05);
+    border-color: rgba(224, 38, 47, 0.4);
+    background: rgba(224, 38, 47, 0.05);
     transform: translateY(-3px);
 }
 
@@ -431,8 +431,8 @@
 
 .plan-card.selected {
     border-color: var(--neon-purple);
-    background: rgba(188, 19, 254, 0.1);
-    box-shadow: 0 0 20px rgba(188, 19, 254, 0.3), inset 0 0 15px rgba(188, 19, 254, 0.05);
+    background: rgba(224, 38, 47, 0.1);
+    box-shadow: 0 0 20px rgba(224, 38, 47, 0.3), inset 0 0 15px rgba(224, 38, 47, 0.05);
 }
 
 .plan-card.selected::before {
