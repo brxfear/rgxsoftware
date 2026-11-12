@@ -3,7 +3,7 @@
 // Shopier'e gönderilecek imzalı form alanlarını döner. Tarayıcı bu formu Shopier'e POST eder.
 import { Buffer } from 'node:buffer';
 import { FieldValue } from 'firebase-admin/firestore';
-import { adminDb, adminAuth, findPlan, roundUsd, paymentLog } from './_lib/firebaseAdmin.js';
+import { adminDb, adminAuth, findPlan, roundUsd, paymentLog, getUsdTry, usdToTry } from './_lib/firebaseAdmin.js';
 import { shopierConfig, buildShopierFields, SHOPIER_PAY_URL } from './_lib/shopier.js';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -27,6 +27,10 @@ export default async function handler(req, res) {
   try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {};
     const { items, buyer = {} } = body;
+    const currency = body.currency === 'TRY' ? 'TRY' : 'USD';
+    const lang = body.lang === 'en' ? 'en' : 'tr';
+    const rate = currency === 'TRY' ? await getUsdTry() : null;
+    const toCur = (usd) => (rate ? usdToTry(usd, rate) : roundUsd(usd));
     const name = String(buyer.name || '').trim();
     const email = String(buyer.email || '').trim().toLowerCase();
     const phone = String(buyer.phone || '').replace(/[^\d+]/g, '');
@@ -58,13 +62,14 @@ export default async function handler(req, res) {
       const product = snap.data();
       const plan = findPlan(product, it.plan_id);
       if (!plan) return res.status(400).json({ error: `${product.name} için seçilen plan bulunamadı.` });
-      const price = roundUsd(plan.price_usd);
+      const price = toCur(plan.price_usd);
       detailed.push({
         product_id: snap.id,
         name: product.name,
         plan_id: String(plan.id),
         durationLabel: plan.label,
         quantity: qty,
+        price_usd: roundUsd(plan.price_usd),
         price,
         subtotal: roundUsd(price * qty),
       });
@@ -77,7 +82,10 @@ export default async function handler(req, res) {
       merchant_oid: orderId,
       user_id: uid,
       total_amount: total,
-      currency: cfg.currency,
+      total_usd: roundUsd(detailed.reduce((s, i) => s + i.price_usd * i.quantity, 0)),
+      currency,
+      ...(rate ? { fx_rate: rate } : {}),
+      lang,
       items: detailed,
       payment_method: 'shopier',
       status: 'pending_payment',
@@ -88,13 +96,13 @@ export default async function handler(req, res) {
     });
 
     const productName = detailed.map((i) => `${i.name} (${i.durationLabel})${i.quantity > 1 ? ` x${i.quantity}` : ''}`).join(', ');
-    const fields = buildShopierFields({ cfg, orderId, total, productName, buyer: { name, email, phone }, userId: uid });
+    const fields = buildShopierFields({ cfg, orderId, total, currency, lang, productName, buyer: { name, email, phone }, userId: uid });
 
     await paymentLog(db, {
       order_id: orderId,
       event: 'created',
       amount: total,
-      currency: cfg.currency,
+      currency,
       message: `Ödeme başlatıldı: ${productName}`,
     });
 

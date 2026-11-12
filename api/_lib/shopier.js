@@ -1,32 +1,26 @@
 // Shopier API (api_pay4) yardımcıları.
 // Shopier panel > Entegrasyonlar > Modül Yönetimi'nden alınan "API Kullanıcı" ve "API Şifre" kullanılır.
-// Env: SHOPIER_API_KEY, SHOPIER_API_SECRET, SHOPIER_WEBSITE_INDEX (varsayılan 1), SHOPIER_CURRENCY (USD | TRY | EUR)
+// Env: SHOPIER_API_KEY, SHOPIER_API_SECRET, SHOPIER_WEBSITE_INDEX (varsayılan 1)
+// Para birimi istek başına seçilir: site TR dilindeyse TRY, EN dilindeyse USD.
 import process from 'node:process';
 import crypto from 'node:crypto';
 import { Buffer } from 'node:buffer';
 
 export const SHOPIER_PAY_URL = 'https://www.shopier.com/ShowProduct/api_pay4.php';
-const CURRENCY_CODES = { TRY: 0, TL: 0, USD: 1, EUR: 2 };
+export const CURRENCY_CODES = { TRY: 0, USD: 1 };
 
 export const shopierConfig = () => {
   const key = process.env.SHOPIER_API_KEY;
   const secret = process.env.SHOPIER_API_SECRET;
   if (!key || !secret) throw new Error('SHOPIER_API_KEY / SHOPIER_API_SECRET tanımlı değil.');
-  const currency = (process.env.SHOPIER_CURRENCY || 'USD').toUpperCase();
-  if (!(currency in CURRENCY_CODES)) throw new Error('SHOPIER_CURRENCY USD, TRY veya EUR olmalı.');
-  return {
-    key,
-    secret,
-    websiteIndex: process.env.SHOPIER_WEBSITE_INDEX || '1',
-    currency,
-    currencyCode: CURRENCY_CODES[currency],
-  };
+  return { key, secret, websiteIndex: process.env.SHOPIER_WEBSITE_INDEX || '1' };
 };
 
 const hmac = (data, secret) => crypto.createHmac('sha256', secret).update(data).digest('base64');
 
 /** Shopier ödeme sayfasına POST edilecek imzalı form alanları. */
-export const buildShopierFields = ({ cfg, orderId, total, productName, buyer, userId }) => {
+export const buildShopierFields = ({ cfg, orderId, total, currency, lang, productName, buyer, userId }) => {
+  const currencyCode = CURRENCY_CODES[currency] ?? CURRENCY_CODES.USD;
   const random_nr = String(crypto.randomInt(100000, 999999));
   const total_order_value = Number(total).toFixed(2);
   const [first, ...rest] = String(buyer.name).trim().split(/\s+/);
@@ -54,14 +48,14 @@ export const buildShopierFields = ({ cfg, orderId, total, productName, buyer, us
     shipping_country: 'Turkey',
     shipping_postcode: '34000',
     total_order_value,
-    currency: String(cfg.currencyCode),
+    currency: String(currencyCode),
     platform: '0',
     is_in_frame: '0',
-    current_language: '0',
+    current_language: lang === 'en' ? '1' : '0',
     modul_version: '1.0.4',
     random_nr,
   };
-  fields.signature = hmac(random_nr + orderId + total_order_value + cfg.currencyCode, cfg.secret);
+  fields.signature = hmac(random_nr + orderId + total_order_value + currencyCode, cfg.secret);
   return fields;
 };
 

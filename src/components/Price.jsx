@@ -1,7 +1,10 @@
 import React from 'react';
-import { fmtUsd } from '../lib/currency';
+import { useMoney } from '../lib/currency';
 
-/** $ fiyat. */
-const Price = ({ usd, className = '' }) => <span className={`price-usd-only ${className}`}>{fmtUsd(usd)}</span>;
+/** $ fiyatı seçili dile göre gösterir: TR → ₺ (güncel kur), EN → $. */
+const Price = ({ usd, className = '' }) => {
+  const { fmt } = useMoney();
+  return <span className={`price-usd-only ${className}`}>{fmt(usd)}</span>;
+};
 
 export default Price;

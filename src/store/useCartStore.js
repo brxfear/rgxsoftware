@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import { collection, doc, getDocs, setDoc, updateDoc, deleteDoc, writeBatch, serverTimestamp } from 'firebase/firestore';
 import { toast } from 'react-hot-toast';
 import { auth, db } from '../lib/firebase';
+import { translate } from '../i18n';
 
 // Sepet: localStorage'da tutulur; giriş yapmış kullanıcı için carts/{uid}/items altına da yazılır.
 // Kalem id'si = `${productId}_${duration}` (hem yerelde hem Firestore'da aynı).
@@ -96,7 +97,7 @@ export const useCartStore = create(
           set({ cart: [...get().cart, next] });
         }
 
-        toast.success('Ürün sepete eklendi!', { style: toastStyle });
+        toast.success(translate('cart.added'), { style: toastStyle });
 
         const user = auth.currentUser;
         if (user) {

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useT } from '../../i18n';
 import { MessageSquare } from 'lucide-react';
 
 // Discord sunucusundaki gerçek müşteri yorumları (olduğu gibi).
@@ -9,14 +10,15 @@ const reviews = [
 ];
 
 const ReviewsSection = () => {
+  const { t } = useT();
   return (
     <section id="reviews" className="section-reviews">
       <div className="container">
         <div className="section-header-flex">
           <div>
-            <span className="section-tag">TOPLULUK DEĞERLENDİRMELERİ</span>
-            <h2 className="section-title">Müşteri Yorumları</h2>
-            <p className="section-desc">Müşterilerimizin sipariş sonrasında Discord sunucumuzda yazdıkları.</p>
+            <span className="section-tag">{t('reviews.tag')}</span>
+            <h2 className="section-title">{t('reviews.title')}</h2>
+            <p className="section-desc">{t('reviews.desc')}</p>
           </div>
           <a
             href="https://discord.gg/rgxsoftware1"
@@ -25,7 +27,7 @@ const ReviewsSection = () => {
             className="btn-secondary"
           >
             <MessageSquare size={16} />
-            <span>Tüm Yorumları Gör</span>
+            <span>{t('reviews.all')}</span>
           </a>
         </div>
 
@@ -37,7 +39,7 @@ const ReviewsSection = () => {
                 <div className="review-avatar">{rev.author.charAt(0).toUpperCase()}</div>
                 <div>
                   <h4 className="review-name">{rev.author}</h4>
-                  <span className="review-game">Discord üzerinden · {rev.date}</span>
+                  <span className="review-game">{t('reviews.via')} · {rev.date}</span>
                 </div>
               </div>
             </div>

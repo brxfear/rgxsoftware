@@ -283,3 +283,36 @@
 @media (max-width: 480px) {
   .user-email-text, .user-chevron { display: none; }
 }
+
+/* ---------- TR / EN ---------- */
+.lang-switch {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.lang-switch button {
+  min-width: 34px;
+  height: 30px;
+  padding: 0 8px;
+  border: none;
+  border-radius: 7px;
+  background: none;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.lang-switch button:hover { color: var(--text-main); }
+.lang-switch button.on {
+  color: #fff;
+  background: linear-gradient(135deg, #f0333c 0%, #b3141c 100%);
+  box-shadow: 0 4px 12px -4px rgba(224, 38, 47, 0.8);
+}
+@media (max-width: 480px) {
+  .lang-switch button { min-width: 30px; padding: 0 6px; }
+}

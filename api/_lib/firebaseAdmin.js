@@ -32,6 +32,19 @@ export const findPlan = (product, planId) => getPlans(product).find((x) => Strin
 
 export const roundUsd = (n) => Math.round((Number(n) || 0) * 100) / 100;
 
+// USD/TRY kuru (istemciyle aynı kaynak, 30 dk bellekte). ₺ fiyat = tam liraya yuvarlı.
+let fxCache = null;
+export const getUsdTry = async () => {
+  if (fxCache && Date.now() - fxCache.at < 30 * 60 * 1000) return fxCache.rate;
+  const r = await fetch('https://open.er-api.com/v6/latest/USD');
+  const d = await r.json();
+  const rate = Number(d?.rates?.TRY);
+  if (!(rate > 0)) throw new Error('Döviz kuru alınamadı');
+  fxCache = { rate, at: Date.now() };
+  return rate;
+};
+export const usdToTry = (usd, rate) => Math.round((Number(usd) || 0) * rate);
+
 /** Sunucu tarafı ödeme logu (payment_logs) — sadece Admin SDK yazar, adminler okur. */
 export const paymentLog = async (db, entry) => {
   try {

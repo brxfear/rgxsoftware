@@ -17,20 +17,25 @@ import { toDate } from '../../lib/db';
 import { authErrorMessage } from '../../lib/authErrors';
 import { useCartStore } from '../../store/useCartStore';
 import GoogleIcon from '../GoogleIcon';
+import { useT, planLabel, translate } from '../../i18n';
+import { fmtMoney } from '../../lib/currency';
 import './AccountModal.css';
 
-const STATUS = {
-  'Waiting for Confirmation': { label: 'Onay bekliyor', tone: 'warn' },
-  pending_payment: { label: 'Ödeme bekleniyor', tone: 'muted' },
-  paid: { label: 'Ödendi — hazırlanıyor', tone: 'info' },
-  Completed: { label: 'Teslim edildi', tone: 'ok' },
-  Canceled: { label: 'İptal edildi', tone: 'bad' },
+const STATUS_KEY = {
+  'Waiting for Confirmation': ['waiting', 'warn'],
+  pending_payment: ['pending', 'muted'],
+  paid: ['paid', 'info'],
+  Completed: ['done', 'ok'],
+  Canceled: ['canceled', 'bad'],
 };
-const statusOf = (s = '') => STATUS[s] || (s.startsWith('failed') ? { label: 'Ödeme başarısız', tone: 'bad' } : { label: s || '—', tone: 'muted' });
-const tl = (n) => '$' + (Number(n) || 0).toLocaleString('en-US', { maximumFractionDigits: 2 });
-const fmt = (v) => toDate(v)?.toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) || '—';
+const statusOf = (s = '', t) => {
+  const k = STATUS_KEY[s] || (s.startsWith('failed') ? ['failed', 'bad'] : null);
+  return k ? { label: t(`account.status.${k[0]}`), tone: k[1] } : { label: s || '—', tone: 'muted' };
+};
 
 const AccountModal = ({ isOpen, onClose, user, initialTab = 'profile', onProfileUpdated }) => {
+  const { t, lang } = useT();
+  const fmt = (v) => toDate(v)?.toLocaleString(lang === 'tr' ? 'tr-TR' : 'en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) || '—';
   const [tab, setTab] = useState(initialTab);
   const [name, setName] = useState(user?.displayName || '');
   const [savingName, setSavingName] = useState(false);
@@ -60,7 +65,7 @@ const AccountModal = ({ isOpen, onClose, user, initialTab = 'profile', onProfile
       .catch((err) => {
         console.error(err);
         if (!cancelled) setOrders([]);
-        toast.error('Siparişler yüklenemedi.');
+        toast.error(translate('account.ordersFailed'));
       });
     return () => {
       cancelled = true;
@@ -83,7 +88,7 @@ const AccountModal = ({ isOpen, onClose, user, initialTab = 'profile', onProfile
     try {
       await updateProfile(auth.currentUser, { displayName: clean || null });
       onProfileUpdated?.();
-      toast.success('Profil güncellendi.');
+      toast.success(t('account.saved'));
     } catch (err) {
       toast.error(authErrorMessage(err));
     } finally {
@@ -93,14 +98,14 @@ const AccountModal = ({ isOpen, onClose, user, initialTab = 'profile', onProfile
 
   const logout = async () => {
     await signOut(auth);
-    toast.success('Çıkış yapıldı.');
+    toast.success(t('nav.loggedOut'));
     onClose();
   };
 
   const resetPassword = async () => {
     try {
       await sendPasswordResetEmail(auth, user.email);
-      toast.success('Şifre sıfırlama bağlantısı e-postana gönderildi.');
+      toast.success(t('auth.resetSent'));
     } catch (err) {
       toast.error(authErrorMessage(err));
     }
@@ -114,14 +119,14 @@ const AccountModal = ({ isOpen, onClose, user, initialTab = 'profile', onProfile
         await reauthenticateWithPopup(auth.currentUser, new GoogleAuthProvider());
       } else if (hasPassword) {
         if (!password) {
-          toast.error('Hesabı silmek için şifreni gir.');
+          toast.error(t('account.needPassword'));
           return;
         }
         await reauthenticateWithCredential(auth.currentUser, EmailAuthProvider.credential(user.email, password));
       }
       await useCartStore.getState().clearCart();
       await deleteUser(auth.currentUser);
-      toast.success('Hesabın silindi.');
+      toast.success(t('account.deleted'));
       onClose();
     } catch (err) {
       if (err?.code !== 'auth/popup-closed-by-user') toast.error(authErrorMessage(err));
@@ -134,7 +139,7 @@ const AccountModal = ({ isOpen, onClose, user, initialTab = 'profile', onProfile
 
   return (
     <div className="acc-overlay" onClick={onClose}>
-      <div className="acc-modal" role="dialog" aria-modal="true" aria-label="Hesabım" onClick={(e) => e.stopPropagation()}>
+      <div className="acc-modal" role="dialog" aria-modal="true" aria-label={t('account.title')} onClick={(e) => e.stopPropagation()}>
         <header className="acc-head">
           <div className="acc-identity">
             {user.photoURL ? (
@@ -143,76 +148,73 @@ const AccountModal = ({ isOpen, onClose, user, initialTab = 'profile', onProfile
               <span className="acc-avatar acc-avatar-letter">{initial}</span>
             )}
             <div>
-              <strong>{user.displayName || 'Hesabım'}</strong>
+              <strong>{user.displayName || t('account.title')}</strong>
               <span>{user.email}</span>
             </div>
           </div>
-          <button className="acc-icon-btn" onClick={onClose} aria-label="Kapat"><X size={18} /></button>
+          <button className="acc-icon-btn" onClick={onClose} aria-label={t('modal.close')}><X size={18} /></button>
         </header>
 
         <nav className="acc-tabs">
-          <button className={tab === 'profile' ? 'on' : ''} onClick={() => setTab('profile')}><User size={15} /> Profil</button>
-          <button className={tab === 'orders' ? 'on' : ''} onClick={() => setTab('orders')}><Package size={15} /> Siparişlerim</button>
+          <button className={tab === 'profile' ? 'on' : ''} onClick={() => setTab('profile')}><User size={15} /> {t('account.profile')}</button>
+          <button className={tab === 'orders' ? 'on' : ''} onClick={() => setTab('orders')}><Package size={15} /> {t('account.orders')}</button>
         </nav>
 
         <div className="acc-body">
           {tab === 'profile' && (
             <>
               <form className="acc-section" onSubmit={saveName}>
-                <label className="acc-label" htmlFor="acc-name">Görünen ad</label>
+                <label className="acc-label" htmlFor="acc-name">{t('account.displayName')}</label>
                 <div className="acc-row">
-                  <input id="acc-name" className="acc-input" maxLength={40} value={name} onChange={(e) => setName(e.target.value)} placeholder="Adın" />
+                  <input id="acc-name" className="acc-input" maxLength={40} value={name} onChange={(e) => setName(e.target.value)} placeholder={t('account.namePh')} />
                   <button className="acc-btn acc-btn-primary" disabled={savingName || name.trim() === (user.displayName || '')}>
-                    {savingName ? 'Kaydediliyor…' : 'Kaydet'}
+                    {savingName ? t('account.saving') : t('account.save')}
                   </button>
                 </div>
               </form>
 
               <div className="acc-section">
-                <span className="acc-label">E-posta</span>
+                <span className="acc-label">{t('account.email')}</span>
                 <div className="acc-static">{user.email}</div>
               </div>
 
               <div className="acc-section">
-                <span className="acc-label">Giriş yöntemi</span>
+                <span className="acc-label">{t('account.method')}</span>
                 <div className="acc-static acc-providers">
                   {isGoogle && <span className="acc-chip"><GoogleIcon /> Google</span>}
-                  {hasPassword && <span className="acc-chip"><KeyRound size={13} /> E-posta ve şifre</span>}
+                  {hasPassword && <span className="acc-chip"><KeyRound size={13} /> {t('account.passwordMethod')}</span>}
                 </div>
                 {hasPassword && (
-                  <button type="button" className="acc-link" onClick={resetPassword}>Şifre sıfırlama bağlantısı gönder</button>
+                  <button type="button" className="acc-link" onClick={resetPassword}>{t('account.sendReset')}</button>
                 )}
               </div>
 
               <div className="acc-actions">
-                <button className="acc-btn acc-btn-ghost" onClick={logout}><LogOut size={15} /> Çıkış yap</button>
+                <button className="acc-btn acc-btn-ghost" onClick={logout}><LogOut size={15} /> {t('account.logout')}</button>
               </div>
 
               <div className="acc-danger">
                 {!confirmDelete ? (
                   <button className="acc-link acc-link-danger" onClick={() => setConfirmDelete(true)}>
-                    <Trash2 size={14} /> Hesabımı sil
+                    <Trash2 size={14} /> {t('account.delete')}
                   </button>
                 ) : (
                   <div className="acc-danger-box">
-                    <p>
-                      Hesabın kalıcı olarak silinir ve bu işlem geri alınamaz. Geçmiş siparişlerin kayıtlarımızda kalır,
-                      ama artık onlara bu hesapla erişemezsin.
-                    </p>
+                    <p>{t('account.deleteWarn')}</p>
                     {!isGoogle && hasPassword && (
                       <input
                         className="acc-input"
                         type="password"
                         autoComplete="current-password"
-                        placeholder="Onay için şifren"
+                        placeholder={t('account.passwordConfirm')}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                       />
                     )}
                     <div className="acc-row">
-                      <button className="acc-btn acc-btn-ghost" onClick={() => setConfirmDelete(false)} disabled={busy}>Vazgeç</button>
+                      <button className="acc-btn acc-btn-ghost" onClick={() => setConfirmDelete(false)} disabled={busy}>{t('account.cancel')}</button>
                       <button className="acc-btn acc-btn-danger" onClick={removeAccount} disabled={busy}>
-                        {busy ? 'Siliniyor…' : isGoogle ? 'Google ile onayla ve sil' : 'Kalıcı olarak sil'}
+                        {busy ? t('account.deleting') : isGoogle ? t('account.deleteGoogle') : t('account.deleteForever')}
                       </button>
                     </div>
                   </div>
@@ -223,12 +225,12 @@ const AccountModal = ({ isOpen, onClose, user, initialTab = 'profile', onProfile
 
           {tab === 'orders' && (
             <div className="acc-orders">
-              {orders === null && <p className="acc-muted">Yükleniyor…</p>}
+              {orders === null && <p className="acc-muted">{t('account.loading')}</p>}
               {orders?.length === 0 && (
-                <p className="acc-muted">Henüz siparişin yok. Kart ile ödemelerde key ve kurulum bilgileri e-postana gönderilir.</p>
+                <p className="acc-muted">{t('account.noOrders')}</p>
               )}
               {orders?.map((o) => {
-                const st = statusOf(o.status);
+                const st = statusOf(o.status, t);
                 return (
                   <article key={o.id} className="acc-order">
                     <div className="acc-order-top">
@@ -238,13 +240,13 @@ const AccountModal = ({ isOpen, onClose, user, initialTab = 'profile', onProfile
                     <ul>
                       {(o.items || []).map((i, idx) => (
                         <li key={idx}>
-                          <span>{i.name} <em>· {i.durationLabel}{i.quantity > 1 ? ` × ${i.quantity}` : ''}</em></span>
+                          <span>{i.name} <em>· {planLabel(i.durationLabel, lang)}{i.quantity > 1 ? ` × ${i.quantity}` : ''}</em></span>
                         </li>
                       ))}
                     </ul>
                     <div className="acc-order-foot">
                       <span>{fmt(o.created_at)}</span>
-                      <strong>{tl(o.total_amount)}</strong>
+                      <strong>{fmtMoney(o.total_amount, o.currency || 'USD')}</strong>
                     </div>
                   </article>
                 );

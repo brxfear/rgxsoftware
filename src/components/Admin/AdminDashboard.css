@@ -538,3 +538,6 @@ select.adm-input option { background: #1a1214; }
 }
 .adm-env-list { list-style: none; display: flex; flex-direction: column; gap: 6px; margin: 0 0 14px; font-size: 13px; }
 .adm-env-list code { color: var(--adm-red-2); }
+.adm-en-block { margin-bottom: 16px; padding: 12px 14px; border-radius: 12px; border: 1px dashed var(--adm-line-2); }
+.adm-en-block summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--adm-muted); }
+.adm-en-block[open] summary { margin-bottom: 14px; }

@@ -20,11 +20,11 @@ import DiscordBanner from './components/Discord/DiscordBanner';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './lib/firebase';
 import { fetchCategories, fetchProducts, createManualOrder, getStartPrice } from './lib/db';
-import { roundUsd } from './lib/currency';
+import { roundUsd, loadUsdTry, usdToTry, currencyForLang } from './lib/currency';
 import Price from './components/Price';
 import { useCartStore } from './store/useCartStore';
 import { triggerConfetti } from './utils/celebration';
-import { translations } from './utils/translations';
+import { useT, translate } from './i18n';
 import './App.css';
 import './brand.css';
 
@@ -52,7 +52,7 @@ const scrollToId = (id) => {
 };
 
 function Store() {
-  const [language] = useState(() => localStorage.getItem('brx_lang') || 'tr');
+  const { t, lang } = useT();
   const [activeSection, setActiveSection] = useState('home');
   const [activeTab, setActiveTab] = useState('');
   const [categories, setCategories] = useState([]);
@@ -69,17 +69,6 @@ function Store() {
   const [selectedProduct, setSelectedProduct] = useState(null);
 
   const { cart, addItem, fetchCart } = useCartStore();
-
-  const t = (path) => {
-    const keys = path.split('.');
-    let result = translations[language];
-    for (const key of keys) {
-      if (result && result[key]) result = result[key];
-      else return path;
-    }
-    return result;
-  };
-
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
@@ -99,7 +88,7 @@ function Store() {
         setProducts(prods.filter(p => p.is_available !== false));
       } catch (err) {
         console.error('Veriler yüklenemedi:', err);
-        toast.error('Ürünler yüklenemedi, sayfayı yenile.');
+        toast.error(translate('products.loadError'));
       } finally {
         setLoading(false);
       }
@@ -112,9 +101,9 @@ function Store() {
       if (payment === 'basarili') {
         triggerConfetti();
         useCartStore.getState().clearCart();
-        toast.success('Ödemen alındı! Key ve kurulum detayları e-postana gönderilecek.', { duration: 6000 });
+        toast.success(translate('checkout.paidToast'), { duration: 6000 });
       } else {
-        toast.error('Ödeme tamamlanamadı. Tekrar deneyebilir veya destekle iletişime geçebilirsin.', { duration: 6000 });
+        toast.error(translate('checkout.failToast'), { duration: 6000 });
       }
       window.history.replaceState({}, '', window.location.pathname);
     }
@@ -153,20 +142,20 @@ function Store() {
           <div className="container hero-inner">
             <div className="hero-pill-badge">
               <span className="status-dot-green"></span>
-              <span>Anında otomatik teslimat</span>
+              <span>{t('hero.pill')}</span>
             </div>
 
             <h1 className="hero-heading">
               <span className="hero-title">RGX Software</span> <br />
-              <span className="hero-accent">Private Yazılımlar</span>
+              <span className="hero-accent">{t('hero.title2')}</span>
             </h1>
 
             {/* Showcase panel */}
             <div className="hero-showcase">
               <div className="showcase-topbar">
                 <span className="showcase-chip showcase-chip-live">UNDETECTED</span>
-                <span className="showcase-chip">7/24 Destek</span>
-                <span className="showcase-chip">{categories.length || '—'} Oyun</span>
+                <span className="showcase-chip">{t('hero.support')}</span>
+                <span className="showcase-chip">{t('hero.games', { n: categories.length || '—' })}</span>
                 <span className="showcase-rec">
                   <span className="rec-dot"></span> RGX
                 </span>
@@ -185,39 +174,38 @@ function Store() {
             </div>
 
             <p className="hero-subtext">
-              Valorant, CS2, Rust ve daha pek çok popüler oyun için kernel seviyesinde
-              private çözümler. Shopier ile kartla ya da havale/EFT ile öde, anahtarın hızla gelsin.
+              {t('hero.sub')}
             </p>
 
             <div className="hero-cta-group">
               <button className="btn-primary btn-lg" onClick={() => scrollToId('products-section')}>
-                <span>Mağazaya göz at</span>
+                <span>{t('hero.shop')}</span>
                 <ArrowRight size={17} />
               </button>
               <a href={DISCORD_URL} target="_blank" rel="noopener noreferrer" className="btn-secondary btn-lg">
-                <span>Discord Topluluğu</span>
+                <span>{t('hero.discord')}</span>
               </a>
             </div>
 
             <div className="hero-stats-bar">
               <div className="stat-item">
                 <span className="stat-num">{products.length || '—'}</span>
-                <span className="stat-label">Aktif ürün</span>
+                <span className="stat-label">{t('hero.statProducts')}</span>
               </div>
               <div className="stat-divider"></div>
               <div className="stat-item">
                 <span className="stat-num">{categories.length || '—'}</span>
-                <span className="stat-label">Desteklenen oyun</span>
+                <span className="stat-label">{t('hero.statGames')}</span>
               </div>
               <div className="stat-divider"></div>
               <div className="stat-item">
-                <span className="stat-num">Anında</span>
-                <span className="stat-label">Otomatik key teslimi</span>
+                <span className="stat-num">{t('hero.statInstant')}</span>
+                <span className="stat-label">{t('hero.statDelivery')}</span>
               </div>
               <div className="stat-divider"></div>
               <div className="stat-item">
                 <span className="stat-num">7/24</span>
-                <span className="stat-label">Türkçe destek</span>
+                <span className="stat-label">{t('hero.statSupport')}</span>
               </div>
             </div>
           </div>
@@ -228,11 +216,11 @@ function Store() {
           <section className="container section-block">
             <div className="section-header-flex">
               <div>
-                <h2 className="section-title">Öne çıkanlar</h2>
-                <p className="section-desc">Ekibimizin önerdiği ürünler; her birinin durumu canlı olarak görünür.</p>
+                <h2 className="section-title">{t('featured.title')}</h2>
+                <p className="section-desc">{t('featured.desc')}</p>
               </div>
               <button className="link-arrow" onClick={() => scrollToId('products-section')}>
-                Tümünü gör <ArrowRight size={15} />
+                {t('featured.all')} <ArrowRight size={15} />
               </button>
             </div>
             <div className="product-grid product-grid-4">
@@ -253,8 +241,8 @@ function Store() {
           <section className="container section-block">
             <div className="section-header-flex">
               <div>
-                <h2 className="section-title">Oyunlar</h2>
-                <p className="section-desc">{categories.length} oyun için yazılımlar. Oyununu seç, tüm ürünleri yan yana karşılaştır.</p>
+                <h2 className="section-title">{t('games.title')}</h2>
+                <p className="section-desc">{t('games.desc', { n: categories.length })}</p>
               </div>
             </div>
             <div className="games-grid">
@@ -282,9 +270,9 @@ function Store() {
                     <div className="game-card-body">
                       <span className="game-card-name">{cat.name}</span>
                       <div className="game-card-meta">
-                        <span>{catProducts.length} ürün</span>
+                        <span>{t('games.count', { n: catProducts.length })}</span>
                         {minPrice !== null && (
-                          <span>Başlangıç <Price usd={minPrice} inline className="game-card-price" /></span>
+                          <span>{t('games.from')} <Price usd={minPrice} className="game-card-price" /></span>
                         )}
                       </div>
                     </div>
@@ -297,14 +285,14 @@ function Store() {
 
         {/* ================= ÖDEME YÖNTEMLERİ ================= */}
         <section className="container section-block">
-          <h2 className="section-title">Shopier ve <span className="hero-accent">havale</span> ile öde</h2>
-          <p className="section-desc">Kartla ödemeler Shopier güvencesiyle anında onaylanır; havale/EFT ödemeleri ekibimiz tarafından onaylanır.</p>
+          <h2 className="section-title">{t('pay.title1')} <span className="hero-accent">{t('pay.title2')}</span> {t('pay.title3')}</h2>
+          <p className="section-desc">{t('pay.desc')}</p>
           <div className="payment-grid">
             {[
-              { icon: <CreditCard size={22} />, label: 'Kredi / Banka Kartı', sub: 'Shopier · 3D Secure' },
-              { icon: <ShieldCheck size={22} />, label: 'Shopier güvencesi', sub: 'Güvenli ödeme altyapısı' },
-              { icon: <Landmark size={22} />, label: 'Havale / EFT', sub: 'IBAN ile, elle onay' },
-              { icon: <Zap size={22} />, label: 'Anında teslimat', sub: 'Otomatik key' },
+              { icon: <CreditCard size={22} />, label: t('pay.card'), sub: t('pay.cardSub') },
+              { icon: <ShieldCheck size={22} />, label: t('pay.safe'), sub: t('pay.safeSub') },
+              { icon: <Landmark size={22} />, label: t('pay.bank'), sub: t('pay.bankSub') },
+              { icon: <Zap size={22} />, label: t('pay.instant'), sub: t('pay.instantSub') },
             ].map(({ icon, label, sub }) => (
               <div key={label} className="payment-tile">
                 {icon}
@@ -319,15 +307,15 @@ function Store() {
         <section id="products-section" className="container section-block">
           <div className="section-header-flex">
             <div>
-              <h2 className="section-title">Tüm ürünler</h2>
-              <p className="section-desc">Oyununu seç, süre ve planları karşılaştır.</p>
+              <h2 className="section-title">{t('products.title')}</h2>
+              <p className="section-desc">{t('products.desc')}</p>
             </div>
           </div>
 
           <TabSwitcher games={categories} activeTab={activeTab} onTabChange={setActiveTab} />
 
           {loading ? (
-            <div className="empty-state">Yazılımlar ve güncel durumlar yükleniyor...</div>
+            <div className="empty-state">{t('products.loading')}</div>
           ) : (
             <div className="product-grid">
               {filteredProducts.length > 0 ? (
@@ -340,7 +328,7 @@ function Store() {
                 ))
               ) : (
                 <div className="empty-state" style={{ gridColumn: '1 / -1' }}>
-                  Bu kategoride henüz aktif ürün bulunmuyor.
+                  {t('products.empty')}
                 </div>
               )}
             </div>
@@ -355,16 +343,16 @@ function Store() {
           <div className="about-panel">
             <div className="about-bg" aria-hidden="true"></div>
             <div className="about-content">
-              <span className="section-tag">Hakkımızda</span>
-              <h2 className="section-title">Her üründe elde ettikleriniz</h2>
-              <p className="section-desc">Tüm RGX ürünlerinde güvenli teslimat, düzenli güncellemeler, gerçek destek ve anında erişim.</p>
+              <span className="section-tag">{t('about.tag')}</span>
+              <h2 className="section-title">{t('about.title')}</h2>
+              <p className="section-desc">{t('about.desc')}</p>
             </div>
             <div className="about-features">
               {[
-                { icon: <ShieldCheck size={18} />, title: 'Güvenli ve undetected', desc: 'Sistemlerimiz maksimum güvenlik ve düşük tespit riski için kurgulanır.' },
-                { icon: <CheckCircle2 size={18} />, title: 'Sahada test edilmiş', desc: 'Her sürüm, yayın öncesi gerçek oturumlarda denenir.' },
-                { icon: <Shield size={18} />, title: 'Güvenli ödeme', desc: 'Tüm işlemler güvenilir ödeme altyapıları üzerinden korunur.' },
-                { icon: <Zap size={18} />, title: 'Anında teslimat', desc: 'Başarılı ödeme sonrası erişim anında iletilir.' },
+                { icon: <ShieldCheck size={18} />, title: t('about.f1t'), desc: t('about.f1d') },
+                { icon: <CheckCircle2 size={18} />, title: t('about.f2t'), desc: t('about.f2d') },
+                { icon: <Shield size={18} />, title: t('about.f3t'), desc: t('about.f3d') },
+                { icon: <Zap size={18} />, title: t('about.f4t'), desc: t('about.f4d') },
               ].map(({ icon, title, desc }) => (
                 <div key={title} className="about-feature">
                   <div className="about-feature-icon">{icon}</div>
@@ -386,7 +374,6 @@ function Store() {
       <Cart
         isOpen={isCartOpen}
         onClose={() => setIsCartOpen(false)}
-        t={t}
         onCheckout={() => {
           setIsCartOpen(false);
           setIsCheckoutOpen(true);
@@ -400,6 +387,7 @@ function Store() {
         user={user}
         totalUsd={roundUsd(cart.reduce((sum, item) => sum + (item.price * item.quantity), 0))}
         onComplete={async (data) => {
+          const currency = currencyForLang(lang);
           const items = cart.map(item => ({
             product_id: item.product_id,
             plan_id: String(item.duration),
@@ -416,33 +404,45 @@ function Store() {
                   'Content-Type': 'application/json',
                   ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
                 },
-                body: JSON.stringify({ items, buyer: { name: data.name, email: data.email, phone: data.phone } }),
+                body: JSON.stringify({ items, currency, lang, buyer: { name: data.name, email: data.email, phone: data.phone } }),
               });
               const out = await res.json().catch(() => null);
-              if (!res.ok || !out?.action) throw new Error(out?.error || 'sunucuya ulaşılamadı');
+              if (!res.ok || !out?.action) throw new Error(out?.error || t('checkout.unreachable'));
               submitShopierForm(out.action, out.fields);
               return { type: 'shopier' };
             } catch (err) {
-              toast.error('Ödeme başlatılamadı: ' + err.message);
+              toast.error(t('checkout.payFailed') + ': ' + err.message);
               throw err;
             }
           }
 
-          // ---- IBAN: elle onaylanan sipariş
+          // ---- IBAN: elle onaylanan sipariş (TR'de ₺, EN'de $)
+          let rate = null;
+          if (currency === 'TRY') {
+            rate = await loadUsdTry();
+            if (!rate) {
+              toast.error(t('checkout.fxFailed'));
+              throw new Error('fx');
+            }
+          }
+          const toCur = (usd) => (rate ? usdToTry(usd, rate) : roundUsd(usd));
           const detailedItems = cart.map(item => ({
             product_id: item.product_id,
             name: item.name,
             plan_id: String(item.duration),
             durationLabel: item.durationLabel || '',
             quantity: item.quantity,
-            price: item.price,
-            subtotal: roundUsd(item.price * item.quantity),
+            price_usd: item.price,
+            price: toCur(item.price),
+            subtotal: toCur(item.price) * item.quantity,
           }));
           try {
             const ref = await createManualOrder({
               user_id: user?.uid || null,
               total_amount: roundUsd(detailedItems.reduce((s, i) => s + i.subtotal, 0)),
-              currency: 'USD',
+              total_usd: roundUsd(cart.reduce((s, i) => s + i.price * i.quantity, 0)),
+              ...(rate ? { fx_rate: rate } : {}),
+              currency,
               items: detailedItems,
               payment_method: 'iban',
               customer_name: data.name,
@@ -452,7 +452,7 @@ function Store() {
             await useCartStore.getState().clearCart();
             return { type: 'iban', orderId: ref.id };
           } catch (err) {
-            toast.error('Sipariş oluşturulamadı: ' + err.message);
+            toast.error(t('checkout.orderFailed') + ': ' + err.message);
             throw err;
           }
         }}
@@ -488,19 +488,19 @@ function Store() {
             <img src="/logo.webp" alt="RGX Software" width="56" height="56" />
             <div>
               <strong>RGX SOFTWARE</strong>
-              <p>Private yazılımlar, anında teslimat ve 7/24 Türkçe destek.</p>
+              <p>{t('footer.tagline')}</p>
             </div>
           </div>
           <nav className="footer-links">
-            <a href="#products-section">Ürünler</a>
-            <a href="#how-it-works">Nasıl çalışır</a>
-            <a href="#reviews">Yorumlar</a>
-            <a href="#faq">SSS</a>
+            <a href="#products-section">{t('footer.products')}</a>
+            <a href="#how-it-works">{t('footer.how')}</a>
+            <a href="#reviews">{t('footer.reviews')}</a>
+            <a href="#faq">{t('footer.faq')}</a>
             <a href={DISCORD_URL} target="_blank" rel="noopener noreferrer">Discord</a>
           </nav>
         </div>
         <div className="container footer-bottom">
-          <p>&copy; {new Date().getFullYear()} RGX SOFTWARE. Tüm hakları saklıdır.</p>
+          <p>&copy; {new Date().getFullYear()} RGX SOFTWARE. {t('footer.rights')}</p>
         </div>
       </footer>
     </div>

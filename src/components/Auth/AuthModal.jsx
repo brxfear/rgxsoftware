@@ -11,9 +11,11 @@ import { toast } from 'react-hot-toast';
 import { auth } from '../../lib/firebase';
 import { authErrorMessage } from '../../lib/authErrors';
 import GoogleIcon from '../GoogleIcon';
+import { useT } from '../../i18n';
 import './AuthModal.css';
 
 const AuthModal = ({ isOpen, onClose }) => {
+  const { t } = useT();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -27,10 +29,10 @@ const AuthModal = ({ isOpen, onClose }) => {
     try {
       if (isLogin) {
         await signInWithEmailAndPassword(auth, email, password);
-        toast.success('Giriş yapıldı. Tekrar hoş geldin!');
+        toast.success(t('auth.welcome'));
       } else {
         await createUserWithEmailAndPassword(auth, email, password);
-        toast.success('Hesabın oluşturuldu.');
+        toast.success(t('auth.created'));
       }
       onClose();
     } catch (err) {
@@ -44,7 +46,7 @@ const AuthModal = ({ isOpen, onClose }) => {
     setLoading(true);
     try {
       await signInWithPopup(auth, new GoogleAuthProvider());
-      toast.success('Google ile giriş yapıldı.');
+      toast.success(t('auth.googleOk'));
       onClose();
     } catch (err) {
       if (err?.code !== 'auth/popup-closed-by-user') toast.error(authErrorMessage(err));
@@ -55,12 +57,12 @@ const AuthModal = ({ isOpen, onClose }) => {
 
   const handleReset = async () => {
     if (!email) {
-      toast.error('Önce e-posta adresini yaz.');
+      toast.error(t('auth.resetNeedEmail'));
       return;
     }
     try {
       await sendPasswordResetEmail(auth, email);
-      toast.success('Şifre sıfırlama bağlantısı e-postana gönderildi.');
+      toast.success(t('auth.resetSent'));
     } catch (err) {
       toast.error(authErrorMessage(err));
     }
@@ -70,21 +72,21 @@ const AuthModal = ({ isOpen, onClose }) => {
     <div className="auth-overlay" onClick={onClose}>
       <div className="glass-panel auth-modal" onClick={(e) => e.stopPropagation()}>
         <div className="auth-header">
-          <h2 className="cyber-font neon-text">{isLogin ? 'Giriş Yap' : 'Kayıt Ol'}</h2>
-          <button onClick={onClose} className="close-btn" aria-label="Kapat"><X /></button>
+          <h2 className="cyber-font neon-text">{isLogin ? t('auth.login') : t('auth.register')}</h2>
+          <button onClick={onClose} className="close-btn" aria-label={t('modal.close')}><X /></button>
         </div>
 
         <button type="button" className="auth-google-btn" onClick={handleGoogle} disabled={loading}>
-          <GoogleIcon /> Google ile devam et
+          <GoogleIcon /> {t('auth.google')}
         </button>
-        <div className="auth-or"><span>veya e-posta ile</span></div>
+        <div className="auth-or"><span>{t('auth.orEmail')}</span></div>
 
         <form onSubmit={handleAuth} className="auth-form">
           <div className="input-group">
             <Mail className="input-icon" size={18} />
             <input
               type="email"
-              placeholder="E-posta"
+              placeholder={t('auth.email')}
               autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -96,7 +98,7 @@ const AuthModal = ({ isOpen, onClose }) => {
             <Lock className="input-icon" size={18} />
             <input
               type="password"
-              placeholder="Şifre"
+              placeholder={t('auth.password')}
               autoComplete={isLogin ? 'current-password' : 'new-password'}
               minLength={6}
               value={password}
@@ -107,15 +109,15 @@ const AuthModal = ({ isOpen, onClose }) => {
           </div>
 
           <button type="submit" className="neon-button auth-submit" disabled={loading}>
-            {loading ? 'İşleniyor...' : isLogin ? 'Giriş Yap' : 'Hesap Oluştur'}
+            {loading ? t('auth.processing') : isLogin ? t('auth.login') : t('auth.create')}
           </button>
         </form>
 
         <div className="auth-footer">
           <p onClick={() => setIsLogin(!isLogin)}>
-            {isLogin ? 'Hesabın yok mu? Kayıt ol' : 'Zaten hesabın var mı? Giriş yap'}
+            {isLogin ? t('auth.toRegister') : t('auth.toLogin')}
           </p>
-          {isLogin && <p onClick={handleReset}>Şifremi unuttum</p>}
+          {isLogin && <p onClick={handleReset}>{t('auth.forgot')}</p>}
         </div>
       </div>
     </div>

@@ -1,10 +1,12 @@
 import Price from '../Price';
 import React from 'react';
+import { useT, planLabel } from '../../i18n';
 import { ShoppingCart, X, Trash2, Plus, Minus } from 'lucide-react';
 import { useCartStore } from '../../store/useCartStore';
 import './Cart.css';
 
-const Cart = ({ isOpen, onClose, onCheckout, t }) => {
+const Cart = ({ isOpen, onClose, onCheckout }) => {
+    const { t, lang } = useT();
     const { cart, updateQuantity, removeItem, loading } = useCartStore();
     const totalUsd = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
@@ -15,12 +17,12 @@ const Cart = ({ isOpen, onClose, onCheckout, t }) => {
             <div className="glass-panel cart-panel" onClick={e => e.stopPropagation()}>
                 <div className="cart-header">
                     <h2 className="cyber-font neon-text"><ShoppingCart size={20} /> {t('cart.title')}</h2>
-                    <button onClick={onClose} className="close-btn"><X /></button>
+                    <button onClick={onClose} className="close-btn" aria-label={t('modal.close')}><X /></button>
                 </div>
 
                 <div className="cart-items">
                     {loading ? (
-                        <div className="empty-cart cyber-font">SYNCING...</div>
+                        <div className="empty-cart cyber-font">{t('cart.syncing')}</div>
                     ) : cart.length === 0 ? (
                         <div className="empty-cart cyber-font">{t('cart.empty')}</div>
                     ) : (
@@ -32,7 +34,7 @@ const Cart = ({ isOpen, onClose, onCheckout, t }) => {
                                 <div className="cart-item-info">
                                     <span className="item-name">{item.name}</span>
                                     {item.durationLabel && (
-                                        <span className="item-duration">{item.durationLabel}</span>
+                                        <span className="item-duration">{planLabel(item.durationLabel, lang)}</span>
                                     )}
                                     <Price usd={item.price} className="item-price" />
                                     <div className="quantity-controls">

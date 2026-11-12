@@ -40,7 +40,7 @@ import {
 import { toast } from 'react-hot-toast';
 import { auth, db } from '../../lib/firebase';
 import { toDate, getStartPrice, getPlans } from '../../lib/db';
-import { fmtUsd } from '../../lib/currency';
+import { fmtUsd, fmtMoney } from '../../lib/currency';
 import { fileToCompressedDataUrl } from './imageUtils';
 import { loggedWrite, adminIdForEmail, logAdminLogin } from '../../lib/adminLog';
 import './AdminDashboard.css';
@@ -65,9 +65,6 @@ const statusMeta = (value = '') => {
 
 const REVENUE_STATUSES = ['paid', 'Completed'];
 
-const tl = (n) =>
-  '$' + (Number(n) || 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
-
 const fmtDate = (v) => {
   const d = toDate(v);
   return d
@@ -88,7 +85,7 @@ const docBytes = (obj) => new Blob([JSON.stringify(obj)]).size;
 const MAX_DOC_BYTES = 950 * 1024;
 
 const FIELD_LABELS = {
-  name: 'ad', description: 'açıklama', details: 'detaylar', category_id: 'kategori',
+  name: 'ad', description: 'açıklama', details: 'detaylar', description_en: 'EN açıklama', details_en: 'EN detaylar', category_id: 'kategori',
   price_1day: '1 gün fiyatı', price_7day: '7 gün fiyatı', price_30day: '30 gün fiyatı', price_lifetime: 'sınırsız fiyatı',
   plans: 'planlar', image_url: 'kapak görseli', video_url: 'video', extra_images: 'ek görseller', is_available: 'satış durumu', slug: 'slug',
 };
@@ -102,14 +99,27 @@ const changeSummary = (before = {}, after = {}) => {
     const b = after[k];
     if (JSON.stringify(a ?? '') === JSON.stringify(b ?? '')) return;
     if (k === 'plans') parts.push(`planlar: ${(b || []).map((pl) => `${pl.label} ${fmtUsd(pl.price_usd)}`).join(', ')}`);
-    else if (['image_url', 'extra_images', 'details', 'description'].includes(k)) parts.push(`${FIELD_LABELS[k]} değişti`);
+    else if (['image_url', 'extra_images', 'details', 'description', 'details_en', 'description_en'].includes(k)) parts.push(`${FIELD_LABELS[k]} değişti`);
     else if (k === 'is_available') parts.push(b ? 'satışa açıldı' : 'gizlendi');
     else parts.push(`${FIELD_LABELS[k]}: ${a ?? '—'} → ${b ?? '—'}`);
   });
   return parts.join(', ') || 'değişiklik yok';
 };
 
-const orderLabel = (o) => `#${(o.merchant_oid || o.id).slice(-6)} (${o.customer_name || 'isimsiz'}, ${tl(o.total_amount)})`;
+const money = (amount, currency) => fmtMoney(amount, currency || 'USD');
+
+/** Siparişleri para birimine göre toplayıp "$120 · ₺4.520" gibi gösterir. */
+const sumByCurrency = (orders) => {
+  const sums = {};
+  orders.forEach((o) => {
+    const c = o.currency || 'USD';
+    sums[c] = (sums[c] || 0) + (Number(o.total_amount) || 0);
+  });
+  const parts = Object.entries(sums).map(([c, v]) => money(v, c));
+  return parts.length ? parts.join(' · ') : money(0, 'USD');
+};
+
+const orderLabel = (o) => `#${(o.merchant_oid || o.id).slice(-6)} (${o.customer_name || 'isimsiz'}, ${money(o.total_amount, o.currency)})`;
 
 const useCollection = (path, order = 'created_at', dir = 'desc', max = 500) => {
   const [rows, setRows] = useState([]);
@@ -206,13 +216,13 @@ const ImageField = ({ label, value, onChange, hint }) => {
 /* Genel bakış                                                         */
 /* ------------------------------------------------------------------ */
 const Overview = ({ orders, products, categories, go }) => {
-  const revenue = orders.filter((o) => REVENUE_STATUSES.includes(o.status)).reduce((s, o) => s + (Number(o.total_amount) || 0), 0);
+  const revenue = sumByCurrency(orders.filter((o) => REVENUE_STATUSES.includes(o.status)));
   const waiting = orders.filter((o) => o.status === 'Waiting for Confirmation' || o.status === 'paid');
   const today = new Date().toDateString();
   const todayCount = orders.filter((o) => toDate(o.created_at)?.toDateString() === today).length;
 
   const cards = [
-    { icon: Wallet, label: 'Toplam ciro', value: tl(revenue), sub: 'Ödenen + teslim edilen' },
+    { icon: Wallet, label: 'Toplam ciro', value: revenue, sub: 'Ödenen + teslim edilen' },
     { icon: Clock, label: 'İşlem bekleyen', value: waiting.length, sub: 'Onay / teslim bekliyor', action: () => go('orders', 'action') },
     { icon: ShoppingBag, label: 'Bugünkü sipariş', value: todayCount, sub: `Toplam ${orders.length} sipariş` },
     { icon: Package, label: 'Ürün', value: products.length, sub: `${categories.length} kategori` },
@@ -247,7 +257,7 @@ const Overview = ({ orders, products, categories, go }) => {
                       <div className="adm-muted">{o.customer_email}</div>
                     </td>
                     <td>{(o.items || []).map((i) => `${i.name} (${i.durationLabel})`).join(', ')}</td>
-                    <td className="adm-num">{tl(o.total_amount)}</td>
+                    <td className="adm-num">{money(o.total_amount, o.currency)}</td>
                     <td><StatusPill status={o.status} /></td>
                     <td className="adm-muted">{fmtDate(o.created_at)}</td>
                   </tr>
@@ -348,7 +358,7 @@ const Orders = ({ orders, initialFilter, me }) => {
                     <span className="adm-muted">{o.customer_email} · {o.customer_phone}</span>
                   </div>
                   <span className="adm-order-items">{(o.items || []).length} ürün</span>
-                  <span className="adm-num">{tl(o.total_amount)}</span>
+                  <span className="adm-num">{money(o.total_amount, o.currency)}</span>
                   <StatusPill status={o.status} />
                   <span className="adm-muted adm-hide-sm">{fmtDate(o.created_at)}</span>
                   <ChevronDown size={16} className="adm-chevron" />
@@ -372,7 +382,7 @@ const Orders = ({ orders, initialFilter, me }) => {
                             <td>{i.name}</td>
                             <td>{i.durationLabel}</td>
                             <td>{i.quantity}</td>
-                            <td className="adm-num">{tl(i.subtotal ?? i.price * i.quantity)}</td>
+                            <td className="adm-num">{money(i.subtotal ?? i.price * i.quantity, o.currency)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -415,6 +425,8 @@ const EMPTY_PRODUCT = {
   name: '',
   description: '',
   details: '',
+  description_en: '',
+  details_en: '',
   category_id: '',
   image_url: '',
   video_url: '',
@@ -481,6 +493,8 @@ const ProductForm = ({ initial, categories, onClose, me }) => {
       name: form.name.trim(),
       description: form.description.trim(),
       details: form.details,
+      description_en: (form.description_en || '').trim(),
+      details_en: form.details_en || '',
       category_id: form.category_id,
       plans,
       featured_plan_id: plans.some((pl) => pl.id === form.featured_plan_id) ? form.featured_plan_id : '',
@@ -554,6 +568,18 @@ const ProductForm = ({ initial, categories, onClose, me }) => {
             <span className="adm-label">Detaylar / özellikler</span>
             <textarea className="adm-input" rows={6} value={form.details} onChange={set('details')} placeholder={'- Aimbot\n- ESP\n- …'} />
           </label>
+
+          <details className="adm-en-block" open={!!(form.description_en || form.details_en)}>
+            <summary>İngilizce metin (EN) — boş bırakılırsa Türkçesi gösterilir</summary>
+            <label className="adm-field">
+              <span className="adm-label">Short description (EN)</span>
+              <input className="adm-input" value={form.description_en || ''} onChange={set('description_en')} maxLength={160} />
+            </label>
+            <label className="adm-field">
+              <span className="adm-label">Details / features (EN)</span>
+              <textarea className="adm-input" rows={5} value={form.details_en || ''} onChange={set('details_en')} />
+            </label>
+          </details>
 
           <div className="adm-field">
             <span className="adm-label">Planlar — fiyatlar $ (USD)</span>
@@ -1013,7 +1039,7 @@ const Payments = ({ orders }) => {
   const paid = orders.filter((o) => o.payment_method === 'shopier' && REVENUE_STATUSES.includes(o.status));
   const today = new Date().toDateString();
   const stats = [
-    { label: 'Shopier ciro', value: tl(paid.reduce((s, o) => s + (Number(o.total_amount) || 0), 0)) },
+    { label: 'Shopier ciro', value: sumByCurrency(paid) },
     { label: 'Başarılı ödeme', value: paid.length },
     { label: 'Bugün başarısız', value: logs.filter((l) => l.event === 'failed' && toDate(l.at)?.toDateString() === today).length },
     { label: 'Geçersiz imza', value: logs.filter((l) => l.event === 'bad_signature').length },
@@ -1065,7 +1091,7 @@ const Payments = ({ orders }) => {
                       <td className="adm-muted adm-nowrap">{fmtDate(l.at)}</td>
                       <td><span className={`adm-pill adm-pill-${m.tone}`}>{m.label}</span></td>
                       <td>{l.order_id ? <code>#{l.order_id.slice(-8)}</code> : '—'}</td>
-                      <td className="adm-num">{l.amount != null ? tl(l.amount) : '—'}</td>
+                      <td className="adm-num">{l.amount != null ? money(l.amount, l.currency) : '—'}</td>
                       <td className="adm-hide-sm"><code>{l.payment_id || '—'}</code></td>
                       <td>{l.message}</td>
                     </tr>

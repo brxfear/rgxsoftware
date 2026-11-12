@@ -1,10 +1,12 @@
 import React from 'react';
+import { useT, localized } from '../../i18n';
 import { ChevronRight, Star } from 'lucide-react';
 import { getPlans, getStartPrice } from '../../lib/db';
 import Price from '../Price';
 import './ProductCard.css';
 
 const ProductCard = ({ product, onClick, highlight = false }) => {
+  const { t, lang } = useT();
   const planCount = getPlans(product).length;
   const startPrice = getStartPrice(product);
 
@@ -23,7 +25,7 @@ const ProductCard = ({ product, onClick, highlight = false }) => {
             }}
           />
           <div className="product-floating-badges">
-            {highlight && <span className="badge-recommended"><Star size={11} fill="currentColor" /> Ekip önerisi</span>}
+            {highlight && <span className="badge-recommended"><Star size={11} fill="currentColor" /> {t('card.recommended')}</span>}
             <span className="status-badge-undetected">
               <span className="status-dot-green"></span>
               UNDETECTED
@@ -34,16 +36,16 @@ const ProductCard = ({ product, onClick, highlight = false }) => {
 
       <div className="product-card-body">
         <div className="product-meta">
-          <span className="product-category-tag">{product.category_name || 'Özel Yazılım'}</span>
-          <span className="product-features-count">{planCount} plan</span>
+          <span className="product-category-tag">{product.category_name || t('card.fallbackCat')}</span>
+          <span className="product-features-count">{t('card.plans', { n: planCount })}</span>
         </div>
 
         <h3 className="product-title">{product.name}</h3>
-        <p className="product-description">{product.description || 'Gelişmiş ESP, Aimbot ve HWID koruması içeren birinci sınıf yazılım.'}</p>
+        <p className="product-description">{localized(product, 'description', lang)}</p>
 
         <div className="product-card-footer">
           <div className="price-block">
-            <span className="price-label">Başlangıç</span>
+            <span className="price-label">{t('card.from')}</span>
             <Price usd={startPrice} className="price-value" />
           </div>
 
@@ -54,7 +56,7 @@ const ProductCard = ({ product, onClick, highlight = false }) => {
               onClick(product);
             }}
           >
-            <span>İncele</span>
+            <span>{t('card.view')}</span>
             <ChevronRight size={16} />
           </button>
         </div>

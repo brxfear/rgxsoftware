@@ -2,10 +2,12 @@ import React, { useEffect, useRef, useState } from 'react';
 import { signOut } from 'firebase/auth';
 import { toast } from 'react-hot-toast';
 import { auth } from '../../lib/firebase';
+import { useT } from '../../i18n';
 import { ShoppingCart, LogIn, User, MessageCircle, Package, LogOut, ChevronDown } from 'lucide-react';
 import './Navbar.css';
 
 const UserMenu = ({ user, onAccountClick }) => {
+  const { t } = useT();
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -22,7 +24,7 @@ const UserMenu = ({ user, onAccountClick }) => {
     };
   }, [open]);
 
-  const label = user.displayName?.split(' ')[0] || user.email?.split('@')[0] || 'Hesabım';
+  const label = user.displayName?.split(' ')[0] || user.email?.split('@')[0] || t('nav.account');
   const go = (tab) => {
     setOpen(false);
     onAccountClick(tab);
@@ -45,18 +47,18 @@ const UserMenu = ({ user, onAccountClick }) => {
             <strong>{user.displayName || label}</strong>
             <span>{user.email}</span>
           </div>
-          <button role="menuitem" onClick={() => go('profile')}><User size={15} /> Hesabım</button>
-          <button role="menuitem" onClick={() => go('orders')}><Package size={15} /> Siparişlerim</button>
+          <button role="menuitem" onClick={() => go('profile')}><User size={15} /> {t('nav.account')}</button>
+          <button role="menuitem" onClick={() => go('orders')}><Package size={15} /> {t('nav.orders')}</button>
           <button
             role="menuitem"
             className="danger"
             onClick={async () => {
               setOpen(false);
               await signOut(auth);
-              toast.success('Çıkış yapıldı.');
+              toast.success(t('nav.loggedOut'));
             }}
           >
-            <LogOut size={15} /> Çıkış yap
+            <LogOut size={15} /> {t('nav.logout')}
           </button>
         </div>
       )}
@@ -64,7 +66,21 @@ const UserMenu = ({ user, onAccountClick }) => {
   );
 };
 
+const LangSwitch = () => {
+  const { lang, setLang, t } = useT();
+  return (
+    <div className="lang-switch" role="group" aria-label={t('nav.langLabel')}>
+      {['tr', 'en'].map((l) => (
+        <button key={l} className={lang === l ? 'on' : ''} onClick={() => setLang(l)} aria-pressed={lang === l}>
+          {l.toUpperCase()}
+        </button>
+      ))}
+    </div>
+  );
+};
+
 const Navbar = ({ activeSection, onSectionChange, user, onAuthClick, onAccountClick, cartCount, onCartClick }) => {
+  const { t } = useT();
   return (
     <header className="navbar-fixed-container">
       <div className="glass-bar nav-inner">
@@ -86,7 +102,7 @@ const Navbar = ({ activeSection, onSectionChange, user, onAuthClick, onAccountCl
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
           >
-            Ana Sayfa
+            {t('nav.home')}
           </button>
 
           <button
@@ -96,19 +112,19 @@ const Navbar = ({ activeSection, onSectionChange, user, onAuthClick, onAccountCl
               document.getElementById('products-section')?.scrollIntoView({ behavior: 'smooth' });
             }}
           >
-            Ürünler
+            {t('nav.products')}
           </button>
 
           <a href="#how-it-works" className="nav-link" onClick={() => onSectionChange('home')}>
-            Nasıl Çalışır?
+            {t('nav.how')}
           </a>
 
           <a href="#reviews" className="nav-link" onClick={() => onSectionChange('home')}>
-            Yorumlar
+            {t('nav.reviews')}
           </a>
 
           <a href="#faq" className="nav-link" onClick={() => onSectionChange('home')}>
-            SSS
+            {t('nav.faq')}
           </a>
 
           <a
@@ -126,20 +142,22 @@ const Navbar = ({ activeSection, onSectionChange, user, onAuthClick, onAccountCl
           {/* Status Badge */}
           <div className="nav-status-badge hidden-sm">
             <span className="status-dot-green"></span>
-            <span>TÜM SİSTEMLER AKTİF</span>
+            <span>{t('nav.status')}</span>
           </div>
+
+          <LangSwitch />
 
           {/* User Auth */}
           {user ? (
             <UserMenu user={user} onAccountClick={onAccountClick} />
           ) : (
             <button className="auth-btn" onClick={onAuthClick}>
-              <LogIn size={15} /> <span>Giriş Yap</span>
+              <LogIn size={15} /> <span>{t('nav.login')}</span>
             </button>
           )}
 
           {/* Cart Capsule */}
-          <button className="cart-btn" onClick={onCartClick} aria-label="Sepet">
+          <button className="cart-btn" onClick={onCartClick} aria-label={t('nav.cart')}>
             <ShoppingCart size={17} />
             {cartCount > 0 && <span className="cart-badge">{cartCount}</span>}
           </button>

@@ -73,7 +73,7 @@ export default async function handler(req, res) {
       order_id: orderId,
       event: success ? 'success' : 'failed',
       amount: snap.get('total_amount') ?? null,
-      currency: snap.get('currency') || cfg.currency,
+      currency: snap.get('currency') || 'USD',
       payment_id: body.payment_id ? String(body.payment_id) : null,
       message: success
         ? `Ödeme onaylandı (${snap.get('customer_name') || ''})`

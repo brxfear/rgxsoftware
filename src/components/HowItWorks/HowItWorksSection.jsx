@@ -1,32 +1,18 @@
 import React from 'react';
+import { useT } from '../../i18n';
 import { CreditCard, Zap, ShieldCheck } from 'lucide-react';
 
 const HowItWorksSection = () => {
-  const steps = [
-    {
-      num: "01",
-      title: "Planını Seç",
-      desc: "İhtiyacına göre 1 Günlük, 7 Günlük, 30 Günlük veya Sınırsız lisans sürelerini karşılaştır ve sepete ekle."
-    },
-    {
-      num: "02",
-      title: "Güvenle Öde",
-      desc: "Shopier ile kredi/banka kartından (3D Secure) ya da IBAN ile havale/EFT yaparak güvenle öde."
-    },
-    {
-      num: "03",
-      title: "Anında Teslim Al",
-      desc: "Lisans anahtarın ve adım adım videolu kurulum kılavuzun siparişin ardından saniyeler içinde ekranında belirir."
-    }
-  ];
+  const { t } = useT();
+  const steps = [1, 2, 3].map((n) => ({ num: `0${n}`, title: t(`how.s${n}t`), desc: t(`how.s${n}d`) }));
 
   return (
     <section id="how-it-works" className="section-how">
       <div className="container">
         <div className="section-header-center">
-          <span className="section-tag">KOLAY VE OTOMATİK</span>
-          <h2 className="section-title">Nasıl Çalışıyoruz?</h2>
-          <p className="section-desc">Sen sadece oyuna odaklan, gerisini tam otomatik altyapımız halletsin.</p>
+          <span className="section-tag">{t('how.tag')}</span>
+          <h2 className="section-title">{t('how.title')}</h2>
+          <p className="section-desc">{t('how.desc')}</p>
         </div>
 
         <div className="how-steps-grid">

@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { X, ShoppingCart, Zap, ShieldCheck, Headphones, ChevronLeft, ChevronRight, Check, Star } from 'lucide-react';
 import { getPlans } from '../../lib/db';
-import { fmtUsd } from '../../lib/currency';
+import { useMoney } from '../../lib/currency';
+import { useT, planLabel, localized } from '../../i18n';
 import './ProductModal.css';
 
 const youtubeEmbed = (url) => {
@@ -10,6 +11,8 @@ const youtubeEmbed = (url) => {
 };
 
 const ProductModal = ({ isOpen, onClose, product, onAddToCart, onBuyNow, categoryName }) => {
+  const { t, lang } = useT();
+  const { fmt } = useMoney();
   // App bu bileşeni key={ürün id} ile verir; her ürün açılışında state sıfırdan kurulur.
   const [index, setIndex] = useState(0);
   const [planId, setPlanId] = useState(() => {
@@ -74,7 +77,7 @@ const ProductModal = ({ isOpen, onClose, product, onAddToCart, onBuyNow, categor
   return (
     <div className="pm-overlay" onClick={onClose}>
       <div className="pm-modal" role="dialog" aria-modal="true" aria-label={product.name} onClick={(e) => e.stopPropagation()}>
-        <button className="pm-close" onClick={onClose} aria-label="Kapat"><X size={18} /></button>
+        <button className="pm-close" onClick={onClose} aria-label={t('modal.close')}><X size={18} /></button>
 
         <div className="pm-grid">
           {/* -------- Sol üst: medya -------- */}
@@ -116,52 +119,52 @@ const ProductModal = ({ isOpen, onClose, product, onAddToCart, onBuyNow, categor
               <span className="pm-chip pm-chip-ok"><span className="status-dot-green" /> Undetected</span>
             </div>
             <h2 className="pm-title">{product.name}</h2>
-            <p className="pm-from">Başlangıç <strong>{fmtUsd(cheapest)}</strong></p>
+            <p className="pm-from">{t('modal.from')} <strong>{fmt(cheapest)}</strong></p>
 
-            <div className="pm-plans" role="radiogroup" aria-label="Plan seç">
+            <div className="pm-plans" role="radiogroup" aria-label={t('modal.choosePlan')}>
               {plans.map((p) => {
                 const on = p.id === planId;
                 return (
                   <button key={p.id} role="radio" aria-checked={on} className={`pm-plan ${on ? 'on' : ''}`} onClick={() => setPlanId(p.id)}>
                     <span className="pm-radio">{on && <Check size={12} strokeWidth={3} />}</span>
                     <span className="pm-plan-label">
-                      {p.label}
-                      {p.id === product.featured_plan_id && <em><Star size={10} fill="currentColor" /> Popüler</em>}
+                      {planLabel(p.label, lang)}
+                      {p.id === product.featured_plan_id && <em><Star size={10} fill="currentColor" /> {t('modal.popular')}</em>}
                     </span>
-                    <span className="pm-plan-price">{fmtUsd(p.price_usd)}</span>
+                    <span className="pm-plan-price">{fmt(p.price_usd)}</span>
                   </button>
                 );
               })}
-              {!plans.length && <p className="pm-empty">Bu ürün şu an satışta değil.</p>}
+              {!plans.length && <p className="pm-empty">{t('modal.notForSale')}</p>}
             </div>
 
             <div className="pm-total">
-              <span>Toplam</span>
-              <strong>{selected ? fmtUsd(selected.price_usd) : '—'}</strong>
+              <span>{t('modal.total')}</span>
+              <strong>{selected ? fmt(selected.price_usd) : '—'}</strong>
             </div>
 
             <button className="pm-cta" onClick={buy} disabled={!selected}>
-              <Zap size={17} /> Hemen satın al
+              <Zap size={17} /> {t('modal.buyNow')}
             </button>
             <button className="pm-cta-secondary" onClick={add} disabled={!selected}>
-              <ShoppingCart size={16} /> Sepete ekle
+              <ShoppingCart size={16} /> {t('modal.addToCart')}
             </button>
 
             <ul className="pm-perks">
-              <li><Zap size={14} /> Anında dijital teslimat</li>
-              <li><ShieldCheck size={14} /> Shopier güvenli ödeme</li>
-              <li><Headphones size={14} /> 7/24 Discord desteği</li>
+              <li><Zap size={14} /> {t('modal.perk1')}</li>
+              <li><ShieldCheck size={14} /> {t('modal.perk2')}</li>
+              <li><Headphones size={14} /> {t('modal.perk3')}</li>
             </ul>
           </aside>
 
           {/* -------- Sol alt: açıklama -------- */}
             {(product.description || product.details) && (
               <div className="pm-info">
-                {product.description && <p className="pm-desc">{product.description}</p>}
+                {localized(product, 'description', lang) && <p className="pm-desc">{localized(product, 'description', lang)}</p>}
                 {product.details && (
                   <>
-                    <h3>Özellikler</h3>
-                    <div className="pm-details">{product.details}</div>
+                    <h3>{t('modal.features')}</h3>
+                    <div className="pm-details">{localized(product, 'details', lang)}</div>
                   </>
                 )}
               </div>

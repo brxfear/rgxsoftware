@@ -1,30 +1,11 @@
 import React, { useState } from 'react';
+import { useT } from '../../i18n';
 import { HelpCircle, ChevronDown } from 'lucide-react';
 
-const defaultFaqs = [
-  {
-    q: "Hangi oyunlar için yazılım satın alabilirim?",
-    a: "Valorant, CS2, Rust, Apex Legends, Fortnite ve daha pek çok popüler oyun için ESP, Aimbot, Wallhack ve HWID Spoofer çözümleri sunuyoruz."
-  },
-  {
-    q: "Satın aldıktan sonra teslimat nasıl ve ne kadar sürede yapılır?",
-    a: "Teslimat tamamen otomatiktir. Ödemeniz onaylandıktan sonra lisans anahtarınız ve detaylı kurulum kılavuzunuz anında e-postanıza gönderilir ve hesabınızda aktifleşir."
-  },
-  {
-    q: "Hangi ödeme yöntemlerini kabul ediyorsunuz?",
-    a: "Kredi ve banka kartıyla Shopier güvencesinde (3D Secure) ya da IBAN ile havale/EFT yaparak ödeyebilirsiniz. Kartla ödemeler anında onaylanır; havale/EFT ödemeleri, dekontu sipariş numaranızla birlikte Discord'da ticket açarak ilettiğinizde ekibimiz tarafından onaylanır. Tüm fiyatlar USD ($) olarak gösterilir."
-  },
-  {
-    q: "Yazılımlar tespit ediliyor mu (Undetected)?",
-    a: "Tüm yazılımlarımız çekirdek (Kernel/Hypervisor) düzeyinde geliştirilir ve sürekli güncellenir. Canlı durum panelimizden her ürünün güncel durumunu anlık takip edebilirsiniz."
-  },
-  {
-    q: "Kurulumda zorlanır mıyım, destek veriyor musunuz?",
-    a: "Kurulum 1-2 dakika sürer ve videolu rehber mevcuttur. Herhangi bir sorunuzda 7/24 Discord destek ekibimiz ve ticket sistemimiz üzerinden birebir yardımcı olmaktadır."
-  }
-];
 
 const FAQSection = () => {
+  const { t } = useT();
+  const faqs = t('faq.items');
   const [openIndex, setOpenIndex] = useState(0);
 
   const toggle = (idx) => {
@@ -39,30 +20,28 @@ const FAQSection = () => {
           <div className="faq-intro">
             <div className="faq-badge">
               <HelpCircle size={15} />
-              <span>YARDIM MERKEZİ</span>
+              <span>{t('faq.badge')}</span>
             </div>
-            <h2 className="faq-title">Sıkça Sorulan Sorular</h2>
-            <p className="faq-subtitle">
-              Teslimat, ödeme yöntemleri, uyumluluk ve güvenlikle ilgili en merak edilen soruların net cevapları.
-            </p>
+            <h2 className="faq-title">{t('faq.title')}</h2>
+            <p className="faq-subtitle">{t('faq.subtitle')}</p>
             
             <div className="faq-support-box glass-panel">
-              <h4>Aklında başka bir soru mu var?</h4>
-              <p>Destek ekibimiz Discord üzerinde 7/24 Türkçe ve anlık yanıt veriyor.</p>
+              <h4>{t('faq.boxTitle')}</h4>
+              <p>{t('faq.boxText')}</p>
               <a 
                 href="https://discord.gg/rgxsoftware1" 
                 target="_blank" 
                 rel="noopener noreferrer" 
                 className="btn-primary support-btn"
               >
-                Discord Destek Al
+                {t('faq.boxBtn')}
               </a>
             </div>
           </div>
 
           {/* Sağ Kolon: Accordion Listesi */}
           <div className="faq-accordion-list">
-            {defaultFaqs.map((faq, index) => {
+            {faqs.map((faq, index) => {
               const isOpen = openIndex === index;
               return (
                 <div 
