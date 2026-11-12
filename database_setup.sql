@@ -42,6 +42,7 @@ CREATE TABLE cart_items (
 -- Create Orders Table
 CREATE TABLE orders (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  merchant_oid TEXT UNIQUE,
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   total_amount NUMERIC(10, 2) NOT NULL,
   items JSONB NOT NULL,

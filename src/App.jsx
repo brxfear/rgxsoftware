@@ -307,24 +307,46 @@ function Store() {
             subtotal: item.price * item.quantity
           }));
 
-          const { error } = await supabase.from('orders').insert([{
-            user_id: user?.id || null,
-            total_amount: totalAmount,
-            items: detailedItems,
-            subscription_duration: cart[0]?.duration || 1,
-            status: 'Waiting for Confirmation',
-            customer_name: data.name,
-            customer_phone: data.contact,
-            customer_email: user?.email || 'Guest'
-          }]);
+          if (data.payment_method === 'paytr') {
+            // Call Supabase Edge Function
+            const { data: paytrData, error } = await supabase.functions.invoke('create-paytr-session', {
+              body: {
+                items: detailedItems,
+                total_amount: totalAmount,
+                customer_name: data.name,
+                customer_email: user?.email || 'guest@brx.site',
+                customer_phone: data.contact
+              }
+            });
 
-          if (error) {
-            toast.error(t('common.error_order') + error.message);
+            if (error || !paytrData?.token) {
+              toast.error(t('common.error_order') + ' ' + (error?.message || 'PayTR Token Error'));
+              throw new Error('Payment init failed');
+            }
+            return paytrData.token; // Return token to display iframe
           } else {
-            setIsCheckoutOpen(false);
-            triggerConfetti();
-            await useCartStore.getState().clearCart();
-            toast.success(t('common.success_order'), { duration: 5000 });
+            // Manual order logic
+            const { error } = await supabase.from('orders').insert([{
+              user_id: user?.id || null,
+              total_amount: totalAmount,
+              items: detailedItems,
+              subscription_duration: cart[0]?.duration || 1,
+              status: 'Waiting for Confirmation',
+              customer_name: data.name,
+              customer_phone: data.contact,
+              customer_email: user?.email || 'Guest'
+            }]);
+
+            if (error) {
+              toast.error(t('common.error_order') + error.message);
+              throw error;
+            } else {
+              setIsCheckoutOpen(false);
+              triggerConfetti();
+              await useCartStore.getState().clearCart();
+              toast.success(t('common.success_order'), { duration: 5000 });
+              return 'success';
+            }
           }
         }}
       />

@@ -3,13 +3,31 @@ import { CreditCard, Wallet, Send, X, ArrowLeft, User, MessageSquare, Copy, Chec
 import './CheckoutModal.css';
 
 const CheckoutModal = ({ isOpen, onClose, total, onComplete, t }) => {
-    const [step, setStep] = useState(1); // 1: Info Form, 2: Method Selection, 3: Details
+    const [step, setStep] = useState(1); // 1: Info Form, 2: Method Selection, 3: Details, 4: iFrame
     const [method, setMethod] = useState(null);
     const [copied, setCopied] = useState(false);
+    const [iframeToken, setIframeToken] = useState(null);
+    const [loading, setLoading] = useState(false);
     const [customerInfo, setCustomerInfo] = useState({
         name: '',
         contact: ''
     });
+
+    React.useEffect(() => {
+        if (step === 4 && iframeToken) {
+            const script = document.createElement('script');
+            script.src = 'https://www.paytr.com/js/iframeResizer.min.js';
+            script.async = true;
+            script.onload = () => {
+                if (window.iFrameResize) window.iFrameResize({}, '#paytriframe');
+            };
+            document.body.appendChild(script);
+
+            return () => {
+                document.body.removeChild(script);
+            };
+        }
+    }, [step, iframeToken]);
 
     if (!isOpen) return null;
 
@@ -18,16 +36,27 @@ const CheckoutModal = ({ isOpen, onClose, total, onComplete, t }) => {
         setStep(2);
     };
 
-    const handleFinalize = () => {
-        onComplete({
-            ...customerInfo,
-            payment_method: method
-        });
+    const handleFinalize = async () => {
+        setLoading(true);
+        try {
+            const token = await onComplete({
+                ...customerInfo,
+                payment_method: method
+            });
+            if (token && token !== 'success') {
+                setIframeToken(token);
+                setStep(4);
+            }
+        } catch (e) {
+            console.error('Payment Error:', e);
+        }
+        setLoading(false);
     };
 
     const resetAndClose = () => {
         setStep(1);
         setMethod(null);
+        setIframeToken(null);
         setCustomerInfo({ name: '', contact: '' });
         onClose();
     };
@@ -43,7 +72,7 @@ const CheckoutModal = ({ isOpen, onClose, total, onComplete, t }) => {
             <div className="glass-panel checkout-box" onClick={e => e.stopPropagation()}>
                 <div className="checkout-header">
                     <h2 className="cyber-font">
-                        {step === 1 ? t('checkout.step1_title') : t('checkout.step2_title')}
+                        {step === 1 ? t('checkout.step1_title') : step === 4 ? 'GÜVENLİ ÖDEME' : t('checkout.step2_title')}
                     </h2>
                     <button onClick={resetAndClose} className="close-x"><X size={20} /></button>
                 </div>
@@ -91,6 +120,11 @@ const CheckoutModal = ({ isOpen, onClose, total, onComplete, t }) => {
                         </button>
                         <p className="instruction-text">{t('checkout.select_vector')}</p>
                         <div className="methods-container">
+                            <div className="method-card" onClick={() => { setMethod('paytr'); setStep(3); }}>
+                                <CreditCard size={24} />
+                                <span>Kredi / Banka Kartı</span>
+                                <small>PayTR Güvencesiyle</small>
+                            </div>
                             <div className="method-card" onClick={() => { setMethod('crypto'); setStep(3); }}>
                                 <Wallet size={24} />
                                 <span>{t('checkout.crypto')}</span>
@@ -114,10 +148,16 @@ const CheckoutModal = ({ isOpen, onClose, total, onComplete, t }) => {
 
                         <div className="data-card">
                             <p className="card-label cyber-font">
-                                {method === 'crypto' ? t('checkout.btc_address') : t('checkout.transfer_data')}
+                                {method === 'paytr' ? 'KREDİ/BANKA KARTI İLE ÖDEME' : method === 'crypto' ? t('checkout.btc_address') : t('checkout.transfer_data')}
                             </p>
                             <div className="data-box">
-                                {method === 'crypto' ? (
+                                {method === 'paytr' ? (
+                                    <div className="iban-block">
+                                        <p style={{ fontSize: '0.85rem', color: '#fff', textAlign: 'center', margin: '10px 0' }}>
+                                            Onayla butonuna bastıktan sonra 256-bit SSL korumalı PayTR güvenli ödeme sayfasına yönlendirileceksiniz.
+                                        </p>
+                                    </div>
+                                ) : method === 'crypto' ? (
                                     <div className="copy-field">
                                         <code>kullanım dışı...</code>
                                         <button onClick={() => copyToClipboard('TELEGRAM YADA WHATSAPPDAN ULAŞIN t.me/brxfear')}>
@@ -148,14 +188,25 @@ const CheckoutModal = ({ isOpen, onClose, total, onComplete, t }) => {
                         </div>
 
                         <div className="modal-footer-actions" style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '15px' }}>
-                            <button onClick={handleFinalize} className="action-button-large finalize">
-                                {t('checkout.confirm')} <Send size={16} />
+                            <button onClick={handleFinalize} className="action-button-large finalize" disabled={loading}>
+                                {loading ? 'YÜKLENİYOR...' : t('checkout.confirm')} {!loading && <Send size={16} />}
                             </button>
 
                             <button className="back-link-capsule" onClick={() => setStep(2)} style={{ alignSelf: 'center' }}>
                                 {t('checkout.back_selection')}
                             </button>
                         </div>
+                    </div>
+                )}
+                {step === 4 && iframeToken && (
+                    <div className="paytr-iframe-container fade-in" style={{ width: '100%', height: '600px', overflow: 'hidden', padding: '10px' }}>
+                        <iframe
+                            src={`https://www.paytr.com/odeme/guvenli/${iframeToken}`}
+                            id="paytriframe"
+                            frameBorder="0"
+                            scrolling="no"
+                            style={{ width: '100%', height: '100%' }}
+                        ></iframe>
                     </div>
                 )}
             </div>
