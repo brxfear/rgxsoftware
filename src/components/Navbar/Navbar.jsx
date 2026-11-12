@@ -1,8 +1,70 @@
-import React from 'react';
-import { ShoppingCart, LogIn, User, ShieldCheck, Flame, MessageCircle } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { signOut } from 'firebase/auth';
+import { toast } from 'react-hot-toast';
+import { auth } from '../../lib/firebase';
+import { ShoppingCart, LogIn, User, MessageCircle, Package, LogOut, ChevronDown } from 'lucide-react';
 import './Navbar.css';
 
-const Navbar = ({ activeSection, onSectionChange, user, onAuthClick, cartCount, onCartClick, language, onLanguageToggle }) => {
+const UserMenu = ({ user, onAccountClick }) => {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (e) => {
+      if (e.type === 'keydown' ? e.key === 'Escape' : !ref.current?.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', close);
+    document.addEventListener('keydown', close);
+    return () => {
+      document.removeEventListener('mousedown', close);
+      document.removeEventListener('keydown', close);
+    };
+  }, [open]);
+
+  const label = user.displayName?.split(' ')[0] || user.email?.split('@')[0] || 'Hesabım';
+  const go = (tab) => {
+    setOpen(false);
+    onAccountClick(tab);
+  };
+
+  return (
+    <div className="user-menu" ref={ref}>
+      <button className="user-button" onClick={() => setOpen((o) => !o)} aria-haspopup="menu" aria-expanded={open}>
+        {user.photoURL ? (
+          <img src={user.photoURL} alt="" className="user-avatar" referrerPolicy="no-referrer" />
+        ) : (
+          <User size={15} />
+        )}
+        <span className="user-email-text">{label}</span>
+        <ChevronDown size={14} className={`user-chevron ${open ? 'open' : ''}`} />
+      </button>
+      {open && (
+        <div className="user-dropdown" role="menu">
+          <div className="user-dropdown-head">
+            <strong>{user.displayName || label}</strong>
+            <span>{user.email}</span>
+          </div>
+          <button role="menuitem" onClick={() => go('profile')}><User size={15} /> Hesabım</button>
+          <button role="menuitem" onClick={() => go('orders')}><Package size={15} /> Siparişlerim</button>
+          <button
+            role="menuitem"
+            className="danger"
+            onClick={async () => {
+              setOpen(false);
+              await signOut(auth);
+              toast.success('Çıkış yapıldı.');
+            }}
+          >
+            <LogOut size={15} /> Çıkış yap
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const Navbar = ({ activeSection, onSectionChange, user, onAuthClick, onAccountClick, cartCount, onCartClick }) => {
   return (
     <header className="navbar-fixed-container">
       <div className="glass-bar nav-inner">
@@ -69,10 +131,7 @@ const Navbar = ({ activeSection, onSectionChange, user, onAuthClick, cartCount, 
 
           {/* User Auth */}
           {user ? (
-            <div className="user-button">
-              <User size={15} />
-              <span className="user-email-text">{user.email.split('@')[0]}</span>
-            </div>
+            <UserMenu user={user} onAccountClick={onAccountClick} />
           ) : (
             <button className="auth-btn" onClick={onAuthClick}>
               <LogIn size={15} /> <span>Giriş Yap</span>

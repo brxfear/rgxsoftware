@@ -11,6 +11,7 @@ import Cart from './components/Cart/Cart';
 import CheckoutModal from './components/Checkout/CheckoutModal';
 import ProductModal from './components/ProductCard/ProductModal';
 import AuthModal from './components/Auth/AuthModal';
+import AccountModal from './components/Account/AccountModal';
 import FAQSection from './components/FAQ/FAQSection';
 import ReviewsSection from './components/Reviews/ReviewsSection';
 import HowItWorksSection from './components/HowItWorks/HowItWorksSection';
@@ -33,7 +34,7 @@ const scrollToId = (id) => {
 };
 
 function Store() {
-  const [language, setLanguage] = useState(localStorage.getItem('brx_lang') || 'tr');
+  const [language] = useState(() => localStorage.getItem('brx_lang') || 'tr');
   const [activeSection, setActiveSection] = useState('home');
   const [activeTab, setActiveTab] = useState('');
   const [categories, setCategories] = useState([]);
@@ -43,6 +44,8 @@ function Store() {
   // Modal & User states
   const [user, setUser] = useState(null);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [accountTab, setAccountTab] = useState(null);
+  const [, setProfileVersion] = useState(0);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -59,11 +62,6 @@ function Store() {
     return result;
   };
 
-  const toggleLanguage = () => {
-    const newLang = language === 'tr' ? 'en' : 'tr';
-    setLanguage(newLang);
-    localStorage.setItem('brx_lang', newLang);
-  };
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
@@ -122,10 +120,9 @@ function Store() {
         onSectionChange={setActiveSection}
         user={user}
         onAuthClick={() => setIsAuthOpen(true)}
+        onAccountClick={(tab) => setAccountTab(tab)}
         cartCount={cart.reduce((total, item) => total + item.quantity, 0)}
         onCartClick={() => setIsCartOpen(true)}
-        language={language}
-        onLanguageToggle={toggleLanguage}
       />
 
       <main>
@@ -446,6 +443,14 @@ function Store() {
       />
 
       <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
+
+      <AccountModal
+        isOpen={!!accountTab && !!user}
+        initialTab={accountTab || 'profile'}
+        user={user}
+        onClose={() => setAccountTab(null)}
+        onProfileUpdated={() => setProfileVersion((v) => v + 1)}
+      />
 
       <ProductModal
         isOpen={!!selectedProduct}
