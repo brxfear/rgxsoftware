@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
 import { X, ShoppingBag, Terminal, ShieldCheck, Zap, ChevronLeft, ChevronRight, Play, Clock } from 'lucide-react';
+import { getPlans } from '../../lib/db';
+import { useUsdTry, usdToTry, fmtTry, fmtUsd } from '../../lib/currency';
+import Price from '../Price';
 import './ProductModal.css';
 
 const ProductModal = ({ isOpen, onClose, product, onAddToCart }) => {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [selectedPlan, setSelectedPlan] = useState(null);
+    const rate = useUsdTry();
 
     if (!isOpen || !product) return null;
 
@@ -28,6 +32,9 @@ const ProductModal = ({ isOpen, onClose, product, onAddToCart }) => {
             if (img) mediaItems.push({ type: 'image', url: img });
         });
     }
+    if (!mediaItems.length) {
+        mediaItems.push({ type: 'image', url: '/logo.webp', fallback: true });
+    }
 
     const nextMedia = () => {
         setCurrentIndex((prev) => (prev + 1) % mediaItems.length);
@@ -41,19 +48,15 @@ const ProductModal = ({ isOpen, onClose, product, onAddToCart }) => {
     const videoEmbedUrl = currentMedia?.type === 'video' ? getYoutubeEmbedUrl(currentMedia.url) : null;
 
     // Subscription plans
-    const plans = [
-        { duration: 1, label: '1 GÜN', price: product.price_1day || product.price || 0 },
-        { duration: 7, label: '7 GÜN', price: product.price_7day || 0 },
-        { duration: 30, label: '30 GÜN', price: product.price_30day || 0 },
-        { duration: 9999, label: 'SINIRSIZ', price: product.price_lifetime || 0 },
-    ].filter(p => p.price > 0);
+    const plans = getPlans(product);
+    const featuredId = product.featured_plan_id;
 
     const handleBuy = () => {
         if (!selectedPlan) return;
         onAddToCart({
             ...product,
-            selectedDuration: selectedPlan.duration,
-            selectedPrice: selectedPlan.price,
+            selectedDuration: selectedPlan.id,
+            selectedPrice: Number(selectedPlan.price_usd),
             selectedLabel: selectedPlan.label
         });
         setSelectedPlan(null);
@@ -86,7 +89,7 @@ const ProductModal = ({ isOpen, onClose, product, onAddToCart }) => {
                                         )}
                                     </div>
                                 ) : (
-                                    <img src={currentMedia?.url} alt={product.name} className="modal-image" />
+                                    <img src={currentMedia?.url} alt={product.name} className={`modal-image ${currentMedia?.fallback ? 'modal-image-fallback' : ''}`} />
                                 )}
                                 
                                 {mediaItems.length > 1 && (
@@ -98,7 +101,7 @@ const ProductModal = ({ isOpen, onClose, product, onAddToCart }) => {
                                 
                                 <div className="image-glow"></div>
                                 <div className="image-badge cyber-font">
-                                    <ShieldCheck size={14} /> {currentMedia?.type === 'video' ? 'VIDEO FEED' : 'ENCRYPTED DATA'}
+                                    <ShieldCheck size={14} /> {currentMedia?.type === 'video' ? 'VİDEO' : 'RGX SOFTWARE'}
                                 </div>
                             </div>
 
@@ -125,38 +128,38 @@ const ProductModal = ({ isOpen, onClose, product, onAddToCart }) => {
 
                         <div className="modal-info">
                             <div className="modal-header">
-                                <span className="status-indicator">SYSTEM ONLINE</span>
+                                <span className="status-indicator">UNDETECTED</span>
                                 <h2 className="cyber-font neon-text">{product.name}</h2>
                             </div>
 
                             {/* Subscription Plan Selector */}
                             <div className="subscription-selector">
-                                <h4 className="cyber-font"><Clock size={14} /> ABONELİK SÜRESİ SEÇ:</h4>
+                                <h4 className="cyber-font"><Clock size={14} /> PLAN SEÇ</h4>
                                 <div className="plan-options">
                                     {plans.map(plan => (
                                         <button
-                                            key={plan.duration}
-                                            className={`plan-card ${selectedPlan?.duration === plan.duration ? 'selected' : ''}`}
+                                            key={plan.id}
+                                            className={`plan-card ${selectedPlan?.id === plan.id ? 'selected' : ''}`}
                                             onClick={() => setSelectedPlan(plan)}
                                         >
                                             <span className="plan-duration cyber-font">{plan.label}</span>
-                                            <span className="plan-price">₺{plan.price}</span>
-                                            {plan.duration === 30 && <span className="plan-badge">POPÜLER</span>}
+                                            <Price usd={plan.price_usd} className="plan-price" />
+                                            {plan.id === featuredId && <span className="plan-badge">POPÜLER</span>}
                                         </button>
                                     ))}
                                 </div>
                             </div>
 
                             <div className="modal-description">
-                                <h4 className="cyber-font"><Terminal size={14} /> TECHNICAL SPECS:</h4>
+                                <h4 className="cyber-font"><Terminal size={14} /> AÇIKLAMA</h4>
                                 <p style={{ whiteSpace: 'pre-wrap' }}>
-                                    {product.description || "No encrypted data provided for this sector."}
+                                    {product.description || 'Açıklama yakında eklenecek.'}
                                 </p>
                             </div>
 
                             {product.details && (
                                 <div className="modal-details-extended">
-                                    <h4 className="cyber-font"><Terminal size={14} /> EXTENDED PROTOCOL DETAILS:</h4>
+                                    <h4 className="cyber-font"><Terminal size={14} /> DETAYLAR</h4>
                                     <p style={{ whiteSpace: 'pre-wrap' }}>
                                         {product.details}
                                     </p>
@@ -165,10 +168,10 @@ const ProductModal = ({ isOpen, onClose, product, onAddToCart }) => {
 
                             <div className="modal-benefits">
                                 <div className="benefit-item">
-                                    <Zap size={14} /> <span>Instant Digital Delivery</span>
+                                    <Zap size={14} /> <span>Anında dijital teslimat</span>
                                 </div>
                                 <div className="benefit-item">
-                                    <ShieldCheck size={14} /> <span>24/7 Priority Support</span>
+                                    <ShieldCheck size={14} /> <span>7/24 Türkçe destek</span>
                                 </div>
                             </div>
 
@@ -180,7 +183,7 @@ const ProductModal = ({ isOpen, onClose, product, onAddToCart }) => {
                                 >
                                     <ShoppingBag size={20} /> 
                                     {selectedPlan 
-                                        ? `${selectedPlan.label} - ₺${selectedPlan.price} SATIN AL` 
+                                        ? `${selectedPlan.label} — ${rate ? fmtTry(usdToTry(selectedPlan.price_usd, rate)) : fmtUsd(selectedPlan.price_usd)} SEPETE EKLE` 
                                         : 'ÖNCE SÜRE SEÇ'}
                                 </button>
                             </div>

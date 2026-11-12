@@ -35,7 +35,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { auth, db } from '../../lib/firebase';
-import { toDate, getStartPrice } from '../../lib/db';
+import { toDate, getStartPrice, getPlans } from '../../lib/db';
+import { fmtUsd, useUsdTry, usdToTry, fmtTry } from '../../lib/currency';
 import { fileToCompressedDataUrl } from './imageUtils';
 import { loggedWrite, adminIdForEmail, logAdminLogin } from '../../lib/adminLog';
 import './AdminDashboard.css';
@@ -77,13 +78,15 @@ const slugify = (s) =>
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
 
+const newPlanId = () => 'pl_' + Math.random().toString(36).slice(2, 8);
+
 const docBytes = (obj) => new Blob([JSON.stringify(obj)]).size;
 const MAX_DOC_BYTES = 950 * 1024;
 
 const FIELD_LABELS = {
   name: 'ad', description: 'açıklama', details: 'detaylar', category_id: 'kategori',
   price_1day: '1 gün fiyatı', price_7day: '7 gün fiyatı', price_30day: '30 gün fiyatı', price_lifetime: 'sınırsız fiyatı',
-  image_url: 'kapak görseli', video_url: 'video', extra_images: 'ek görseller', is_available: 'satış durumu', slug: 'slug',
+  plans: 'planlar', image_url: 'kapak görseli', video_url: 'video', extra_images: 'ek görseller', is_available: 'satış durumu', slug: 'slug',
 };
 
 /** Değişen alanları okunur bir özete çevirir (görseller için sadece "değişti"). */
@@ -94,7 +97,8 @@ const changeSummary = (before = {}, after = {}) => {
     const a = before[k];
     const b = after[k];
     if (JSON.stringify(a ?? '') === JSON.stringify(b ?? '')) return;
-    if (['image_url', 'extra_images', 'details', 'description'].includes(k)) parts.push(`${FIELD_LABELS[k]} değişti`);
+    if (k === 'plans') parts.push(`planlar: ${(b || []).map((pl) => `${pl.label} ${fmtUsd(pl.price_usd)}`).join(', ')}`);
+    else if (['image_url', 'extra_images', 'details', 'description'].includes(k)) parts.push(`${FIELD_LABELS[k]} değişti`);
     else if (k === 'is_available') parts.push(b ? 'satışa açıldı' : 'gizlendi');
     else parts.push(`${FIELD_LABELS[k]}: ${a ?? '—'} → ${b ?? '—'}`);
   });
@@ -408,10 +412,6 @@ const EMPTY_PRODUCT = {
   description: '',
   details: '',
   category_id: '',
-  price_1day: '',
-  price_7day: '',
-  price_30day: '',
-  price_lifetime: '',
   image_url: '',
   video_url: '',
   extra_images: [],
@@ -422,12 +422,26 @@ const ProductForm = ({ initial, categories, onClose, me }) => {
   const [form, setForm] = useState(() => ({
     ...EMPTY_PRODUCT,
     ...initial,
-    price_1day: String(initial?.price_1day || initial?.price || ''),
-    price_7day: String(initial?.price_7day || ''),
-    price_30day: String(initial?.price_30day || ''),
-    price_lifetime: String(initial?.price_lifetime || ''),
     extra_images: initial?.extra_images || [],
+    plans: initial?.id ? getPlans(initial).map((x) => ({ ...x, price_usd: String(x.price_usd) })) : [],
+    featured_plan_id: initial?.featured_plan_id || '',
   }));
+  const rate = useUsdTry();
+
+  const setPlan = (i, key, value) =>
+    setForm((f) => ({ ...f, plans: f.plans.map((pl, j) => (j === i ? { ...pl, [key]: value } : pl)) }));
+  const addPlan = (label = '') =>
+    setForm((f) => ({ ...f, plans: [...f.plans, { id: newPlanId(), label, price_usd: '' }] }));
+  const removePlan = (i) =>
+    setForm((f) => ({ ...f, plans: f.plans.filter((_, j) => j !== i) }));
+  const movePlan = (i, d) =>
+    setForm((f) => {
+      const arr = [...f.plans];
+      const j = i + d;
+      if (j < 0 || j >= arr.length) return f;
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+      return { ...f, plans: arr };
+    });
   const [saving, setSaving] = useState(false);
   const extraRef = useRef(null);
 
@@ -453,19 +467,21 @@ const ProductForm = ({ initial, categories, onClose, me }) => {
     e.preventDefault();
     if (!form.name.trim()) return toast.error('Ürün adı gerekli.');
     if (!form.category_id) return toast.error('Kategori seç.');
-    const prices = ['price_1day', 'price_7day', 'price_30day', 'price_lifetime'].map((k) => parseFloat(form[k]) || 0);
-    if (!prices.some((p) => p > 0)) return toast.error('En az bir plan fiyatı gir.');
+    const plans = form.plans
+      .map((pl) => ({ id: pl.id, label: pl.label.trim(), price_usd: Math.round((parseFloat(pl.price_usd) || 0) * 100) / 100 }))
+      .filter((pl) => pl.label || pl.price_usd);
+    if (!plans.length) return toast.error('En az bir plan ekle.');
+    if (plans.some((pl) => !pl.label || !(pl.price_usd > 0))) return toast.error('Her planın adı ve $ fiyatı olmalı.');
+    const prices = plans.map((pl) => pl.price_usd);
 
     const data = {
       name: form.name.trim(),
       description: form.description.trim(),
       details: form.details,
       category_id: form.category_id,
-      price_1day: prices[0],
-      price_7day: prices[1],
-      price_30day: prices[2],
-      price_lifetime: prices[3],
-      price: prices.find((p) => p > 0),
+      plans,
+      featured_plan_id: plans.some((pl) => pl.id === form.featured_plan_id) ? form.featured_plan_id : '',
+      price: Math.min(...prices),
       image_url: form.image_url || '',
       video_url: form.video_url.trim(),
       extra_images: form.extra_images,
@@ -491,7 +507,7 @@ const ProductForm = ({ initial, categories, onClose, me }) => {
         await loggedWrite({
           me, mode: 'create', collectionName: 'products', targetType: 'product',
           data: { ...data, created_at: serverTimestamp() },
-          summary: `Ürün "${data.name}" eklendi (${catName(data.category_id)}, başlangıç ${tl(Math.min(...prices.filter((p) => p > 0)))})`,
+          summary: `Ürün "${data.name}" eklendi (${catName(data.category_id)}, ${plans.map((pl) => `${pl.label} ${fmtUsd(pl.price_usd)}`).join(', ')})`,
         });
         toast.success('Ürün eklendi');
       }
@@ -537,19 +553,38 @@ const ProductForm = ({ initial, categories, onClose, me }) => {
           </label>
 
           <div className="adm-field">
-            <span className="adm-label">Plan fiyatları (₺) — boş bırakılan plan satılmaz</span>
-            <div className="adm-grid-4">
-              {[
-                ['price_1day', '1 Gün'],
-                ['price_7day', '7 Gün'],
-                ['price_30day', '30 Gün'],
-                ['price_lifetime', 'Sınırsız'],
-              ].map(([k, l]) => (
-                <label key={k} className="adm-price-input">
-                  <small>{l}</small>
-                  <input className="adm-input" type="number" min="0" step="0.01" inputMode="decimal" value={form[k]} onChange={set(k)} />
-                </label>
+            <span className="adm-label">Planlar — fiyatlar $ olarak girilir, sitede güncel kurla ₺ gösterilir</span>
+            <div className="adm-plans-editor">
+              {form.plans.map((pl, i) => (
+                <div key={pl.id} className="adm-plan-row">
+                  <div className="adm-plan-move">
+                    <button type="button" onClick={() => movePlan(i, -1)} disabled={i === 0} aria-label="Yukarı">▲</button>
+                    <button type="button" onClick={() => movePlan(i, 1)} disabled={i === form.plans.length - 1} aria-label="Aşağı">▼</button>
+                  </div>
+                  <input className="adm-input" placeholder="Plan adı (ör. 1 Hafta)" value={pl.label} onChange={(e) => setPlan(i, 'label', e.target.value)} maxLength={30} />
+                  <label className="adm-usd-input">
+                    <span>$</span>
+                    <input className="adm-input" type="number" min="0" step="0.01" inputMode="decimal" placeholder="0" value={pl.price_usd} onChange={(e) => setPlan(i, 'price_usd', e.target.value)} />
+                  </label>
+                  <span className="adm-muted adm-plan-try">{rate && parseFloat(pl.price_usd) > 0 ? '≈ ' + fmtTry(usdToTry(pl.price_usd, rate)) : ''}</span>
+                  <button
+                    type="button"
+                    className={`adm-icon-btn ${form.featured_plan_id === pl.id ? 'on' : ''}`}
+                    title="Popüler olarak işaretle"
+                    onClick={() => setForm((f) => ({ ...f, featured_plan_id: f.featured_plan_id === pl.id ? '' : pl.id }))}
+                  >
+                    ★
+                  </button>
+                  <button type="button" className="adm-icon-btn danger" onClick={() => removePlan(i)} aria-label="Planı sil"><Trash2 size={14} /></button>
+                </div>
               ))}
+              <div className="adm-plan-presets">
+                <span className="adm-muted">Ekle:</span>
+                {['1 Gün', '3 Gün', '1 Hafta', '1 Ay', 'Sınırsız', 'Tek Seferlik'].map((l) => (
+                  <button key={l} type="button" className="adm-chip" onClick={() => addPlan(l)}>+ {l}</button>
+                ))}
+                <button type="button" className="adm-chip" onClick={() => addPlan('')}>+ Özel</button>
+              </div>
             </div>
           </div>
 
@@ -676,11 +711,9 @@ const Products = ({ products, categories, me }) => {
                   </td>
                   <td>{catName(p.category_id)}</td>
                   <td className="adm-hide-sm adm-plans">
-                    {[['1G', p.price_1day || p.price], ['7G', p.price_7day], ['30G', p.price_30day], ['∞', p.price_lifetime]]
-                      .filter(([, v]) => v > 0)
-                      .map(([k, v]) => <span key={k}>{k} {tl(v)}</span>)}
+                    {getPlans(p).map((pl) => <span key={pl.id}>{pl.label} {fmtUsd(pl.price_usd)}</span>)}
                   </td>
-                  <td className="adm-num">{tl(getStartPrice(p))}</td>
+                  <td className="adm-num">{fmtUsd(getStartPrice(p))}</td>
                   <td>
                     <button className={`adm-pill adm-pill-${p.is_available === false ? 'muted' : 'ok'} adm-pill-btn`} onClick={() => toggle(p)} title="Satış durumunu değiştir">
                       {p.is_available === false ? <><EyeOff size={12} /> Gizli</> : <><Eye size={12} /> Satışta</>}

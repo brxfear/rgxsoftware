@@ -643,3 +643,15 @@
     gap: 12px;
   }
 }
+
+/* ---------- Çift para birimi (₺ + $) ---------- */
+.price-dual { display: inline-flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+.price-dual .price-try { font-weight: 800; color: var(--text-main); letter-spacing: -0.01em; }
+.price-dual .price-usd { font-size: 0.72em; font-weight: 600; color: var(--text-muted); }
+.price-value.price-dual .price-try { font-family: var(--font-display); font-size: 22px; }
+.price-value.price-dual .price-usd { font-size: 12.5px; }
+.price-inline { gap: 4px; }
+.price-inline .price-try { font-weight: 700; }
+.game-card-meta .price-dual .price-usd { font-size: 11px; }
+
+.modal-image.modal-image-fallback { object-fit: contain; padding: 12%; background: url("/media/brand-texture.webp") center / cover; }

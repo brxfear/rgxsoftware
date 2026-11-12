@@ -1,8 +1,9 @@
+import Price from '../Price';
 import React, { useState } from 'react';
 import { CreditCard, Wallet, Send, X, ArrowLeft, User, MessageSquare, Copy, Check, Shield } from 'lucide-react';
 import './CheckoutModal.css';
 
-const CheckoutModal = ({ isOpen, onClose, total, onComplete, t }) => {
+const CheckoutModal = ({ isOpen, onClose, totalUsd, onComplete, t }) => {
     const [step, setStep] = useState(1); // 1: Info Form, 2: Method Selection, 3: Details, 4: iFrame
     const [method, setMethod] = useState(null);
     const [copied, setCopied] = useState(false);
@@ -143,7 +144,7 @@ const CheckoutModal = ({ isOpen, onClose, total, onComplete, t }) => {
                     <div className="transaction-details fade-in">
                         <div className="total-block">
                             <span>{t('checkout.total_due')}</span>
-                            <h3 className="neon-text">₺{total.toFixed(2)}</h3>
+                            <h3 className="neon-text"><Price usd={totalUsd} /></h3>
                         </div>
 
                         <div className="data-card">

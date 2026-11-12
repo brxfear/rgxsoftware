@@ -7,7 +7,7 @@ import process from 'node:process';
 import { Buffer } from 'node:buffer';
 import crypto from 'node:crypto';
 import { FieldValue } from 'firebase-admin/firestore';
-import { adminDb, adminAuth, planPrice } from './_lib/firebaseAdmin.js';
+import { adminDb, adminAuth, findPlan, getUsdTry, usdToTry } from './_lib/firebaseAdmin.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -45,8 +45,9 @@ export default async function handler(req, res) {
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) email = 'misafir@rgxsoftware.com';
 
-    // Fiyatları sunucuda hesapla
+    // Fiyatları sunucuda hesapla ($ → güncel kurla ₺)
     const db = adminDb();
+    const rate = await getUsdTry();
     const detailed = [];
     for (const it of items) {
       const qty = Math.max(1, Math.min(10, parseInt(it.quantity, 10) || 1));
@@ -55,27 +56,32 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Sepetteki bir ürün artık satışta değil.' });
       }
       const product = snap.data();
-      const plan = planPrice(product, it.duration);
+      const plan = findPlan(product, it.plan_id ?? it.duration);
       if (!plan) return res.status(400).json({ error: `${product.name} için seçilen plan bulunamadı.` });
+      const unitTry = usdToTry(plan.price_usd, rate);
       detailed.push({
         product_id: snap.id,
         name: product.name,
-        price: plan.price,
-        duration: Number(it.duration),
+        plan_id: String(plan.id),
         durationLabel: plan.label,
         quantity: qty,
-        subtotal: Math.round(plan.price * qty * 100) / 100,
+        price_usd: Number(plan.price_usd),
+        price: unitTry,
+        subtotal: unitTry * qty,
       });
     }
-    const total_amount = Math.round(detailed.reduce((s, i) => s + i.subtotal, 0) * 100) / 100;
+    const total_amount = detailed.reduce((s, i) => s + i.subtotal, 0);
+    const total_usd = Math.round(detailed.reduce((s, i) => s + i.price_usd * i.quantity, 0) * 100) / 100;
 
     const merchant_oid = 'RGX' + Date.now() + crypto.randomInt(1000, 9999);
     await db.collection('orders').doc(merchant_oid).set({
       merchant_oid,
       user_id: uid,
       total_amount,
+      total_usd,
+      fx_rate: rate,
+      currency: 'TRY',
       items: detailed,
-      subscription_duration: detailed[0].duration,
       payment_method: 'paytr',
       status: 'pending_payment',
       customer_name: String(customer_name).slice(0, 120),

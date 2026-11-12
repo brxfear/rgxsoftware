@@ -15,18 +15,32 @@ const init = () => {
 export const adminDb = () => getFirestore(init());
 export const adminAuth = () => getAuth(init());
 
-// Fiyat tablosu (src/lib/db.js -> PLAN_DEFS ile aynı)
-export const PLAN_DEFS = [
-  { duration: 1, label: '1 GÜN', field: 'price_1day' },
-  { duration: 7, label: '7 GÜN', field: 'price_7day' },
-  { duration: 30, label: '30 GÜN', field: 'price_30day' },
-  { duration: 9999, label: 'SINIRSIZ', field: 'price_lifetime' },
-];
-
-export const planPrice = (product, duration) => {
-  const plan = PLAN_DEFS.find((p) => p.duration === Number(duration));
-  if (!plan) return null;
-  let price = Number(product[plan.field]) || 0;
-  if (!price && plan.duration === 1) price = Number(product.price) || 0;
-  return price > 0 ? { price, label: plan.label } : null;
+// Planlar (src/lib/db.js -> getPlans ile aynı mantık). Fiyatlar $.
+export const getPlans = (p) => {
+  if (Array.isArray(p?.plans) && p.plans.length) {
+    return p.plans.filter((x) => x && x.id && x.label && Number(x.price_usd) > 0);
+  }
+  return [
+    { id: '1d', label: '1 Gün', price_usd: p?.price_1day || p?.price },
+    { id: '7d', label: '7 Gün', price_usd: p?.price_7day },
+    { id: '30d', label: '30 Gün', price_usd: p?.price_30day },
+    { id: 'life', label: 'Sınırsız', price_usd: p?.price_lifetime },
+  ].filter((x) => Number(x.price_usd) > 0);
 };
+
+export const findPlan = (product, planId) => getPlans(product).find((x) => String(x.id) === String(planId)) || null;
+
+// USD/TRY kuru (istemci ile aynı kaynak). 30 dk bellekte tutulur.
+let fxCache = null;
+export const getUsdTry = async () => {
+  if (fxCache && Date.now() - fxCache.at < 30 * 60 * 1000) return fxCache.rate;
+  const r = await fetch('https://open.er-api.com/v6/latest/USD');
+  const d = await r.json();
+  const rate = Number(d?.rates?.TRY);
+  if (!(rate > 0)) throw new Error('Döviz kuru alınamadı');
+  fxCache = { rate, at: Date.now() };
+  return rate;
+};
+
+// $ → ₺, tam liraya yuvarlı (istemcideki usdToTry ile aynı)
+export const usdToTry = (usd, rate) => Math.round((Number(usd) || 0) * rate);

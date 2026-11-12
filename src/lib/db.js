@@ -46,21 +46,25 @@ export const createManualOrder = (order) =>
 /** Google ile girmiş ve e-postası admins listesinde olan kullanıcı mı? */
 export const isGoogleUser = (user) => !!user?.providerData?.some((p) => p.providerId === 'google.com');
 
-/** Bir ürünün başlangıç (en düşük) fiyatı. */
-export const getStartPrice = (p) => {
-  const lowest = Math.min(
-    p.price_1day || p.price || Infinity,
-    p.price_7day || Infinity,
-    p.price_30day || Infinity,
-    p.price_lifetime || Infinity
-  );
-  return lowest === Infinity ? (p.price || 0) : lowest;
+/**
+ * Ürünün satın alınabilir planları: [{ id, label, price_usd }].
+ * Yeni model: product.plans. Eski 4 sabit alan (price_1day …) varsa onlardan üretilir.
+ * Sunucu (api/_lib/firebaseAdmin.js) aynı mantığı kullanır.
+ */
+export const getPlans = (p) => {
+  if (Array.isArray(p?.plans) && p.plans.length) {
+    return p.plans.filter((x) => x && x.id && x.label && Number(x.price_usd) > 0);
+  }
+  return [
+    { id: '1d', label: '1 Gün', price_usd: p?.price_1day || p?.price },
+    { id: '7d', label: '7 Gün', price_usd: p?.price_7day },
+    { id: '30d', label: '30 Gün', price_usd: p?.price_30day },
+    { id: 'life', label: 'Sınırsız', price_usd: p?.price_lifetime },
+  ].filter((x) => Number(x.price_usd) > 0);
 };
 
-/** Ürünün satın alınabilir planları. Sunucu tarafı (api/) aynı tabloyu kullanır. */
-export const PLAN_DEFS = [
-  { duration: 1, label: '1 GÜN', field: 'price_1day' },
-  { duration: 7, label: '7 GÜN', field: 'price_7day' },
-  { duration: 30, label: '30 GÜN', field: 'price_30day' },
-  { duration: 9999, label: 'SINIRSIZ', field: 'price_lifetime' },
-];
+/** Başlangıç (en düşük) fiyat, $. */
+export const getStartPrice = (p) => {
+  const prices = getPlans(p).map((x) => Number(x.price_usd));
+  return prices.length ? Math.min(...prices) : 0;
+};

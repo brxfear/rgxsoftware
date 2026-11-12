@@ -1,17 +1,12 @@
 import React from 'react';
 import { ChevronRight, Star } from 'lucide-react';
+import { getPlans, getStartPrice } from '../../lib/db';
+import Price from '../Price';
 import './ProductCard.css';
 
 const ProductCard = ({ product, onClick, highlight = false }) => {
-  const lowestPrice = Math.min(
-    product.price_1day || product.price || Infinity,
-    product.price_7day || Infinity,
-    product.price_30day || Infinity,
-    product.price_lifetime || Infinity
-  );
-
-  const displayPrice = lowestPrice === Infinity ? (product.price || 290) : lowestPrice;
-  const planCount = [product.price_1day || product.price, product.price_7day, product.price_30day, product.price_lifetime].filter(Boolean).length || 1;
+  const planCount = getPlans(product).length;
+  const startPrice = getStartPrice(product);
 
   return (
     <div className="product-card glass-card" onClick={() => onClick(product)}>
@@ -20,7 +15,7 @@ const ProductCard = ({ product, onClick, highlight = false }) => {
           <img 
             src={product.image || product.image_url || '/logo.webp'} 
             alt={product.name} 
-            className="product-img"
+            className={`product-img ${product.image || product.image_url ? '' : 'product-img-fallback'}`}
             onError={(e) => {
               e.currentTarget.onerror = null;
               e.currentTarget.src = '/logo.webp';
@@ -49,10 +44,7 @@ const ProductCard = ({ product, onClick, highlight = false }) => {
         <div className="product-card-footer">
           <div className="price-block">
             <span className="price-label">Başlangıç</span>
-            <div className="price-value">
-              <span className="currency">₺</span>
-              <span className="amount">{displayPrice.toLocaleString('tr-TR')}</span>
-            </div>
+            <Price usd={startPrice} className="price-value" />
           </div>
 
           <button 

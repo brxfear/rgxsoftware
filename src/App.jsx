@@ -20,6 +20,8 @@ import DiscordBanner from './components/Discord/DiscordBanner';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './lib/firebase';
 import { fetchCategories, fetchProducts, createManualOrder, getStartPrice } from './lib/db';
+import { loadUsdTry, usdToTry } from './lib/currency';
+import Price from './components/Price';
 import { useCartStore } from './store/useCartStore';
 import { triggerConfetti } from './utils/celebration';
 import { translations } from './utils/translations';
@@ -266,7 +268,7 @@ function Store() {
                       <div className="game-card-meta">
                         <span>{catProducts.length} ürün</span>
                         {minPrice !== null && (
-                          <span>Başlangıç <strong>₺{minPrice.toLocaleString('tr-TR')}</strong></span>
+                          <span>Başlangıç <Price usd={minPrice} inline className="game-card-price" /></span>
                         )}
                       </div>
                     </div>
@@ -378,20 +380,30 @@ function Store() {
       <CheckoutModal
         isOpen={isCheckoutOpen}
         onClose={() => setIsCheckoutOpen(false)}
-        total={cart.reduce((sum, item) => sum + (item.price * item.quantity), 0)}
+        totalUsd={cart.reduce((sum, item) => sum + (item.price * item.quantity), 0)}
         t={t}
         onComplete={async (data) => {
-          const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-
-          const detailedItems = cart.map(item => ({
-            product_id: item.product_id,
-            name: item.name,
-            price: item.price,
-            duration: item.duration || 1,
-            durationLabel: item.durationLabel || '1 GÜN',
-            quantity: item.quantity,
-            subtotal: item.price * item.quantity
-          }));
+          // Sepet fiyatları $; sipariş ₺ olarak kaydedilir (güncel kurla, tam liraya yuvarlı)
+          const rate = await loadUsdTry();
+          if (!rate) {
+            toast.error('Döviz kuru alınamadı, lütfen biraz sonra tekrar dene.');
+            throw new Error('fx unavailable');
+          }
+          const detailedItems = cart.map(item => {
+            const unitTry = usdToTry(item.price, rate);
+            return {
+              product_id: item.product_id,
+              name: item.name,
+              plan_id: String(item.duration),
+              durationLabel: item.durationLabel || '',
+              quantity: item.quantity,
+              price_usd: item.price,
+              price: unitTry,
+              subtotal: unitTry * item.quantity,
+            };
+          });
+          const totalAmount = detailedItems.reduce((sum, i) => sum + i.subtotal, 0);
+          const totalUsd = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
           if (data.payment_method === 'paytr') {
             const idToken = user ? await user.getIdToken() : null;
@@ -404,7 +416,7 @@ function Store() {
                   ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
                 },
                 body: JSON.stringify({
-                  items: detailedItems.map(({ product_id, duration, quantity }) => ({ product_id, duration, quantity })),
+                  items: detailedItems.map(({ product_id, plan_id, quantity }) => ({ product_id, plan_id, quantity })),
                   customer_name: data.name,
                   customer_email: user?.email || data.email || '',
                   customer_phone: data.contact,
@@ -423,8 +435,10 @@ function Store() {
             await createManualOrder({
               user_id: user?.uid || null,
               total_amount: totalAmount,
+              total_usd: Math.round(totalUsd * 100) / 100,
+              fx_rate: rate,
+              currency: 'TRY',
               items: detailedItems,
-              subscription_duration: cart[0]?.duration || 1,
               payment_method: data.payment_method || 'manual',
               customer_name: data.name,
               customer_phone: data.contact,

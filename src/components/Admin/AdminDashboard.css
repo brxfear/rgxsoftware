@@ -519,3 +519,20 @@ select.adm-input option { background: #1a1214; }
 .adm-you { font-style: normal; color: var(--adm-red-2); font-size: 12px; }
 .adm-stack { display: flex; flex-direction: column; gap: 20px; }
 .adm-nowrap { white-space: nowrap; }
+
+/* Plan düzenleyici */
+.adm-plans-editor { display: flex; flex-direction: column; gap: 8px; }
+.adm-plan-row { display: grid; grid-template-columns: 22px minmax(0, 1fr) 120px 76px 34px 34px; gap: 8px; align-items: center; }
+.adm-plan-move { display: flex; flex-direction: column; gap: 2px; }
+.adm-plan-move button { height: 17px; border: none; border-radius: 4px; background: rgba(255,255,255,0.05); color: var(--adm-muted); font-size: 8px; cursor: pointer; }
+.adm-plan-move button:disabled { opacity: 0.3; cursor: default; }
+.adm-usd-input { position: relative; display: block; }
+.adm-usd-input span { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--adm-muted); font-size: 13px; pointer-events: none; }
+.adm-usd-input .adm-input { padding-left: 24px; }
+.adm-plan-try { white-space: nowrap; }
+.adm-icon-btn.on { color: #fbbf24; border-color: rgba(251, 191, 36, 0.5); background: rgba(251, 191, 36, 0.1); }
+.adm-plan-presets { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 4px; }
+@media (max-width: 560px) {
+  .adm-plan-row { grid-template-columns: 22px minmax(0, 1fr) 96px 34px 34px; }
+  .adm-plan-try { display: none; }
+}

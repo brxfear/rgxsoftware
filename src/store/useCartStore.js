@@ -145,6 +145,6 @@ export const useCartStore = create(
         }
       },
     }),
-    { name: 'brx-cart-storage' }
+    { name: 'rgx-cart-v2' }
   )
 );
