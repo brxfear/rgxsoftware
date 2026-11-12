@@ -5,11 +5,7 @@
   },
   "auth": {
     "providers": {
-      "emailPassword": true,
-      "googleSignIn": {
-        "oAuthBrandDisplayName": "RGX Software",
-        "supportEmail": "bilaltahausak@gmail.com"
-      }
+      "emailPassword": true
     }
   }
 }
