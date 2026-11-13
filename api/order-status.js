@@ -34,9 +34,24 @@ export default async function handler(req, res) {
     }
 
     const status = snap.get('status');
-    return res.status(200).json({
-      status: status === 'paid' || status === 'Completed' ? 'paid' : status === 'pending_payment' ? 'pending' : 'failed',
-    });
+    const out = {
+      status:
+        status === 'Completed' ? 'delivered'
+        : status === 'paid' ? 'paid'
+        : status === 'pending_payment' || status === 'Waiting for Confirmation' ? 'pending'
+        : 'failed',
+    };
+    if (req.query?.detail) {
+      out.total = snap.get('total_amount');
+      out.currency = snap.get('currency') || 'USD';
+      const delivery = snap.get('delivery');
+      if (status === 'Completed' && delivery?.items) {
+        out.delivery = {
+          items: delivery.items.map((i) => ({ name: i.name, durationLabel: i.durationLabel, keys: i.keys || [], link: i.link || '', note: i.note || '' })),
+        };
+      }
+    }
+    return res.status(200).json(out);
   } catch (err) {
     console.error('order-status error', err);
     return res.status(500).json({ error: 'Sunucu hatası.' });

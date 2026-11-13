@@ -541,3 +541,32 @@ select.adm-input option { background: #1a1214; }
 .adm-en-block { margin-bottom: 16px; padding: 12px 14px; border-radius: 12px; border: 1px dashed var(--adm-line-2); }
 .adm-en-block summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--adm-muted); }
 .adm-en-block[open] summary { margin-bottom: 14px; }
+
+/* ---------- Key stoğu ---------- */
+.adm-mono { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 13px; }
+.adm-drawer-head h2 { display: inline-flex; align-items: center; gap: 8px; }
+.adm-key-plans { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; margin-bottom: 18px; }
+.adm-key-plan { display: flex; flex-direction: column; padding: 10px 12px; border-radius: 12px; border: 1px solid rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.06); }
+.adm-key-plan.empty { border-color: rgba(251, 191, 36, 0.35); background: rgba(251, 191, 36, 0.06); }
+.adm-key-plan span { font-size: 12px; color: var(--adm-muted); }
+.adm-key-plan strong { font-family: var(--font-display); font-size: 24px; line-height: 1.1; }
+.adm-key-plan small { font-size: 11px; color: var(--adm-muted); }
+.adm-key-list-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 20px 0 8px; }
+.adm-switch-sm { font-size: 12.5px; }
+.adm-key-list { display: flex; flex-direction: column; gap: 6px; }
+.adm-key-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto 30px 30px; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px; background: rgba(0, 0, 0, 0.3); border: 1px solid var(--adm-line); }
+.adm-key-row code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.adm-key-row.used { opacity: 0.55; }
+.adm-key-row .adm-icon-btn { width: 30px; height: 30px; }
+
+/* ---------- Teslimat ---------- */
+.adm-delivery { display: flex; flex-direction: column; gap: 12px; padding: 14px; border-radius: 12px; border: 1px solid rgba(224, 38, 47, 0.25); background: rgba(224, 38, 47, 0.04); }
+.adm-delivery-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.adm-delivery-head .adm-label { display: inline-flex; align-items: center; gap: 6px; margin: 0; }
+.adm-delivery-head em { font-style: normal; text-transform: none; letter-spacing: 0; }
+.adm-delivery-item { display: flex; flex-direction: column; gap: 8px; }
+.adm-delivery-title { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 14px; }
+.adm-delivery-title .adm-btn { margin-left: auto; }
+.adm-btn-xs { height: 30px; padding: 0 10px; font-size: 12.5px; }
+.adm-input-icon-sm { height: 40px; border-radius: 10px; }
+.adm-delivery .adm-form-actions { align-items: center; justify-content: space-between; }

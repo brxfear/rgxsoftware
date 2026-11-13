@@ -78,3 +78,16 @@ export const logAdminLogin = async (me) => {
     /* yoksay */
   }
 };
+
+/**
+ * Tek log + birden fazla belge yazımı (ör. toplu key ekleme, teslimat).
+ * ops(batch, logId) içinde yazılan her belgeye last_log_id: logId eklenmelidir.
+ */
+export const loggedBatch = async ({ me, action, targetType, targetId, summary, ops }) => {
+  const batch = writeBatch(db);
+  const logRef = doc(collection(db, 'admin_logs'));
+  batch.set(logRef, logEntry(me.nickname, action, targetType, targetId, summary));
+  await ops(batch, logRef.id);
+  await batch.commit();
+  return logRef.id;
+};

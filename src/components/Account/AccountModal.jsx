@@ -19,6 +19,7 @@ import { useCartStore } from '../../store/useCartStore';
 import GoogleIcon from '../GoogleIcon';
 import { useT, planLabel, translate } from '../../i18n';
 import { fmtMoney } from '../../lib/currency';
+import OrderDelivery from './OrderDelivery';
 import './AccountModal.css';
 
 const STATUS_KEY = {
@@ -244,6 +245,7 @@ const AccountModal = ({ isOpen, onClose, user, initialTab = 'profile', onProfile
                         </li>
                       ))}
                     </ul>
+                    <OrderDelivery delivery={o.delivery} />
                     <div className="acc-order-foot">
                       <span>{fmt(o.created_at)}</span>
                       <strong>{fmtMoney(o.total_amount, o.currency || 'USD')}</strong>

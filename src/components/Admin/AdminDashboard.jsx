@@ -36,6 +36,7 @@ import {
   ScrollText,
   CreditCard,
   Settings,
+  KeyRound,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { auth, db } from '../../lib/firebase';
@@ -43,6 +44,8 @@ import { toDate, getStartPrice, getPlans } from '../../lib/db';
 import { fmtUsd, fmtMoney } from '../../lib/currency';
 import { fileToCompressedDataUrl } from './imageUtils';
 import { loggedWrite, adminIdForEmail, logAdminLogin } from '../../lib/adminLog';
+import { KeyStockDrawer, DeliveryPanel } from './Fulfillment';
+import { useKeyCounts } from './useKeyCounts';
 import './AdminDashboard.css';
 
 /* ------------------------------------------------------------------ */
@@ -396,6 +399,7 @@ const Orders = ({ orders, initialFilter, me }) => {
                         ))}
                       </tbody>
                     </table>
+                    <DeliveryPanel key={`${o.id}-${o.delivery?.delivered_at?.seconds || 0}`} order={o} me={me} />
                     <div className="adm-order-actions">
                       <span className="adm-label">Durumu değiştir</span>
                       <div className="adm-chips">
@@ -668,6 +672,8 @@ const ProductForm = ({ initial, categories, onClose, me }) => {
 
 const Products = ({ products, categories, me }) => {
   const [editing, setEditing] = useState(null);
+  const [keysFor, setKeysFor] = useState(null);
+  const keyCounts = useKeyCounts();
   const [search, setSearch] = useState('');
   const [cat, setCat] = useState('');
   const catName = (id) => categories.find((c) => c.id === id)?.name || '—';
@@ -730,6 +736,7 @@ const Products = ({ products, categories, me }) => {
                 <th>Kategori</th>
                 <th className="adm-hide-sm">Planlar</th>
                 <th className="adm-num">Başlangıç</th>
+                <th className="adm-num">Key stoğu</th>
                 <th>Durum</th>
                 <th />
               </tr>
@@ -751,12 +758,18 @@ const Products = ({ products, categories, me }) => {
                     {getPlans(p).map((pl) => <span key={pl.id}>{pl.label} {fmtUsd(pl.price_usd)}</span>)}
                   </td>
                   <td className="adm-num">{fmtUsd(getStartPrice(p))}</td>
+                  <td className="adm-num">
+                    <button className={`adm-pill adm-pill-btn adm-pill-${keyCounts[p.id]?._total ? 'ok' : 'warn'}`} onClick={() => setKeysFor(p)} title="Key stoğunu yönet">
+                      <KeyRound size={12} /> {keyCounts[p.id]?._total || 0}
+                    </button>
+                  </td>
                   <td>
                     <button className={`adm-pill adm-pill-${p.is_available === false ? 'muted' : 'ok'} adm-pill-btn`} onClick={() => toggle(p)} title="Satış durumunu değiştir">
                       {p.is_available === false ? <><EyeOff size={12} /> Gizli</> : <><Eye size={12} /> Satışta</>}
                     </button>
                   </td>
                   <td className="adm-row-actions">
+                    <button className="adm-icon-btn" onClick={() => setKeysFor(p)} aria-label="Key stoğu"><KeyRound size={15} /></button>
                     <button className="adm-icon-btn" onClick={() => setEditing(p)} aria-label="Düzenle"><Pencil size={15} /></button>
                     <button className="adm-icon-btn danger" onClick={() => remove(p)} aria-label="Sil"><Trash2 size={15} /></button>
                   </td>
@@ -770,6 +783,7 @@ const Products = ({ products, categories, me }) => {
       )}
 
       {editing && <ProductForm initial={editing} categories={categories} me={me} onClose={() => setEditing(null)} />}
+      {keysFor && <KeyStockDrawer product={keysFor} me={me} onClose={() => setKeysFor(null)} />}
     </section>
   );
 };

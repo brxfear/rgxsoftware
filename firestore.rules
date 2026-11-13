@@ -10,6 +10,7 @@ rules_version = '2';
 //   admin_logs/{id}             yönetici işlem kayıtları — sadece eklenir, asla değiştirilmez/silinmez
 //   payment_logs/{id}           Shopier ödeme olayları — sadece sunucu yazar
 //   settings/{id}               site ayarları (IBAN vb.)
+//   license_keys/{id}           key stoğu — sadece yöneticiler okur/yazar (loglu), asla silinmez
 //
 // Log zorunluluğu: yöneticinin her yazma işlemi aynı batch içinde bir admin_logs kaydı oluşturmak
 // ZORUNDADIR. Hedef belgenin last_log_id alanı o kayda işaret eder; silmede kayıt kimliği
@@ -71,6 +72,12 @@ service cloud.firestore {
         && log.data.at == request.time;
     }
 
+    // Toplu işlemler (ör. 50 key ekleme): belgeler aynı istekte yazılmış tek bir log'a işaret eder.
+    function batchLogged() {
+      let log = getAfter(logPath(request.resource.data.last_log_id));
+      return log.data.actor_uid == request.auth.uid && log.data.at == request.time;
+    }
+
     match /admin_logs/{logId} {
       allow read: if isAdmin();
       allow create: if isAdmin()
@@ -78,7 +85,7 @@ service cloud.firestore {
         && request.resource.data.actor_uid == request.auth.uid
         && request.resource.data.actor_nick == myNick()
         && request.resource.data.action in ['create', 'update', 'delete', 'status', 'login']
-        && request.resource.data.target_type in ['product', 'category', 'order', 'admin', 'session', 'settings']
+        && request.resource.data.target_type in ['product', 'category', 'order', 'admin', 'session', 'settings', 'key']
         && request.resource.data.target_id is string
         && request.resource.data.summary is string
         && request.resource.data.summary.size() <= 500
@@ -147,6 +154,19 @@ service cloud.firestore {
     match /settings/{id} {
       allow read: if true;
       allow create, update: if isAdmin() && loggedWrite(id);
+      allow delete: if false;
+    }
+
+    // Key stoğu: { product_id, plan_id, key, status: available|used|removed, order_id, … }
+    match /license_keys/{id} {
+      allow read: if isAdmin();
+      allow create: if isAdmin() && batchLogged()
+        && request.resource.data.status == 'available'
+        && request.resource.data.key is string
+        && request.resource.data.key.size() > 0
+        && request.resource.data.key.size() <= 2000;
+      allow update: if isAdmin() && batchLogged()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'order_id', 'used_at', 'last_log_id']);
       allow delete: if false;
     }
 

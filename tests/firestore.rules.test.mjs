@@ -12,7 +12,7 @@ const ADMIN2 = { uid: 'admin2', email: 'second@example.com' };
 
 const env = await initializeTestEnvironment({
   projectId: 'rgx-rules-test',
-  firestore: { rules: fs.readFileSync('firestore.rules', 'utf8'), host: '127.0.0.1', port: 8080 },
+  firestore: { rules: fs.readFileSync('firestore.rules', 'utf8'), host: '127.0.0.1', port: Number((process.env.FIRESTORE_EMULATOR_HOST || '127.0.0.1:8085').split(':')[1]) },
 });
 
 const google = (u) => env.authenticatedContext(u.uid, { email: u.email, email_verified: true, firebase: { sign_in_provider: 'google.com' } }).firestore();
@@ -132,6 +132,35 @@ await test('loglar değiştirilemez ve silinemez', async () => {
 });
 await test('müşteri logları okuyamaz', async () => {
   await assertFails(getDocs(collection(google({ uid: 'c', email: 'c@gmail.com' }), 'admin_logs')));
+});
+
+// --- Key stoğu
+const addKeys = (db, me, nick, n, extra = {}) => {
+  const b = writeBatch(db);
+  const logRef = doc(collection(db, 'admin_logs'));
+  b.set(logRef, { actor_uid: me.uid, actor_nick: nick, action: 'create', target_type: 'key', target_id: 'p1', summary: 'test', at: serverTimestamp() });
+  for (let i = 0; i < n; i++) b.set(doc(collection(db, 'license_keys')), { product_id: 'p1', plan_id: '1d', key: `K-${i}`, status: 'available', last_log_id: logRef.id, ...extra });
+  return b.commit();
+};
+await test('admin tek logla toplu key ekleyebilir', async () => {
+  await assertSucceeds(addKeys(google(ADMIN), ADMIN, 'Kurucu', 25));
+});
+await test('logsuz key eklenemez', async () => {
+  await assertFails(setDoc(doc(google(ADMIN), 'license_keys', 'x'), { product_id: 'p1', plan_id: '1d', key: 'K', status: 'available' }));
+});
+await test('müşteri key stoğunu okuyamaz', async () => {
+  await addKeys(google(ADMIN), ADMIN, 'Kurucu', 1);
+  await assertFails(getDocs(collection(password({ uid: 'cust', email: 'c@example.com' }), 'license_keys')));
+});
+await test('key silinemez, sadece durum değişir', async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => setDoc(doc(ctx.firestore(), 'license_keys', 'k1'), { product_id: 'p1', plan_id: '1d', key: 'K', status: 'available' }));
+  const adb = google(ADMIN);
+  await assertFails(deleteDoc(doc(adb, 'license_keys', 'k1')));
+  const b = writeBatch(adb);
+  const logRef = doc(collection(adb, 'admin_logs'));
+  b.set(logRef, { actor_uid: ADMIN.uid, actor_nick: 'Kurucu', action: 'delete', target_type: 'key', target_id: 'k1', summary: 't', at: serverTimestamp() });
+  b.update(doc(adb, 'license_keys', 'k1'), { status: 'removed', last_log_id: logRef.id });
+  await assertSucceeds(b.commit());
 });
 
 // --- Müşteri

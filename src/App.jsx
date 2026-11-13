@@ -12,6 +12,7 @@ import CheckoutModal from './components/Checkout/CheckoutModal';
 import ProductModal from './components/ProductCard/ProductModal';
 import AuthModal from './components/Auth/AuthModal';
 import AccountModal from './components/Account/AccountModal';
+import OrderLookup from './components/Account/OrderLookup';
 import FAQSection from './components/FAQ/FAQSection';
 import ReviewsSection from './components/Reviews/ReviewsSection';
 import HowItWorksSection from './components/HowItWorks/HowItWorksSection';
@@ -47,6 +48,10 @@ function Store() {
   const [user, setUser] = useState(null);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [accountTab, setAccountTab] = useState(null);
+  const [lookup, setLookup] = useState(() => {
+    const q = new URLSearchParams(window.location.search);
+    return q.get('siparis') && q.get('k') ? { id: q.get('siparis'), key: q.get('k') } : null;
+  });
   const [, setProfileVersion] = useState(0);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
@@ -442,6 +447,17 @@ function Store() {
       />
 
       <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
+
+      {lookup && (
+        <OrderLookup
+          orderId={lookup.id}
+          viewKey={lookup.key}
+          onClose={() => {
+            setLookup(null);
+            window.history.replaceState({}, '', window.location.pathname);
+          }}
+        />
+      )}
 
       <AccountModal
         isOpen={!!accountTab && !!user}

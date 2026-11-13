@@ -7,6 +7,7 @@ import { useMoney } from '../../lib/currency';
 import { useT, planLabel } from '../../i18n';
 import { useCartStore } from '../../store/useCartStore';
 import { triggerConfetti } from '../../utils/celebration';
+import { rememberGuestOrder } from '../../lib/guestOrders';
 import './CheckoutModal.css';
 
 const DISCORD_URL = 'https://discord.gg/rgxsoftware1';
@@ -75,7 +76,7 @@ const CheckoutModal = ({ isOpen, onClose, totalUsd, items = [], user, onComplete
         const r = await fetch(`/api/order-status?id=${encodeURIComponent(shopier.orderId)}&key=${shopier.key}`, { cache: 'no-store' });
         const d = await r.json().catch(() => null);
         if (!alive) return;
-        if (d?.status === 'paid') {
+        if (d?.status === 'paid' || d?.status === 'delivered') {
           setStep('paid');
           triggerConfetti();
           await useCartStore.getState().clearCart();
@@ -110,6 +111,13 @@ const CheckoutModal = ({ isOpen, onClose, totalUsd, items = [], user, onComplete
 
   const pay = async () => {
     setBusy(true);
+    // Shopier sayfası iframe'e izin vermediği için yeni sekmede açılır. Açılır pencere engelleyicisine
+    // takılmamak için sekme tıklama anında açılır, adres sonra verilir.
+    let popup = null;
+    if (method === 'shopier') {
+      popup = window.open('', '_blank');
+      if (popup) popup.document.write(`<title>Shopier</title><p style="font-family:sans-serif;padding:24px">${t('checkout.processing')}</p>`);
+    }
     try {
       const result = await onComplete({ ...info, payment_method: method });
       if (result?.type === 'iban') {
@@ -117,11 +125,14 @@ const CheckoutModal = ({ isOpen, onClose, totalUsd, items = [], user, onComplete
         setIbanAmount(fmt(totalUsd));
         setStep('iban-done');
       } else if (result?.type === 'shopier') {
-        setShopier({ url: result.url, orderId: result.orderId, key: result.key });
+        if (popup && !popup.closed) popup.location.href = result.url;
+        setShopier({ url: result.url, orderId: result.orderId, key: result.key, opened: !!popup });
+        rememberGuestOrder(result.orderId, result.key);
         setStep('shopier');
       }
     } catch (err) {
       console.error(err);
+      if (popup && !popup.closed) popup.close();
     } finally {
       setBusy(false);
     }
@@ -131,7 +142,7 @@ const CheckoutModal = ({ isOpen, onClose, totalUsd, items = [], user, onComplete
 
   return (
     <div className="co-overlay" onClick={close}>
-      <div className={`co-modal ${step === 'shopier' ? 'co-modal-wide' : ''}`} role="dialog" aria-modal="true" aria-label={t('checkout.stepPay')} onClick={(e) => e.stopPropagation()}>
+      <div className="co-modal" role="dialog" aria-modal="true" aria-label={t('checkout.stepPay')} onClick={(e) => e.stopPropagation()}>
         <header className="co-head">
           {step === 'method' ? (
             <button className="co-icon" onClick={() => setStep('info')} aria-label={t('checkout.back')}><ArrowLeft size={17} /></button>
@@ -161,14 +172,16 @@ const CheckoutModal = ({ isOpen, onClose, totalUsd, items = [], user, onComplete
         )}
 
         {step === 'shopier' && shopier && (
-          <div className="co-shopier">
-            <div className="co-shopier-frame">
-              <iframe src={shopier.url} title={t('checkout.shopierTitle')} allow="payment" />
+          <div className="co-body">
+            <div className="co-wait-card">
+              <Loader2 size={26} className="co-spin" />
+              <strong>{t('checkout.waitingTitle')}</strong>
+              <span>{shopier.opened ? t('checkout.openedNote') : t('checkout.popupBlocked')}</span>
             </div>
-            <div className="co-shopier-bar">
-              <span className="co-waiting"><Loader2 size={15} className="co-spin" /> {t('checkout.waiting')}</span>
-              <a href={shopier.url} target="_blank" rel="noopener noreferrer"><ExternalLink size={14} /> {t('checkout.openNewTab')}</a>
-            </div>
+            <a className="co-cta" href={shopier.url} target="_blank" rel="noopener noreferrer">
+              <ExternalLink size={16} /> {shopier.opened ? t('checkout.reopen') : t('checkout.openShopier')}
+            </a>
+            <p className="co-hint">{t('checkout.waiting')}</p>
           </div>
         )}
 
@@ -182,7 +195,8 @@ const CheckoutModal = ({ isOpen, onClose, totalUsd, items = [], user, onComplete
               </div>
             </div>
             <p className="co-note">{t('checkout.paidText')}</p>
-            <button className="co-cta" onClick={onClose}>{t('checkout.close')}</button>
+            <a className="co-cta" href={`/?siparis=${encodeURIComponent(shopier?.orderId || '')}&k=${shopier?.key || ''}`}>{t('delivery.viewOrder')}</a>
+            <p className="co-hint">{t('delivery.viewHint')}</p>
           </div>
         )}
 
