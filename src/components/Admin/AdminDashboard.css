@@ -573,3 +573,5 @@ select.adm-input option { background: #1a1214; }
 .adm-login-form { display: flex; flex-direction: column; gap: 10px; }
 .adm-login-btn { height: 44px; }
 .adm-pw-form { display: flex; flex-direction: column; gap: 10px; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--adm-line); }
+.adm-badges { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.adm-delivery-locked { padding: 12px 14px; border-radius: 12px; border: 1px dashed var(--adm-line-2); color: var(--adm-muted); font-size: 13px; }

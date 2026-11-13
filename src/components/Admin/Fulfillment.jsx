@@ -9,6 +9,13 @@ import { db } from '../../lib/firebase';
 import { getPlans } from '../../lib/db';
 import { loggedBatch } from '../../lib/adminLog';
 
+/** "mega.nz/..." gibi şemasız linklere https:// ekler. */
+const normalizeLink = (v) => {
+  const s = String(v || '').trim();
+  if (!s) return '';
+  return /^https?:\/\//i.test(s) ? s : `https://${s.replace(/^\/+/, '')}`;
+};
+
 const mask = (k) => (k.length <= 8 ? '••••••' : `${k.slice(0, 4)}••••${k.slice(-4)}`);
 
 /* ------------------------------------------------------------------ */
@@ -192,7 +199,7 @@ export const DeliveryPanel = ({ order, me }) => {
   const [saving, setSaving] = useState(false);
   const [filling, setFilling] = useState(null);
   const delivered = !!order.delivery?.delivered_at;
-  const canDeliver = ['paid', 'Completed', 'Waiting for Confirmation'].includes(order.status);
+  const canDeliver = ['paid', 'Completed'].includes(order.status);
 
   const setRow = (i, patch) => setRows((rs) => rs.map((r, j) => (j === i ? { ...r, ...patch } : r)));
   const rowKeys = (r) => r.keysText.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
@@ -231,7 +238,7 @@ export const DeliveryPanel = ({ order, me }) => {
       name: r.name,
       durationLabel: r.durationLabel,
       keys: rowKeys(r),
-      link: r.link.trim(),
+      link: normalizeLink(r.link),
       note: r.note.trim(),
     }));
     if (!items.some((it) => it.keys.length || it.link || it.note)) return toast.error('En az bir key, link ya da not gir.');
@@ -277,11 +284,23 @@ export const DeliveryPanel = ({ order, me }) => {
 
   const totalNeeded = useMemo(() => rows.reduce((n, r) => n + r.quantity, 0), [rows]);
 
+  if (!canDeliver) {
+    return (
+      <div className="adm-delivery-locked">
+        <PackageCheck size={14} />{' '}
+        {order.payment_method === 'shopier'
+          ? 'Teslimat, Shopier ödemesi gelince açılır. Ödeme otomatik algılanır.'
+          : order.status === 'Waiting for Confirmation'
+            ? 'Önce havale ödemesini kontrol edip aşağıdan "Ödendi" olarak işaretle; sonra teslim edebilirsin.'
+            : 'Ödemesi alınmamış sipariş teslim edilemez.'}
+      </div>
+    );
+  }
+
   return (
     <div className="adm-delivery">
       <div className="adm-delivery-head">
         <span className="adm-label"><PackageCheck size={14} /> Teslimat {delivered && <em className="adm-pill adm-pill-ok">teslim edildi · {order.delivery.delivered_by}</em>}</span>
-        {!canDeliver && <span className="adm-muted">Ödeme onaylanmadan teslim edilmemeli.</span>}
       </div>
       {rows.map((r, i) => (
         <div key={i} className="adm-delivery-item">

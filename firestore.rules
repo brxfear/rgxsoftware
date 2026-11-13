@@ -134,6 +134,14 @@ service cloud.firestore {
       allow delete: if isAdmin() && loggedDelete(id);
     }
 
+    // Shopier siparişi yönetici tarafından "ödendi"/"teslim edildi" yapılamaz; bunu sadece sunucu
+    // gerçek Shopier ödemesini eşleştirince yapar. (Havale siparişini yönetici onaylayabilir.)
+    function shopierPaymentUntouched() {
+      return resource.data.get('payment_method', '') != 'shopier'
+        || !(request.resource.data.status in ['paid', 'Completed'])
+        || resource.data.status in ['paid', 'Completed'];
+    }
+
     match /orders/{id} {
       // Havale / kripto siparişi: müşteri sadece "onay bekliyor" durumunda oluşturabilir.
       // Kartla ödeme siparişleri sunucuda (Admin SDK) oluşturulur ve bu kurallara takılmaz.
@@ -148,7 +156,7 @@ service cloud.firestore {
           || (!signedIn() && request.resource.data.user_id == null)
         );
       allow read: if isAdmin() || (signedIn() && resource.data.user_id == request.auth.uid);
-      allow update: if isAdmin() && loggedWrite(id);
+      allow update: if isAdmin() && loggedWrite(id) && shopierPaymentUntouched();
       allow delete: if isAdmin() && loggedDelete(id);
     }
 

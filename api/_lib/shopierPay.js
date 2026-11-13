@@ -47,7 +47,8 @@ export const deleteShopierProduct = async (productId) => {
  */
 export const settleShopierOrder = async (db, rawOrder, source) => {
   const o = simplifyOrder(rawOrder);
-  if (o.paymentStatus && o.paymentStatus !== 'paid') return null;
+  // Sadece kesin ödenmiş Shopier siparişleri (ödeme durumu bilinmiyorsa onaylama)
+  if (o.paymentStatus !== 'paid') return null;
 
   for (const item of o.items) {
     const q = await db.collection('orders').where('shopier_product_id', '==', item.productId).limit(1).get();
@@ -57,6 +58,12 @@ export const settleShopierOrder = async (db, rawOrder, source) => {
     const settled = await db.runTransaction(async (tx) => {
       const snap = await tx.get(ref);
       if (snap.get('status') !== 'pending_payment') return false;
+      // Tutar ve para birimi tutmuyorsa ödendi yapma, incelemeye bırak
+      const expected = Number(snap.get('total_amount'));
+      if (Math.abs(expected - o.total) > 0.01 || (snap.get('currency') && o.currency && snap.get('currency') !== o.currency)) {
+        tx.update(ref, { status: 'payment_review', review_reason: `Shopier ${o.total} ${o.currency}, beklenen ${expected} ${snap.get('currency')}`, shopier_order_id: o.id });
+        return 'review';
+      }
       tx.update(ref, {
         status: 'paid',
         paid_at: FieldValue.serverTimestamp(),
@@ -68,17 +75,18 @@ export const settleShopierOrder = async (db, rawOrder, source) => {
       return true;
     });
 
+    if (settled === 'review') {
+      await paymentLog(db, { order_id: ref.id, event: 'error', amount: o.total, currency: o.currency, payment_id: o.id, message: `Tutar uyuşmuyor — sipariş incelemeye alındı (Shopier ${o.id})` });
+      return ref.id;
+    }
     if (settled) {
-      const snap = await ref.get();
-      const expected = Number(snap.get('total_amount'));
-      const mismatch = Math.abs(expected - o.total) > 0.01 || (snap.get('currency') && snap.get('currency') !== o.currency);
       await paymentLog(db, {
         order_id: ref.id,
         event: 'success',
         amount: o.total,
         currency: o.currency,
         payment_id: o.id,
-        message: `Ödeme alındı (${source}) — Shopier sipariş ${o.id}${o.buyer ? `, ${o.buyer}` : ''}${mismatch ? ` · DİKKAT: beklenen ${expected} ${snap.get('currency')}` : ''}`,
+        message: `Ödeme alındı (${source}) — Shopier sipariş ${o.id}${o.buyer ? `, ${o.buyer}` : ''}`,
       });
       await deleteShopierProduct(item.productId);
     }

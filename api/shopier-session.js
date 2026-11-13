@@ -19,7 +19,9 @@ export default async function handler(req, res) {
   try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {};
     const { items, buyer = {} } = body;
-    const currency = body.currency === 'TRY' ? 'TRY' : 'USD';
+    // Shopier mağazası sadece TRY kabul ediyor: kartla ödeme her zaman güncel kurla ₺ olarak alınır.
+    const currency = 'TRY';
+    const displayCurrency = body.currency === 'USD' ? 'USD' : 'TRY';
     const lang = body.lang === 'en' ? 'en' : 'tr';
     const name = String(buyer.name || '').trim();
     const email = String(buyer.email || '').trim().toLowerCase();
@@ -86,6 +88,7 @@ export default async function handler(req, res) {
       currency,
       ...(rate ? { fx_rate: rate } : {}),
       lang,
+      display_currency: displayCurrency,
       items: detailed,
       payment_method: 'shopier',
       status: 'pending_payment',

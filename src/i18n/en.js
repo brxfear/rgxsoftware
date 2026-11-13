@@ -159,6 +159,7 @@ const en = {
     shopierTitle: 'Shopier secure payment',
     waitingTitle: 'Waiting for your payment',
     openedNote: 'The Shopier payment window is open. Complete the payment there; this updates automatically once paid.',
+    chargedTry: 'Shopier charges cards in Turkish lira: about {amount} at today’s rate.',
     sameTab: 'Window didn’t open? Continue in this tab',
     checking: 'Checking your payment…',
     checkingNote: 'If you completed the payment on Shopier, it will be confirmed within seconds.',
@@ -224,6 +225,7 @@ const en = {
       done: 'Delivered',
       canceled: 'Canceled',
       failed: 'Payment failed',
+      review: 'Payment under review',
     },
   },
   authErrors: {

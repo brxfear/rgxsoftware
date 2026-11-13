@@ -28,6 +28,7 @@ const STATUS_KEY = {
   paid: ['paid', 'info'],
   Completed: ['done', 'ok'],
   Canceled: ['canceled', 'bad'],
+  payment_review: ['review', 'warn'],
 };
 const statusOf = (s = '', t) => {
   const k = STATUS_KEY[s] || (s.startsWith('failed') ? ['failed', 'bad'] : null);

@@ -58,7 +58,45 @@ const ORDER_STATUSES = [
   { value: 'paid', label: 'Ödendi', tone: 'info' },
   { value: 'Completed', label: 'Teslim edildi', tone: 'ok' },
   { value: 'Canceled', label: 'İptal', tone: 'bad' },
+  { value: 'payment_review', label: 'Ödeme incelemede', tone: 'warn' },
 ];
+
+const PAID = ['paid', 'Completed'];
+const isShopier = (o) => o.payment_method === 'shopier';
+
+/** Ödeme durumu (teslimattan ayrı gösterilir). */
+const paymentBadge = (o) => {
+  if (PAID.includes(o.status)) return { label: isShopier(o) ? 'Ödendi · Shopier' : 'Ödendi · havale onaylı', tone: 'ok' };
+  if (o.status === 'Waiting for Confirmation') return { label: 'Havale bekleniyor', tone: 'warn' };
+  if (o.status === 'pending_payment') return { label: 'Ödenmedi', tone: 'muted' };
+  if (o.status === 'payment_review') return { label: 'Ödeme incelemede', tone: 'warn' };
+  if (o.status === 'Canceled') return { label: 'İptal', tone: 'bad' };
+  return { label: 'Ödeme başarısız', tone: 'bad' };
+};
+
+/** Teslimat durumu. */
+const deliveryBadge = (o) =>
+  o.status === 'Completed' ? { label: 'Teslim edildi', tone: 'ok' } : PAID.includes(o.status) ? { label: 'Teslim bekliyor', tone: 'warn' } : null;
+
+const OrderBadges = ({ o }) => {
+  const p = paymentBadge(o);
+  const d = deliveryBadge(o);
+  return (
+    <span className="adm-badges">
+      <span className={`adm-pill adm-pill-${p.tone}`}>{p.label}</span>
+      {d && <span className={`adm-pill adm-pill-${d.tone}`}>{d.label}</span>}
+    </span>
+  );
+};
+
+/** Bu sipariş için panelde izin verilen durum değişiklikleri. */
+const allowedStatuses = (o) => {
+  if (isShopier(o)) {
+    // Shopier ödemesini sadece sunucu onaylar; yönetici yalnızca teslim/iptal edebilir
+    return PAID.includes(o.status) ? ['paid', 'Completed'] : ['Canceled'];
+  }
+  return ['Waiting for Confirmation', 'paid', 'Completed', 'Canceled'];
+};
 
 const statusMeta = (value = '') => {
   const found = ORDER_STATUSES.find((s) => s.value === value);
@@ -113,9 +151,13 @@ const changeSummary = (before = {}, after = {}) => {
 const money = (amount, currency) => fmtMoney(amount, currency || 'USD');
 
 /** Yönetici API çağrısı (Firebase ID token ile). */
-const adminApi = async (method, path) => {
+const adminApi = async (method, path, body) => {
   const token = await auth.currentUser?.getIdToken();
-  const r = await fetch(path, { method, headers: token ? { Authorization: `Bearer ${token}` } : {} });
+  const r = await fetch(path, {
+    method,
+    headers: { ...(body ? { 'Content-Type': 'application/json' } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    body: body ? JSON.stringify(body) : undefined,
+  });
   const data = await r.json().catch(() => null);
   if (!r.ok) throw new Error(data?.error || `İstek başarısız (${r.status})`);
   return data;
@@ -271,7 +313,7 @@ const Overview = ({ orders, products, categories, go }) => {
                     </td>
                     <td>{(o.items || []).map((i) => `${i.name} (${i.durationLabel})`).join(', ')}</td>
                     <td className="adm-num">{money(o.total_amount, o.currency)}</td>
-                    <td><StatusPill status={o.status} /></td>
+                    <td><OrderBadges o={o} /></td>
                     <td className="adm-muted">{fmtDate(o.created_at)}</td>
                   </tr>
                 ))}
@@ -312,6 +354,17 @@ const Orders = ({ orders, initialFilter, me }) => {
   });
 
   const setStatus = async (o, status) => {
+    if (status === 'paid' && !isShopier(o) && !confirm('Havale/EFT ödemesinin hesabına geçtiğini kontrol ettin mi? Sipariş "ödendi" olarak işaretlenecek.')) return;
+    if (status === 'Canceled' && isShopier(o) && !PAID.includes(o.status)) {
+      if (!confirm('Ödenmemiş Shopier siparişi iptal edilsin mi? Geçici Shopier ödeme sayfası da silinir.')) return;
+      try {
+        await adminApi('POST', '/api/shopier-cancel', { order_id: o.id });
+        toast.success('Sipariş iptal edildi');
+      } catch (err) {
+        toast.error(err.message);
+      }
+      return;
+    }
     try {
       await loggedWrite({
         me, mode: 'update', collectionName: 'orders', id: o.id, targetType: 'order', action: 'status',
@@ -327,6 +380,8 @@ const Orders = ({ orders, initialFilter, me }) => {
   const remove = async (o) => {
     if (!confirm('Bu sipariş kalıcı olarak silinsin mi?')) return;
     try {
+      // Ödenmemiş Shopier siparişinin geçici ödeme ürününü de sil
+      if (isShopier(o) && o.status === 'pending_payment') await adminApi('POST', '/api/shopier-cancel', { order_id: o.id });
       await loggedWrite({
         me, mode: 'delete', collectionName: 'orders', id: o.id, current: o, targetType: 'order',
         summary: `Sipariş ${orderLabel(o)} silindi`,
@@ -372,7 +427,7 @@ const Orders = ({ orders, initialFilter, me }) => {
                   </div>
                   <span className="adm-order-items">{(o.items || []).length} ürün</span>
                   <span className="adm-num">{money(o.total_amount, o.currency)}</span>
-                  <StatusPill status={o.status} />
+                  <OrderBadges o={o} />
                   <span className="adm-muted adm-hide-sm">{fmtDate(o.created_at)}</span>
                   <ChevronDown size={16} className="adm-chevron" />
                 </button>
@@ -404,7 +459,7 @@ const Orders = ({ orders, initialFilter, me }) => {
                     <div className="adm-order-actions">
                       <span className="adm-label">Durumu değiştir</span>
                       <div className="adm-chips">
-                        {ORDER_STATUSES.map((s) => (
+                        {ORDER_STATUSES.filter((s) => allowedStatuses(o).includes(s.value)).map((s) => (
                           <button
                             key={s.value}
                             className={`adm-chip adm-chip-${s.tone} ${o.status === s.value ? 'on' : ''}`}
@@ -914,13 +969,18 @@ const Admins = ({ me, onNickChange }) => {
   const add = async (e) => {
     e.preventDefault();
     const nickname = nick.trim();
-    if (!EMAIL_RE.test(email.trim())) return toast.error('Geçerli bir Google e-posta adresi yaz.');
+    if (!EMAIL_RE.test(email.trim())) return toast.error('Geçerli bir e-posta adresi yaz.');
     if (!NICK_RE.test(nickname)) return toast.error('Takma ad 2-24 karakter olmalı.');
     setSaving(true);
     try {
       const id = await adminIdForEmail(email);
       if (admins.some((a) => a.id === id)) {
-        toast.error('Bu hesap zaten yönetici.');
+        // Zaten yönetici: sadece şifre belirleme e-postasını tekrar gönder
+        if (!confirm('Bu e-posta zaten yönetici. Şifre belirleme e-postası tekrar gönderilsin mi?')) return;
+        await adminApi('POST', '/api/admin-invite', { email: email.trim() });
+        toast.success('Şifre belirleme e-postası tekrar gönderildi');
+        setEmail('');
+        setNick('');
         return;
       }
       await loggedWrite({
@@ -929,6 +989,12 @@ const Admins = ({ me, onNickChange }) => {
         summary: `"${nickname}" yönetici olarak eklendi`,
       });
       toast.success(`${nickname} yönetici olarak eklendi`);
+      try {
+        await adminApi('POST', '/api/admin-invite', { email: email.trim() });
+        toast.success('Şifre belirleme e-postası gönderildi');
+      } catch (err) {
+        toast.error('Yönetici eklendi ama davet e-postası gönderilemedi: ' + err.message);
+      }
       setEmail('');
       setNick('');
     } catch (err) {
@@ -975,11 +1041,12 @@ const Admins = ({ me, onNickChange }) => {
         <form className="adm-card adm-card-pad" onSubmit={add}>
           <h2 className="adm-card-title">Yönetici ekle</h2>
           <p className="adm-muted adm-help">
-            Eklediğin Google hesabı <strong>/admin</strong> sayfasında “Google ile giriş yap” dediğinde panele girer.
-            E-posta kaydedilmez; sadece şifrelenmiş özeti tutulur ve panelde takma ad görünür.
+            Eklediğin e-postaya <strong>“şifreni belirle”</strong> e-postası gider. Kişi linkten şifresini belirleyip
+            <strong> /admin</strong> sayfasında <strong>e-posta + şifre</strong> ile girer. Gmail ise Google ile de girebilir.
+            E-posta kaydedilmez; panelde sadece takma ad görünür.
           </p>
           <label className="adm-field">
-            <span className="adm-label">Google e-posta adresi</span>
+            <span className="adm-label">E-posta adresi</span>
             <input className="adm-input" type="email" autoComplete="off" placeholder="ornek@gmail.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
           </label>
           <label className="adm-field">

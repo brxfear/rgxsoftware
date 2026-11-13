@@ -136,6 +136,17 @@ await test('müşteri logları okuyamaz', async () => {
   await assertFails(getDocs(collection(google({ uid: 'c', email: 'c@gmail.com' }), 'admin_logs')));
 });
 
+await test('admin ödenmemiş Shopier siparişini ödendi/teslim edildi yapamaz', async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => setDoc(doc(ctx.firestore(), 'orders', 'sp1'), { user_id: 'cust', status: 'pending_payment', payment_method: 'shopier', total_amount: 10, items: [{ name: 'x' }] }));
+  await assertFails(logged(google(ADMIN), ADMIN, 'Kurucu', { mode: 'update', col: 'orders', id: 'sp1', data: { status: 'Completed' }, action: 'status', type: 'order' }));
+  await assertFails(logged(google(ADMIN), ADMIN, 'Kurucu', { mode: 'update', col: 'orders', id: 'sp1', data: { status: 'paid' }, action: 'status', type: 'order' }));
+  await assertSucceeds(logged(google(ADMIN), ADMIN, 'Kurucu', { mode: 'update', col: 'orders', id: 'sp1', data: { status: 'Canceled' }, action: 'status', type: 'order' }));
+});
+await test('ödenmiş Shopier siparişi teslim edilebilir', async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => setDoc(doc(ctx.firestore(), 'orders', 'sp2'), { user_id: 'cust', status: 'paid', payment_method: 'shopier', total_amount: 10, items: [{ name: 'x' }] }));
+  await assertSucceeds(logged(google(ADMIN), ADMIN, 'Kurucu', { mode: 'update', col: 'orders', id: 'sp2', data: { status: 'Completed' }, action: 'status', type: 'order' }));
+});
+
 // --- Kullanıcı adı / şifre girişi
 await test('şifreli giriş (rgx_admin_id) admin olarak yazabilir', async () => {
   await assertSucceeds(logged(custom(ADMIN, sha(ADMIN.email)), ADMIN, 'Kurucu', { mode: 'update', col: 'products', id: 'p1', data: { name: 'C' } }));

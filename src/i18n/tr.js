@@ -159,6 +159,7 @@ const tr = {
     shopierTitle: 'Shopier güvenli ödeme',
     waitingTitle: 'Ödemen bekleniyor',
     openedNote: 'Shopier ödeme penceresi açıldı. Ödemeyi orada tamamla; ödeme gelince burası otomatik güncellenir.',
+    chargedTry: 'Shopier üzerinden {amount} olarak tahsil edilir.',
     sameTab: 'Pencere açılmadı mı? Aynı sekmede devam et',
     checking: 'Ödemen kontrol ediliyor…',
     checkingNote: 'Shopier’de ödemeyi tamamladıysan birkaç saniye içinde onaylanır.',
@@ -224,6 +225,7 @@ const tr = {
       done: 'Teslim edildi',
       canceled: 'İptal edildi',
       failed: 'Ödeme başarısız',
+      review: 'Ödeme kontrol ediliyor',
     },
   },
   authErrors: {

@@ -3,7 +3,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { X, ArrowLeft, ArrowRight, CreditCard, Landmark, Copy, Check, ShieldCheck, MessageCircle, Loader2, ExternalLink, AlertTriangle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { db } from '../../lib/firebase';
-import { useMoney } from '../../lib/currency';
+import { useMoney, loadUsdTry, usdToTry, fmtTry } from '../../lib/currency';
 import { useT, planLabel } from '../../i18n';
 import { useCartStore } from '../../store/useCartStore';
 import { triggerConfetti } from '../../utils/celebration';
@@ -41,6 +41,7 @@ const CheckoutModal = ({ isOpen, onClose, totalUsd, items = [], user, onComplete
   const { t, lang } = useT();
   const { fmt } = useMoney();
   const [step, setStep] = useState('info'); // info → method → (iban-done | shopier → paid / expired)
+  const [tryRate, setTryRate] = useState(null);
   const [shopier, setShopier] = useState(null); // { url, orderId, key, opened }
   const popupRef = useRef(null);
   const [info, setInfo] = useState({ name: '', email: '', phone: '' });
@@ -67,6 +68,11 @@ const CheckoutModal = ({ isOpen, onClose, totalUsd, items = [], user, onComplete
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [isOpen, busy, onClose]);
+
+  // Shopier sadece ₺ çeker: EN'de de ₺ karşılığını göstermek için kuru yükle
+  useEffect(() => {
+    if (isOpen && lang === 'en') loadUsdTry().then((r) => r && setTryRate(r));
+  }, [isOpen, lang]);
 
   // Shopier ödemesini birkaç saniyede bir kontrol et
   useEffect(() => {
@@ -266,7 +272,7 @@ const CheckoutModal = ({ isOpen, onClose, totalUsd, items = [], user, onComplete
             </div>
 
             {method === 'shopier' ? (
-              <p className="co-note"><ShieldCheck size={15} /> {t('checkout.cardNote')}</p>
+              <p className="co-note"><ShieldCheck size={15} /> {t('checkout.cardNote')}{lang === 'en' && tryRate ? ` ${t('checkout.chargedTry', { amount: fmtTry(usdToTry(totalUsd, tryRate)) })}` : ''}</p>
             ) : (
               <p className="co-note"><Landmark size={15} /> {t('checkout.bankNote')}</p>
             )}

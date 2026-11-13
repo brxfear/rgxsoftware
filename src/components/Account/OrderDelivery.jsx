@@ -22,7 +22,15 @@ const CopyKey = ({ value }) => {
   );
 };
 
-const safeUrl = (u) => (/^https?:\/\//i.test(u || '') ? u : null);
+/** Linki güvenli biçime getirir: şemasızsa https:// ekler, javascript: vb. reddeder. */
+const safeUrl = (u) => {
+  const s = String(u || '').trim();
+  if (!s) return null;
+  if (/^https?:\/\//i.test(s)) return s;
+  if (/^[a-z][a-z0-9+.-]*:/i.test(s)) return null;
+  return `https://${s.replace(/^\/+/, '')}`;
+};
+const shortUrl = (u) => u.replace(/^https?:\/\//i, '').replace(/\/$/, '');
 
 /** Teslim edilen key / link / not listesi (müşteri görünümü). */
 const OrderDelivery = ({ delivery }) => {
@@ -39,6 +47,7 @@ const OrderDelivery = ({ delivery }) => {
           {safeUrl(it.link) && (
             <a className="od-link" href={safeUrl(it.link)} target="_blank" rel="noopener noreferrer">
               <Download size={14} /> {t('delivery.download')}
+              <span className="od-link-url">{shortUrl(safeUrl(it.link))}</span>
             </a>
           )}
           {it.note && <p className="od-note"><StickyNote size={13} /> {it.note}</p>}

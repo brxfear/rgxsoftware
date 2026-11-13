@@ -38,7 +38,7 @@ export default async function handler(req, res) {
       status:
         status === 'Completed' ? 'delivered'
         : status === 'paid' ? 'paid'
-        : status === 'pending_payment' || status === 'Waiting for Confirmation' ? 'pending'
+        : status === 'pending_payment' || status === 'Waiting for Confirmation' || status === 'payment_review' ? 'pending'
         : 'failed',
     };
     if (req.query?.detail) {
