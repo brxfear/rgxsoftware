@@ -212,3 +212,5 @@
 .co-wait-card > svg { color: #fbbf24; }
 .co-wait-card strong { font-size: 16px; }
 .co-wait-card span { font-size: 13px; line-height: 1.55; color: #d8d1d2; }
+.co-cta-ghost { height: 44px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.04); color: var(--text-main); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.co-cta-ghost:hover { background: rgba(255,255,255,0.09); }

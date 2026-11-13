@@ -23,6 +23,8 @@ service cloud.firestore {
     }
 
     // ---------- Yönetici kimliği ----------
+    // İki yol: (1) Google ile giriş → e-postanın SHA-256 özeti,
+    //          (2) kullanıcı adı/şifre → sunucunun (api/admin-login) imzaladığı rgx_admin_id talebi.
     function googleUser() {
       return signedIn()
         && request.auth.token.firebase.sign_in_provider == 'google.com'
@@ -31,15 +33,21 @@ service cloud.firestore {
     }
 
     function myAdminId() {
-      return hashing.sha256(request.auth.token.email.lower()).toHexString().lower();
+      return ('rgx_admin_id' in request.auth.token)
+        ? request.auth.token.rgx_admin_id
+        : hashing.sha256(request.auth.token.email.lower()).toHexString().lower();
     }
 
     function adminPath(id) {
       return /databases/$(database)/documents/admins/$(id);
     }
 
+    function adminCandidate() {
+      return signedIn() && (('rgx_admin_id' in request.auth.token) || googleUser());
+    }
+
     function isAdmin() {
-      return googleUser() && exists(adminPath(myAdminId()));
+      return adminCandidate() && exists(adminPath(myAdminId()));
     }
 
     function myNick() {
@@ -95,7 +103,7 @@ service cloud.firestore {
 
     // ---------- Yöneticiler ----------
     match /admins/{id} {
-      allow read: if isAdmin() || (googleUser() && id == myAdminId());
+      allow read: if isAdmin() || (adminCandidate() && id == myAdminId());
       allow create: if isAdmin()
         && id.matches('^[0-9a-f]{64}$')
         && request.resource.data.keys().hasOnly(['nickname', 'added_by_nick', 'created_at', 'last_log_id'])

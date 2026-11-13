@@ -13,6 +13,7 @@ import ProductModal from './components/ProductCard/ProductModal';
 import AuthModal from './components/Auth/AuthModal';
 import AccountModal from './components/Account/AccountModal';
 import OrderLookup from './components/Account/OrderLookup';
+import PendingPaymentWatcher from './components/Checkout/PendingPaymentWatcher';
 import FAQSection from './components/FAQ/FAQSection';
 import ReviewsSection from './components/Reviews/ReviewsSection';
 import HowItWorksSection from './components/HowItWorks/HowItWorksSection';
@@ -447,6 +448,8 @@ function Store() {
       />
 
       <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
+
+      {!lookup && <PendingPaymentWatcher />}
 
       {lookup && (
         <OrderLookup

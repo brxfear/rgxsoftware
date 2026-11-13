@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
-import { ShieldAlert } from 'lucide-react';
+import { onAuthStateChanged, signInWithPopup, signInWithCustomToken, GoogleAuthProvider, signOut } from 'firebase/auth';
+import { ShieldAlert, User, Lock } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { auth } from '../../lib/firebase';
 import { isGoogleUser } from '../../lib/db';
@@ -11,10 +11,33 @@ import AdminDashboard from './AdminDashboard';
 import GoogleIcon from '../GoogleIcon';
 import './AdminDashboard.css';
 
-// Yönetim paneline sadece Google ile, e-postası admins listesinde olan hesaplar girebilir.
+// Yönetim paneline Google ile ya da kullanıcı adı/e-posta + şifre ile, sadece yönetici listesindeki hesaplar girebilir.
 const AdminGate = () => {
   const [state, setState] = useState({ status: 'loading', user: null });
   const [busy, setBusy] = useState(false);
+  const [login, setLogin] = useState('');
+  const [password, setPassword] = useState('');
+
+  const passwordLogin = async (e) => {
+    e.preventDefault();
+    setBusy(true);
+    try {
+      const r = await fetch('/api/admin-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ login, password }),
+      });
+      const d = await r.json().catch(() => null);
+      if (!r.ok || !d?.token) throw new Error(d?.error || 'Giriş yapılamadı.');
+      if (auth.currentUser) await signOut(auth);
+      await signInWithCustomToken(auth, d.token);
+      setPassword('');
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
 
   useEffect(() => {
     return onAuthStateChanged(auth, async (user) => {
@@ -55,7 +78,19 @@ const AdminGate = () => {
 
         {state.status === 'signedOut' && (
           <div className="adm-gate-form">
-            <p className="adm-muted">Sadece yetkili Google hesapları giriş yapabilir.</p>
+            <p className="adm-muted">Sadece yetkili yöneticiler giriş yapabilir.</p>
+            <form className="adm-login-form" onSubmit={passwordLogin}>
+              <label className="adm-input-icon">
+                <User size={16} />
+                <input placeholder="Kullanıcı adı veya e-posta" autoComplete="username" value={login} onChange={(e) => setLogin(e.target.value)} required />
+              </label>
+              <label className="adm-input-icon">
+                <Lock size={16} />
+                <input type="password" placeholder="Şifre" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+              </label>
+              <button className="adm-btn adm-btn-primary adm-btn-block adm-login-btn" disabled={busy}>{busy ? 'Giriş yapılıyor…' : 'Giriş yap'}</button>
+            </form>
+            <div className="adm-or"><span>veya</span></div>
             <button type="button" className="adm-btn adm-btn-ghost adm-btn-block adm-google" onClick={googleLogin} disabled={busy}>
               <GoogleIcon /> {busy ? 'Bekleniyor…' : 'Google ile giriş yap'}
             </button>
@@ -65,14 +100,14 @@ const AdminGate = () => {
         {state.status === 'denied' && (
           <div className="adm-gate-denied">
             <ShieldAlert size={28} />
-            {isGoogleUser(user) ? (
-              <p><strong>{user.email}</strong> yönetici olarak yetkilendirilmemiş.</p>
-            ) : (
-              <p>Yönetim paneline sadece Google hesabıyla girilir. Şu an <strong>{user.email || 'başka bir yöntemle'}</strong> giriş yapılmış.</p>
-            )}
-            <p className="adm-muted">Yetkili bir yönetici, panelden bu e-postayı eklemeli.</p>
-            <button type="button" className="adm-btn adm-btn-ghost adm-btn-block adm-google" onClick={googleLogin} disabled={busy}>
-              <GoogleIcon /> Başka Google hesabıyla giriş yap
+            <p><strong>{user.email || 'Bu hesap'}</strong> yönetici olarak yetkilendirilmemiş.</p>
+            <p className="adm-muted">
+              {isGoogleUser(user)
+                ? 'Yetkili bir yönetici, panelden bu e-postayı eklemeli.'
+                : 'Mağaza hesabıyla değil, yönetici kullanıcı adı/şifresi ya da yetkili Google hesabıyla gir.'}
+            </p>
+            <button type="button" className="adm-btn adm-btn-ghost adm-btn-block" onClick={() => signOut(auth)} disabled={busy}>
+              Çıkış yap ve yönetici olarak gir
             </button>
           </div>
         )}

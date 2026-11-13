@@ -46,6 +46,7 @@ import { fileToCompressedDataUrl } from './imageUtils';
 import { loggedWrite, adminIdForEmail, logAdminLogin } from '../../lib/adminLog';
 import { KeyStockDrawer, DeliveryPanel } from './Fulfillment';
 import { useKeyCounts } from './useKeyCounts';
+import LoginSettings from './LoginSettings';
 import './AdminDashboard.css';
 
 /* ------------------------------------------------------------------ */
@@ -1002,6 +1003,8 @@ const Admins = ({ me, onNickChange }) => {
             <button className="adm-btn adm-btn-ghost" disabled={myNick.trim() === me.nickname}>Kaydet</button>
           </div>
         </form>
+
+        <LoginSettings me={me} />
       </div>
 
       <section className="adm-card">

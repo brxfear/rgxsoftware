@@ -12,10 +12,13 @@ export const adminIdForEmail = async (email) => {
 
 /** Giriş yapmış yöneticinin admins kaydı ({ id, nickname, ... }) ya da null. */
 export const getMyAdminRecord = async (user) => {
-  if (!user?.email || !user.emailVerified) return null;
-  if (!user.providerData?.some((p) => p.providerId === 'google.com')) return null;
+  if (!user) return null;
   try {
-    const id = await adminIdForEmail(user.email);
+    // Kullanıcı adı/şifre ile girişte sunucu oturuma rgx_admin_id ekler
+    const { claims, signInProvider } = await user.getIdTokenResult();
+    let id = claims.rgx_admin_id || null;
+    if (!id && signInProvider === 'google.com' && user.email && user.emailVerified) id = await adminIdForEmail(user.email);
+    if (!id) return null;
     const snap = await getDoc(doc(db, 'admins', id));
     return snap.exists() ? { id, ...snap.data() } : null;
   } catch {

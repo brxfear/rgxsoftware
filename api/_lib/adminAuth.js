@@ -19,10 +19,13 @@ export const requireAdmin = async (req) => {
   } catch {
     throw new HttpError(401, 'Oturum geçersiz.');
   }
-  if (decoded.firebase?.sign_in_provider !== 'google.com' || !decoded.email || !decoded.email_verified) {
-    throw new HttpError(403, 'Yönetici değil.');
+  // Yönetici kimliği: şifreli girişte sunucunun verdiği rgx_admin_id talebi, Google girişinde e-posta özeti
+  let id = null;
+  if (decoded.rgx_admin_id) id = decoded.rgx_admin_id;
+  else if (decoded.firebase?.sign_in_provider === 'google.com' && decoded.email && decoded.email_verified) {
+    id = crypto.createHash('sha256').update(decoded.email.toLowerCase()).digest('hex');
   }
-  const id = crypto.createHash('sha256').update(decoded.email.toLowerCase()).digest('hex');
+  if (!id) throw new HttpError(403, 'Yönetici değil.');
   const snap = await adminDb().collection('admins').doc(id).get();
   if (!snap.exists) throw new HttpError(403, 'Yönetici değil.');
   return { uid: decoded.uid, adminId: id, nickname: snap.get('nickname') };

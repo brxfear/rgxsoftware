@@ -18,6 +18,8 @@ const env = await initializeTestEnvironment({
 const google = (u) => env.authenticatedContext(u.uid, { email: u.email, email_verified: true, firebase: { sign_in_provider: 'google.com' } }).firestore();
 const password = (u) => env.authenticatedContext(u.uid, { email: u.email, email_verified: true, firebase: { sign_in_provider: 'password' } }).firestore();
 const anon = () => env.unauthenticatedContext().firestore();
+// Kullanıcı adı/şifre girişi: sunucunun imzaladığı rgx_admin_id talebi
+const custom = (u, adminId) => env.authenticatedContext(u.uid, { email: u.email, email_verified: true, rgx_admin_id: adminId, firebase: { sign_in_provider: 'custom' } }).firestore();
 
 const seed = async () => {
   await env.clearFirestore();
@@ -132,6 +134,18 @@ await test('loglar değiştirilemez ve silinemez', async () => {
 });
 await test('müşteri logları okuyamaz', async () => {
   await assertFails(getDocs(collection(google({ uid: 'c', email: 'c@gmail.com' }), 'admin_logs')));
+});
+
+// --- Kullanıcı adı / şifre girişi
+await test('şifreli giriş (rgx_admin_id) admin olarak yazabilir', async () => {
+  await assertSucceeds(logged(custom(ADMIN, sha(ADMIN.email)), ADMIN, 'Kurucu', { mode: 'update', col: 'products', id: 'p1', data: { name: 'C' } }));
+});
+await test('listede olmayan rgx_admin_id admin değil', async () => {
+  const x = { uid: 'x', email: 'x@example.com' };
+  await assertFails(logged(custom(x, sha('nobody@example.com')), x, 'Kurucu', { mode: 'update', col: 'products', id: 'p1', data: { name: 'C' } }));
+});
+await test('istemci admin_usernames okuyamaz', async () => {
+  await assertFails(getDocs(collection(google(ADMIN), 'admin_usernames')));
 });
 
 // --- Key stoğu

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { X, ArrowLeft, ArrowRight, CreditCard, Landmark, Copy, Check, ShieldCheck, MessageCircle, Loader2, ExternalLink, AlertTriangle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -8,6 +8,7 @@ import { useT, planLabel } from '../../i18n';
 import { useCartStore } from '../../store/useCartStore';
 import { triggerConfetti } from '../../utils/celebration';
 import { rememberGuestOrder } from '../../lib/guestOrders';
+import { openPaymentWindow, redirectSameTab, savePendingPayment, clearPendingPayment } from '../../lib/shopierWindow';
 import './CheckoutModal.css';
 
 const DISCORD_URL = 'https://discord.gg/rgxsoftware1';
@@ -40,7 +41,8 @@ const CheckoutModal = ({ isOpen, onClose, totalUsd, items = [], user, onComplete
   const { t, lang } = useT();
   const { fmt } = useMoney();
   const [step, setStep] = useState('info'); // info → method → (iban-done | shopier → paid / expired)
-  const [shopier, setShopier] = useState(null); // { url, orderId, key }
+  const [shopier, setShopier] = useState(null); // { url, orderId, key, opened }
+  const popupRef = useRef(null);
   const [info, setInfo] = useState({ name: '', email: '', phone: '' });
   const [method, setMethod] = useState('shopier');
   const [busy, setBusy] = useState(false);
@@ -77,6 +79,12 @@ const CheckoutModal = ({ isOpen, onClose, totalUsd, items = [], user, onComplete
         const d = await r.json().catch(() => null);
         if (!alive) return;
         if (d?.status === 'paid' || d?.status === 'delivered') {
+          clearPendingPayment();
+          try {
+            if (popupRef.current && !popupRef.current.closed) popupRef.current.close();
+          } catch {
+            /* yoksay */
+          }
           setStep('paid');
           triggerConfetti();
           await useCartStore.getState().clearCart();
@@ -111,13 +119,10 @@ const CheckoutModal = ({ isOpen, onClose, totalUsd, items = [], user, onComplete
 
   const pay = async () => {
     setBusy(true);
-    // Shopier sayfası iframe'e izin vermediği için yeni sekmede açılır. Açılır pencere engelleyicisine
-    // takılmamak için sekme tıklama anında açılır, adres sonra verilir.
+    // Shopier sayfası iframe'e izin vermez: ekranın ortasında küçük bir ödeme penceresi açılır.
+    // Engelleyiciye takılmamak için pencere tıklama anında açılır, adres sonra verilir.
     let popup = null;
-    if (method === 'shopier') {
-      popup = window.open('', '_blank');
-      if (popup) popup.document.write(`<title>Shopier</title><p style="font-family:sans-serif;padding:24px">${t('checkout.processing')}</p>`);
-    }
+    if (method === 'shopier') popup = openPaymentWindow(t('checkout.processing'));
     try {
       const result = await onComplete({ ...info, payment_method: method });
       if (result?.type === 'iban') {
@@ -125,10 +130,17 @@ const CheckoutModal = ({ isOpen, onClose, totalUsd, items = [], user, onComplete
         setIbanAmount(fmt(totalUsd));
         setStep('iban-done');
       } else if (result?.type === 'shopier') {
-        if (popup && !popup.closed) popup.location.href = result.url;
-        setShopier({ url: result.url, orderId: result.orderId, key: result.key, opened: !!popup });
         rememberGuestOrder(result.orderId, result.key);
-        setStep('shopier');
+        savePendingPayment(result.orderId, result.key);
+        if (popup && !popup.closed) {
+          popup.location.href = result.url;
+          popupRef.current = popup;
+          setShopier({ url: result.url, orderId: result.orderId, key: result.key, opened: true });
+          setStep('shopier');
+        } else {
+          // Pencere engellendi: aynı sekmede Shopier'e git, dönüşte ödeme otomatik kontrol edilir
+          redirectSameTab(result.url, result.orderId, result.key);
+        }
       }
     } catch (err) {
       console.error(err);
@@ -178,9 +190,12 @@ const CheckoutModal = ({ isOpen, onClose, totalUsd, items = [], user, onComplete
               <strong>{t('checkout.waitingTitle')}</strong>
               <span>{shopier.opened ? t('checkout.openedNote') : t('checkout.popupBlocked')}</span>
             </div>
-            <a className="co-cta" href={shopier.url} target="_blank" rel="noopener noreferrer">
-              <ExternalLink size={16} /> {shopier.opened ? t('checkout.reopen') : t('checkout.openShopier')}
-            </a>
+            <button className="co-cta" onClick={() => { popupRef.current = openPaymentWindow(null, shopier.url) || popupRef.current; }}>
+              <ExternalLink size={16} /> {t('checkout.reopen')}
+            </button>
+            <button className="co-cta-ghost" onClick={() => redirectSameTab(shopier.url, shopier.orderId, shopier.key)}>
+              {t('checkout.sameTab')}
+            </button>
             <p className="co-hint">{t('checkout.waiting')}</p>
           </div>
         )}
