@@ -14,8 +14,6 @@ import AuthModal from './components/Auth/AuthModal';
 import AccountModal from './components/Account/AccountModal';
 import OrderLookup from './components/Account/OrderLookup';
 import PendingPaymentWatcher from './components/Checkout/PendingPaymentWatcher';
-import EmberField from './components/Effects/EmberField';
-import CustomCursor from './components/Effects/CustomCursor';
 import FAQSection from './components/FAQ/FAQSection';
 import ReviewsSection from './components/Reviews/ReviewsSection';
 import HowItWorksSection from './components/HowItWorks/HowItWorksSection';
@@ -113,8 +111,6 @@ function Store() {
 
   return (
     <div className="main-wrapper">
-      <EmberField />
-      <CustomCursor />
       {/* Mitamers Style Glass Header */}
       <Navbar
         activeSection={activeSection}
