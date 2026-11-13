@@ -30,22 +30,6 @@ import './brand.css';
 
 const DISCORD_URL = 'https://discord.gg/rgxsoftware1';
 
-// Shopier ödeme sayfasına imzalı form ile yönlendirir
-const submitShopierForm = (action, fields) => {
-  const form = document.createElement('form');
-  form.method = 'POST';
-  form.action = action;
-  Object.entries(fields).forEach(([name, value]) => {
-    const input = document.createElement('input');
-    input.type = 'hidden';
-    input.name = name;
-    input.value = value;
-    form.appendChild(input);
-  });
-  document.body.appendChild(form);
-  form.submit();
-};
-
 const scrollToId = (id) => {
   const el = document.getElementById(id);
   if (el) el.scrollIntoView({ behavior: 'smooth' });
@@ -394,7 +378,7 @@ function Store() {
             quantity: item.quantity,
           }));
 
-          // ---- Kart: Shopier (sunucu fiyatı Firestore'dan hesaplar, imzalı formu döner)
+          // ---- Kart: Shopier (sunucu fiyatı hesaplar, sipariş için geçici Shopier ödeme sayfası açar)
           if (data.payment_method === 'shopier') {
             try {
               const idToken = user ? await user.getIdToken() : null;
@@ -407,9 +391,8 @@ function Store() {
                 body: JSON.stringify({ items, currency, lang, buyer: { name: data.name, email: data.email, phone: data.phone } }),
               });
               const out = await res.json().catch(() => null);
-              if (!res.ok || !out?.action) throw new Error(out?.error || t('checkout.unreachable'));
-              submitShopierForm(out.action, out.fields);
-              return { type: 'shopier' };
+              if (!res.ok || !out?.url) throw new Error(out?.error || t('checkout.unreachable'));
+              return { type: 'shopier', url: out.url, orderId: out.order_id, key: out.key };
             } catch (err) {
               toast.error(t('checkout.payFailed') + ': ' + err.message);
               throw err;

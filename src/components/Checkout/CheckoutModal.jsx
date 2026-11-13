@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
-import { X, ArrowLeft, ArrowRight, CreditCard, Landmark, Copy, Check, ShieldCheck, MessageCircle, Loader2 } from 'lucide-react';
+import { X, ArrowLeft, ArrowRight, CreditCard, Landmark, Copy, Check, ShieldCheck, MessageCircle, Loader2, ExternalLink, AlertTriangle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { db } from '../../lib/firebase';
 import { useMoney } from '../../lib/currency';
 import { useT, planLabel } from '../../i18n';
+import { useCartStore } from '../../store/useCartStore';
+import { triggerConfetti } from '../../utils/celebration';
 import './CheckoutModal.css';
 
 const DISCORD_URL = 'https://discord.gg/rgxsoftware1';
@@ -36,7 +38,8 @@ const CopyRow = ({ label, value }) => {
 const CheckoutModal = ({ isOpen, onClose, totalUsd, items = [], user, onComplete }) => {
   const { t, lang } = useT();
   const { fmt } = useMoney();
-  const [step, setStep] = useState('info'); // info → method → iban-done
+  const [step, setStep] = useState('info'); // info → method → (iban-done | shopier → paid / expired)
+  const [shopier, setShopier] = useState(null); // { url, orderId, key }
   const [info, setInfo] = useState({ name: '', email: '', phone: '' });
   const [method, setMethod] = useState('shopier');
   const [busy, setBusy] = useState(false);
@@ -48,6 +51,7 @@ const CheckoutModal = ({ isOpen, onClose, totalUsd, items = [], user, onComplete
     if (!isOpen) return;
     setStep('info');
     setIbanOrder(null);
+    setShopier(null);
     setInfo((i) => ({ ...i, name: i.name || user?.displayName || '', email: i.email || user?.email || '' }));
     getDoc(doc(db, 'settings', 'payment'))
       .then((s) => setBank(s.exists() ? s.data() : {}))
@@ -60,6 +64,38 @@ const CheckoutModal = ({ isOpen, onClose, totalUsd, items = [], user, onComplete
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [isOpen, busy, onClose]);
+
+  // Shopier ödemesini birkaç saniyede bir kontrol et
+  useEffect(() => {
+    if (!isOpen || step !== 'shopier' || !shopier) return;
+    let alive = true;
+    let timer;
+    const tick = async () => {
+      try {
+        const r = await fetch(`/api/order-status?id=${encodeURIComponent(shopier.orderId)}&key=${shopier.key}`, { cache: 'no-store' });
+        const d = await r.json().catch(() => null);
+        if (!alive) return;
+        if (d?.status === 'paid') {
+          setStep('paid');
+          triggerConfetti();
+          await useCartStore.getState().clearCart();
+          return;
+        }
+        if (d?.status === 'failed') {
+          setStep('expired');
+          return;
+        }
+      } catch {
+        /* ağ hatası: tekrar dene */
+      }
+      if (alive) timer = setTimeout(tick, 4000);
+    };
+    timer = setTimeout(tick, 4000);
+    return () => {
+      alive = false;
+      clearTimeout(timer);
+    };
+  }, [isOpen, step, shopier]);
 
   if (!isOpen) return null;
 
@@ -80,8 +116,10 @@ const CheckoutModal = ({ isOpen, onClose, totalUsd, items = [], user, onComplete
         setIbanOrder(result.orderId);
         setIbanAmount(fmt(totalUsd));
         setStep('iban-done');
+      } else if (result?.type === 'shopier') {
+        setShopier({ url: result.url, orderId: result.orderId, key: result.key });
+        setStep('shopier');
       }
-      // shopier: sayfa Shopier'a yönlendirilir
     } catch (err) {
       console.error(err);
     } finally {
@@ -93,18 +131,19 @@ const CheckoutModal = ({ isOpen, onClose, totalUsd, items = [], user, onComplete
 
   return (
     <div className="co-overlay" onClick={close}>
-      <div className="co-modal" role="dialog" aria-modal="true" aria-label={t('checkout.stepPay')} onClick={(e) => e.stopPropagation()}>
+      <div className={`co-modal ${step === 'shopier' ? 'co-modal-wide' : ''}`} role="dialog" aria-modal="true" aria-label={t('checkout.stepPay')} onClick={(e) => e.stopPropagation()}>
         <header className="co-head">
           {step === 'method' ? (
             <button className="co-icon" onClick={() => setStep('info')} aria-label={t('checkout.back')}><ArrowLeft size={17} /></button>
           ) : <span />}
           <div className="co-steps">
             <span className={step === 'info' ? 'on' : 'done'}>{t('checkout.stepInfo')}</span>
-            <span className={step === 'method' ? 'on' : step === 'iban-done' ? 'done' : ''}>{t('checkout.stepPay')}</span>
+            <span className={step === 'method' || step === 'shopier' ? 'on' : step === 'iban-done' || step === 'paid' ? 'done' : ''}>{t('checkout.stepPay')}</span>
           </div>
           <button className="co-icon" onClick={close} aria-label={t('modal.close')}><X size={17} /></button>
         </header>
 
+        {step !== 'shopier' && step !== 'paid' && (
         <div className="co-summary">
           <div className="co-summary-items">
             {items.map((i) => (
@@ -119,6 +158,40 @@ const CheckoutModal = ({ isOpen, onClose, totalUsd, items = [], user, onComplete
             <strong>{fmt(totalUsd)}</strong>
           </div>
         </div>
+        )}
+
+        {step === 'shopier' && shopier && (
+          <div className="co-shopier">
+            <div className="co-shopier-frame">
+              <iframe src={shopier.url} title={t('checkout.shopierTitle')} allow="payment" />
+            </div>
+            <div className="co-shopier-bar">
+              <span className="co-waiting"><Loader2 size={15} className="co-spin" /> {t('checkout.waiting')}</span>
+              <a href={shopier.url} target="_blank" rel="noopener noreferrer"><ExternalLink size={14} /> {t('checkout.openNewTab')}</a>
+            </div>
+          </div>
+        )}
+
+        {step === 'paid' && (
+          <div className="co-body">
+            <div className="co-success">
+              <Check size={22} />
+              <div>
+                <strong>{t('checkout.paidTitle')}</strong>
+                <span>{t('checkout.orderNo')}: <code>#{shopier?.orderId?.slice(-8)}</code></span>
+              </div>
+            </div>
+            <p className="co-note">{t('checkout.paidText')}</p>
+            <button className="co-cta" onClick={onClose}>{t('checkout.close')}</button>
+          </div>
+        )}
+
+        {step === 'expired' && (
+          <div className="co-body">
+            <p className="co-note"><AlertTriangle size={15} /> {t('checkout.expired')}</p>
+            <button className="co-cta" onClick={() => setStep('method')}>{t('checkout.back')}</button>
+          </div>
+        )}
 
         {step === 'info' && (
           <form className="co-body" onSubmit={submitInfo}>

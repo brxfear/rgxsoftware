@@ -4,6 +4,7 @@
 import { Buffer } from 'node:buffer';
 import { adminDb, paymentLog } from './_lib/firebaseAdmin.js';
 import { verifyWebhookSignature, simplifyOrder } from './_lib/shopierRest.js';
+import { settleShopierOrder } from './_lib/shopierPay.js';
 
 export const config = { api: { bodyParser: false } };
 
@@ -38,6 +39,12 @@ export default async function handler(req, res) {
     const payload = JSON.parse(raw || '{}');
     const event = String(req.headers['shopier-event'] || payload.event || payload.type || 'order.created');
     const data = payload.data || payload.order || payload;
+
+    if (event === 'order.created') {
+      // Sitedeki bir siparişe aitse ödendi yap (log settleShopierOrder içinde yazılır)
+      const matched = await settleShopierOrder(db, data, 'webhook');
+      if (matched) return res.status(200).send('OK');
+    }
 
     if (event.startsWith('order')) {
       const o = simplifyOrder(data);

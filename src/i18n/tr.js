@@ -155,6 +155,13 @@ const tr = {
     fxFailed: 'Döviz kuru alınamadı, lütfen biraz sonra tekrar dene.',
     unreachable: 'sunucuya ulaşılamadı',
     paidToast: 'Ödemen alındı! Key ve kurulum detayları e-postana gönderilecek.',
+    shopierTitle: 'Shopier güvenli ödeme',
+    waiting: 'Ödemen bekleniyor… Ödemeyi tamamlayınca bu pencere otomatik güncellenir.',
+    openNewTab: 'Ödeme sayfasını yeni sekmede aç',
+    paidTitle: 'Ödemen alındı!',
+    paidText: 'Siparişin onaylandı. Lisans anahtarın ve kurulum bilgilerin e-postana gönderilecek; sorunda Discord’dan bize yazabilirsin.',
+    expired: 'Bu ödemenin süresi doldu. Lütfen sepetten yeniden dene.',
+    close: 'Kapat',
     failToast: 'Ödeme tamamlanamadı. Tekrar deneyebilir veya destekle iletişime geçebilirsin.',
   },
   auth: {

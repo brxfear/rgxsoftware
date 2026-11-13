@@ -155,6 +155,13 @@ const en = {
     fxFailed: 'Exchange rate unavailable, please try again shortly.',
     unreachable: 'server unreachable',
     paidToast: 'Payment received! Your key and setup details will be sent to your email.',
+    shopierTitle: 'Shopier secure payment',
+    waiting: 'Waiting for your payment… This window updates automatically once you pay.',
+    openNewTab: 'Open the payment page in a new tab',
+    paidTitle: 'Payment received!',
+    paidText: 'Your order is confirmed. Your licence key and setup details will be sent to your email; reach us on Discord if anything comes up.',
+    expired: 'This payment has expired. Please try again from your cart.',
+    close: 'Close',
     failToast: 'Payment was not completed. You can try again or contact support.',
   },
   auth: {
