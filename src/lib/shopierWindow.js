@@ -40,14 +40,15 @@ export const openPaymentWindow = (loadingText = '…', url = null) => {
 };
 
 /** Aynı sekmede Shopier'e git; dönüşte kontrol edilmek üzere bekleyen ödemeyi hatırla. */
-export const redirectSameTab = (url, orderId, key) => {
-  savePendingPayment(orderId, key);
+export const redirectSameTab = (url, orderId, key, fromCart = true) => {
+  savePendingPayment(orderId, key, fromCart);
   window.location.href = url;
 };
 
-export const savePendingPayment = (orderId, key) => {
+// fromCart: ödeme sepetten mi başlatıldı (Hemen satın al ise false → başarıda sepet boşaltılmaz)
+export const savePendingPayment = (orderId, key, fromCart = true) => {
   try {
-    localStorage.setItem(PENDING_KEY, JSON.stringify({ orderId, key, at: Date.now() }));
+    localStorage.setItem(PENDING_KEY, JSON.stringify({ orderId, key, fromCart, at: Date.now() }));
   } catch {
     /* yoksay */
   }

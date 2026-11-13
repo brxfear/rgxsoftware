@@ -24,6 +24,7 @@ import { auth } from './lib/firebase';
 import { fetchCategories, fetchProducts, createManualOrder, getStartPrice } from './lib/db';
 import { roundUsd, loadUsdTry, usdToTry, currencyForLang } from './lib/currency';
 import Price from './components/Price';
+import { readPendingPayment } from './lib/shopierWindow';
 import SmokeTrail from './components/Effects/SmokeTrail';
 import CursorDot from './components/Effects/CursorDot';
 import { useCartStore } from './store/useCartStore';
@@ -59,8 +60,11 @@ function Store() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  // "Hemen satın al": sepete eklemeden sadece bu ürünle ödeme
+  const [buyNowItem, setBuyNowItem] = useState(null);
 
   const { cart, addItem, fetchCart } = useCartStore();
+  const checkoutItems = buyNowItem ? [buyNowItem] : cart;
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
@@ -92,7 +96,7 @@ function Store() {
     if (payment) {
       if (payment === 'basarili') {
         triggerConfetti();
-        useCartStore.getState().clearCart();
+        if (readPendingPayment()?.fromCart !== false) useCartStore.getState().clearCart();
         toast.success(translate('checkout.paidToast'), { duration: 6000 });
       } else {
         toast.error(translate('checkout.failToast'), { duration: 6000 });
@@ -370,19 +374,24 @@ function Store() {
         onClose={() => setIsCartOpen(false)}
         onCheckout={() => {
           setIsCartOpen(false);
+          setBuyNowItem(null);
           setIsCheckoutOpen(true);
         }}
       />
 
       <CheckoutModal
         isOpen={isCheckoutOpen}
-        onClose={() => setIsCheckoutOpen(false)}
-        items={cart}
+        onClose={() => {
+          setIsCheckoutOpen(false);
+          setBuyNowItem(null);
+        }}
+        items={checkoutItems}
+        fromCart={!buyNowItem}
         user={user}
-        totalUsd={roundUsd(cart.reduce((sum, item) => sum + (item.price * item.quantity), 0))}
+        totalUsd={roundUsd(checkoutItems.reduce((sum, item) => sum + (item.price * item.quantity), 0))}
         onComplete={async (data) => {
           const currency = currencyForLang(lang);
-          const items = cart.map(item => ({
+          const items = checkoutItems.map(item => ({
             product_id: item.product_id,
             plan_id: String(item.duration),
             quantity: item.quantity,
@@ -419,7 +428,7 @@ function Store() {
             }
           }
           const toCur = (usd) => (rate ? usdToTry(usd, rate) : roundUsd(usd));
-          const detailedItems = cart.map(item => ({
+          const detailedItems = checkoutItems.map(item => ({
             product_id: item.product_id,
             name: item.name,
             plan_id: String(item.duration),
@@ -433,7 +442,7 @@ function Store() {
             const ref = await createManualOrder({
               user_id: user?.uid || null,
               total_amount: roundUsd(detailedItems.reduce((s, i) => s + i.subtotal, 0)),
-              total_usd: roundUsd(cart.reduce((s, i) => s + i.price * i.quantity, 0)),
+              total_usd: roundUsd(checkoutItems.reduce((s, i) => s + i.price * i.quantity, 0)),
               ...(rate ? { fx_rate: rate } : {}),
               currency,
               items: detailedItems,
@@ -442,7 +451,7 @@ function Store() {
               customer_phone: data.phone,
               customer_email: data.email || user?.email || '',
             });
-            await useCartStore.getState().clearCart();
+            if (!buyNowItem) await useCartStore.getState().clearCart();
             return { type: 'iban', orderId: ref.id };
           } catch (err) {
             toast.error(t('checkout.orderFailed') + ': ' + err.message);
@@ -480,9 +489,20 @@ function Store() {
         onClose={() => setSelectedProduct(null)}
         product={selectedProduct}
         onAddToCart={(p) => addItem(p)}
-        onBuyNow={async (p) => {
-          await addItem(p);
-          setIsCartOpen(true);
+        onBuyNow={(p) => {
+          const duration = p.selectedDuration || 1;
+          setBuyNowItem({
+            id: `buy-${p.id}-${duration}`,
+            product_id: p.id,
+            name: p.name,
+            price: p.selectedPrice || p.price,
+            duration,
+            durationLabel: p.selectedLabel || '',
+            image: p.image_url || p.image || '',
+            quantity: 1,
+          });
+          setIsCartOpen(false);
+          setIsCheckoutOpen(true);
         }}
         categoryName={categoryName(selectedProduct?.category_id)}
       />

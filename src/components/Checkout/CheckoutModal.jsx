@@ -37,7 +37,8 @@ const CopyRow = ({ label, value }) => {
   );
 };
 
-const CheckoutModal = ({ isOpen, onClose, totalUsd, items = [], user, onComplete }) => {
+// fromCart=false: "Hemen satın al" ile tek ürün; ödeme sonrası sepet boşaltılmaz.
+const CheckoutModal = ({ isOpen, onClose, totalUsd, items = [], user, onComplete, fromCart = true }) => {
   const { t, lang } = useT();
   const { fmt } = useMoney();
   const [step, setStep] = useState('info'); // info → method → (iban-done | shopier → paid / expired)
@@ -93,7 +94,7 @@ const CheckoutModal = ({ isOpen, onClose, totalUsd, items = [], user, onComplete
           }
           setStep('paid');
           triggerConfetti();
-          await useCartStore.getState().clearCart();
+          if (fromCart) await useCartStore.getState().clearCart();
           return;
         }
         if (d?.status === 'failed') {
@@ -110,7 +111,7 @@ const CheckoutModal = ({ isOpen, onClose, totalUsd, items = [], user, onComplete
       alive = false;
       clearTimeout(timer);
     };
-  }, [isOpen, step, shopier]);
+  }, [isOpen, step, shopier, fromCart]);
 
   if (!isOpen) return null;
 
@@ -137,7 +138,7 @@ const CheckoutModal = ({ isOpen, onClose, totalUsd, items = [], user, onComplete
         setStep('iban-done');
       } else if (result?.type === 'shopier') {
         rememberGuestOrder(result.orderId, result.key);
-        savePendingPayment(result.orderId, result.key);
+        savePendingPayment(result.orderId, result.key, fromCart);
         if (popup && !popup.closed) {
           popup.location.href = result.url;
           popupRef.current = popup;
@@ -145,7 +146,7 @@ const CheckoutModal = ({ isOpen, onClose, totalUsd, items = [], user, onComplete
           setStep('shopier');
         } else {
           // Pencere engellendi: aynı sekmede Shopier'e git, dönüşte ödeme otomatik kontrol edilir
-          redirectSameTab(result.url, result.orderId, result.key);
+          redirectSameTab(result.url, result.orderId, result.key, fromCart);
         }
       }
     } catch (err) {
@@ -199,7 +200,7 @@ const CheckoutModal = ({ isOpen, onClose, totalUsd, items = [], user, onComplete
             <button className="co-cta" onClick={() => { popupRef.current = openPaymentWindow(null, shopier.url) || popupRef.current; }}>
               <ExternalLink size={16} /> {t('checkout.reopen')}
             </button>
-            <button className="co-cta-ghost" onClick={() => redirectSameTab(shopier.url, shopier.orderId, shopier.key)}>
+            <button className="co-cta-ghost" onClick={() => redirectSameTab(shopier.url, shopier.orderId, shopier.key, fromCart)}>
               {t('checkout.sameTab')}
             </button>
             <p className="co-hint">{t('checkout.waiting')}</p>

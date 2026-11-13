@@ -29,7 +29,7 @@ const PendingPaymentWatcher = () => {
           setState('paid');
           setOpen(true);
           triggerConfetti();
-          await useCartStore.getState().clearCart();
+          if (pending.fromCart !== false) await useCartStore.getState().clearCart();
           return;
         }
         if (d?.status === 'failed' || r.status === 404) {
