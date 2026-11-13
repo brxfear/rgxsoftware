@@ -24,6 +24,8 @@ import { auth } from './lib/firebase';
 import { fetchCategories, fetchProducts, createManualOrder, getStartPrice } from './lib/db';
 import { roundUsd, loadUsdTry, usdToTry, currencyForLang } from './lib/currency';
 import Price from './components/Price';
+import SmokeTrail from './components/Effects/SmokeTrail';
+import CursorDot from './components/Effects/CursorDot';
 import { useCartStore } from './store/useCartStore';
 import { triggerConfetti } from './utils/celebration';
 import { useT, translate } from './i18n';
@@ -111,6 +113,8 @@ function Store() {
 
   return (
     <div className="main-wrapper">
+      <SmokeTrail />
+      <CursorDot />
       {/* Mitamers Style Glass Header */}
       <Navbar
         activeSection={activeSection}
