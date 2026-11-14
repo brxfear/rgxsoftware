@@ -1,6 +1,6 @@
 // Sayfalar arası ortak durum: katalog, kullanıcı, site ayarları ve açık pencereler (giriş, sepet, ödeme).
 import { create } from 'zustand';
-import { doc, getDoc } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, orderBy, query, limit } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { fetchCategories, fetchProducts } from '../lib/db';
 
@@ -14,6 +14,7 @@ export const useShopStore = create((set, get) => ({
   user: null,
   authReady: false,
   discord: { invite_url: DEFAULT_DISCORD },
+  announcements: null,
 
   authOpen: false,
   cartOpen: false,
@@ -40,6 +41,15 @@ export const useShopStore = create((set, get) => ({
       if (s.exists()) set({ discord: { invite_url: DEFAULT_DISCORD, ...s.data() } });
     } catch {
       /* varsayılan link kalır */
+    }
+  },
+
+  loadAnnouncements: async () => {
+    try {
+      const snap = await getDocs(query(collection(db, 'announcements'), orderBy('created_at', 'desc'), limit(50)));
+      set({ announcements: snap.docs.map((d) => ({ id: d.id, ...d.data() })) });
+    } catch {
+      set({ announcements: [] });
     }
   },
 

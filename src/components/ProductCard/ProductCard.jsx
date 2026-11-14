@@ -4,6 +4,7 @@ import { useT, localized } from '../../i18n';
 import { ArrowRight, Star } from 'lucide-react';
 import { getPlans, getStartPrice } from '../../lib/db';
 import Price from '../Price';
+import StatusPill from '../StatusPill';
 import './ProductCard.css';
 
 /** Ürün kartı: tıklanınca ürün sayfasına (/products/oyun/urun) gider. */
@@ -30,10 +31,7 @@ const ProductCard = ({ product, to, categoryName, highlight = false }) => {
           />
           <div className="product-floating-badges">
             {highlight && <span className="badge-recommended"><Star size={11} fill="currentColor" /> {t('card.recommended')}</span>}
-            <span className="status-badge-undetected">
-              <span className="status-dot-green"></span>
-              UNDETECTED
-            </span>
+            <StatusPill product={product} className="st-pill-sm" />
           </div>
         </div>
       </div>

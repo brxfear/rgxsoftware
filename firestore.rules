@@ -186,6 +186,13 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Duyurular: herkes okur, yönetici loglu yazar/siler.
+    match /announcements/{id} {
+      allow read: if true;
+      allow create, update: if isAdmin() && loggedWrite(id);
+      allow delete: if isAdmin() && loggedDelete(id);
+    }
+
     // Discord vouch kanalından bot ile çekilen müşteri yorumları: herkes okur, sadece sunucu yazar.
     match /vouches/{id} {
       allow read: if true;

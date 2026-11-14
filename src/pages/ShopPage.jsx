@@ -21,7 +21,7 @@ const ShopPage = () => {
         <strong>{t('shop.title')}</strong>
       </nav>
       <header className="page-head">
-        <h1 className="page-title">{t('shop.title')}</h1>
+        <h1 className="page-title">{t('shop.heading')}</h1>
         <p className="page-sub">{t('shop.sub')}</p>
       </header>
       <div className="page-meta-row">

@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ShoppingCart, Zap, ShieldCheck, Headphones, ChevronLeft, ChevronRight, Check, Star, Minus, Plus, Lock, Lightbulb } from 'lucide-react';
-import ProductCard from '../components/ProductCard/ProductCard';
+import RichProductCard from '../components/ProductCard/RichProductCard';
+import StatusPill from '../components/StatusPill';
 import { useShopStore, useDiscordUrl } from '../store/useShopStore';
 import { useCartStore } from '../store/useCartStore';
 import { getPlans } from '../lib/db';
@@ -115,7 +116,7 @@ const ProductView = ({ product, category, categories, products }) => {
         <h1 className="page-title">{product.name}</h1>
         <div className="pp-head-chips">
           {category && <span className="pm-chip">{category.name}</span>}
-          <span className="pm-chip pm-chip-ok"><span className="status-dot-green" /> Undetected</span>
+          <StatusPill product={product} />
         </div>
         <p className="pp-head-sub">{t('product.tagline')}</p>
       </header>
@@ -233,10 +234,11 @@ const ProductView = ({ product, category, categories, products }) => {
 
       {related.length > 0 && (
         <section className="section-block pp-related">
+          <span className="st-eyebrow">{category?.name}</span>
           <h2 className="section-title">{t('product.related')}</h2>
-          <div className="product-grid product-grid-4">
+          <div className="rpc-grid">
             {related.map((p) => (
-              <ProductCard key={p.id} product={p} to={productPath(p, categories)} categoryName={category?.name} />
+              <RichProductCard key={p.id} product={p} to={productPath(p, categories)} categoryName={category?.name} />
             ))}
           </div>
         </section>

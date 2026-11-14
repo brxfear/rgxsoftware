@@ -12,6 +12,7 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import {
+  Megaphone,
   LayoutDashboard,
   ShoppingBag,
   Package,
@@ -48,6 +49,7 @@ import { KeyStockDrawer, DeliveryPanel } from './Fulfillment';
 import { useKeyCounts } from './useKeyCounts';
 import LoginSettings from './LoginSettings';
 import DiscordSettings from './DiscordSettings';
+import AdminAnnouncements from './AdminAnnouncements';
 import './AdminDashboard.css';
 
 /* ------------------------------------------------------------------ */
@@ -131,6 +133,7 @@ const FIELD_LABELS = {
   name: 'ad', description: 'açıklama', details: 'detaylar', description_en: 'EN açıklama', details_en: 'EN detaylar', category_id: 'kategori',
   price_1day: '1 gün fiyatı', price_7day: '7 gün fiyatı', price_30day: '30 gün fiyatı', price_lifetime: 'sınırsız fiyatı',
   plans: 'planlar', image_url: 'kapak görseli', video_url: 'video', extra_images: 'ek görseller', is_available: 'satış durumu', slug: 'slug',
+  status: 'durum', badge: 'rozet', menu_image_url: 'menü SS',
 };
 
 /** Değişen alanları okunur bir özete çevirir (görseller için sadece "değişti"). */
@@ -142,7 +145,7 @@ const changeSummary = (before = {}, after = {}) => {
     const b = after[k];
     if (JSON.stringify(a ?? '') === JSON.stringify(b ?? '')) return;
     if (k === 'plans') parts.push(`planlar: ${(b || []).map((pl) => `${pl.label} ${fmtUsd(pl.price_usd)}`).join(', ')}`);
-    else if (['image_url', 'extra_images', 'details', 'description', 'details_en', 'description_en'].includes(k)) parts.push(`${FIELD_LABELS[k]} değişti`);
+    else if (['image_url', 'menu_image_url', 'extra_images', 'details', 'description', 'details_en', 'description_en'].includes(k)) parts.push(`${FIELD_LABELS[k]} değişti`);
     else if (k === 'is_available') parts.push(b ? 'satışa açıldı' : 'gizlendi');
     else parts.push(`${FIELD_LABELS[k]}: ${a ?? '—'} → ${b ?? '—'}`);
   });
@@ -502,7 +505,17 @@ const EMPTY_PRODUCT = {
   video_url: '',
   extra_images: [],
   is_available: true,
+  status: 'undetected',
+  badge: '',
+  menu_image_url: '',
 };
+
+const STATUS_OPTIONS = [
+  ['undetected', 'Undetected · Online'],
+  ['testing', 'Test ediliyor'],
+  ['updating', 'Güncelleniyor (bakımda)'],
+  ['detected', 'Detected · Kapalı'],
+];
 
 const ProductForm = ({ initial, categories, onClose, me }) => {
   const [form, setForm] = useState(() => ({
@@ -572,9 +585,18 @@ const ProductForm = ({ initial, categories, onClose, me }) => {
       image_url: form.image_url || '',
       video_url: form.video_url.trim(),
       extra_images: form.extra_images,
+      menu_image_url: form.menu_image_url || '',
+      badge: (form.badge || '').trim().toUpperCase().slice(0, 18),
+      status: form.status || 'undetected',
       is_available: !!form.is_available,
       updated_at: serverTimestamp(),
     };
+    // Durum değiştiyse geçmişe ekle (durum sayfasındaki 30 günlük çubuklar buradan hesaplanır)
+    const prevStatus = initial?.id ? initial.status || 'undetected' : null;
+    if (prevStatus !== data.status) {
+      const log = Array.isArray(initial?.status_log) ? initial.status_log : [];
+      data.status_log = [...log, { from: prevStatus || data.status, to: data.status, at: new Date().toISOString() }].slice(-80);
+    }
     if (docBytes(data) > MAX_DOC_BYTES) {
       return toast.error('Görseller çok büyük (1 MB sınırı). Bazı ek görselleri kaldır ya da URL kullan.');
     }
@@ -629,6 +651,19 @@ const ProductForm = ({ initial, categories, onClose, me }) => {
             </label>
           </div>
 
+          <div className="adm-grid-2">
+            <label className="adm-field">
+              <span className="adm-label">Durum (Durum sayfasında görünür)</span>
+              <select className="adm-input" value={form.status || 'undetected'} onChange={set('status')}>
+                {STATUS_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </select>
+            </label>
+            <label className="adm-field">
+              <span className="adm-label">Rozet (opsiyonel, ör. NO FORMAT)</span>
+              <input className="adm-input" value={form.badge || ''} onChange={set('badge')} maxLength={18} placeholder="PERMANENT" />
+            </label>
+          </div>
+
           <label className="adm-field">
             <span className="adm-label">Kısa açıklama</span>
             <input className="adm-input" value={form.description} onChange={set('description')} maxLength={160} />
@@ -637,6 +672,7 @@ const ProductForm = ({ initial, categories, onClose, me }) => {
           <label className="adm-field">
             <span className="adm-label">Detaylar / özellikler</span>
             <textarea className="adm-input" rows={6} value={form.details} onChange={set('details')} placeholder={'- Aimbot\n- ESP\n- …'} />
+            <span className="adm-muted adm-help">“-” ile başlayan ilk 4 satır ürün kartında ✓ madde olarak gösterilir.</span>
           </label>
 
           <details className="adm-en-block" open={!!(form.description_en || form.details_en)}>
@@ -686,7 +722,8 @@ const ProductForm = ({ initial, categories, onClose, me }) => {
             </div>
           </div>
 
-          <ImageField label="Kapak görseli" value={form.image_url} onChange={set('image_url')} hint="Otomatik WebP'ye küçültülür." />
+          <ImageField label="Kapak görseli (Ürün PP)" value={form.image_url} onChange={set('image_url')} hint="Otomatik WebP'ye küçültülür." />
+          <ImageField label="Menü / GUI ekran görüntüsü (Menü SS)" value={form.menu_image_url || ''} onChange={set('menu_image_url')} hint="Ürün kartında 'Menü SS' sekmesinde ve tam ekran görünür." />
 
           <div className="adm-field">
             <span className="adm-label">Ek görseller</span>
@@ -1429,7 +1466,7 @@ const ACTION_META = {
   delete: { label: 'Silme', tone: 'bad' },
   login: { label: 'Giriş', tone: 'muted' },
 };
-const TYPE_LABEL = { product: 'Ürün', category: 'Kategori', order: 'Sipariş', admin: 'Yönetici', session: 'Oturum', settings: 'Ayarlar' };
+const TYPE_LABEL = { product: 'Ürün', category: 'Kategori', order: 'Sipariş', admin: 'Yönetici', session: 'Oturum', settings: 'Ayarlar', announcement: 'Duyuru' };
 
 const Logs = () => {
   const [logs, ready] = useCollection('admin_logs', 'at', 'desc', 500);
@@ -1505,6 +1542,7 @@ const NAV = [
   { id: 'orders', label: 'Siparişler', icon: ShoppingBag },
   { id: 'products', label: 'Ürünler', icon: Package },
   { id: 'categories', label: 'Kategoriler', icon: FolderTree },
+  { id: 'announcements', label: 'Duyurular', icon: Megaphone },
   { id: 'payments', label: 'Ödemeler', icon: CreditCard },
   { id: 'admins', label: 'Yöneticiler', icon: UserCog },
   { id: 'logs', label: 'Kayıtlar', icon: ScrollText },
@@ -1588,6 +1626,7 @@ const AdminDashboard = ({ admin }) => {
           {view === 'logs' && <Logs />}
           {view === 'payments' && <Payments orders={orders} />}
           {view === 'settings' && <SettingsView me={me} />}
+          {view === 'announcements' && <AdminAnnouncements me={me} />}
         </div>
       </main>
     </div>

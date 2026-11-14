@@ -17,6 +17,8 @@ import ShopPage from './pages/ShopPage';
 import CategoryPage from './pages/CategoryPage';
 import ProductPage from './pages/ProductPage';
 import ReviewsPage from './pages/ReviewsPage';
+import StatusPage from './pages/StatusPage';
+import AnnouncementsPage from './pages/AnnouncementsPage';
 
 import { auth } from './lib/firebase';
 import { roundUsd } from './lib/currency';
@@ -106,6 +108,7 @@ function Shell() {
       if (useShopStore.getState().loadError) toast.error(translate('products.loadError'));
     });
     store.loadSettings();
+    store.loadAnnouncements();
 
     // Shopier dönüşü: /?odeme=basarili | /?odeme=basarisiz
     const params = new URLSearchParams(window.location.search);
@@ -178,6 +181,8 @@ function App() {
           <Route path="products/:cat" element={<CategoryPage />} />
           <Route path="products/:cat/:product" element={<ProductPage />} />
           <Route path="reviews" element={<ReviewsPage />} />
+          <Route path="status" element={<StatusPage />} />
+          <Route path="announcements" element={<AnnouncementsPage />} />
           <Route path="account" element={<AccountPage />} />
           <Route path="account/:tab" element={<AccountPage />} />
         </Route>

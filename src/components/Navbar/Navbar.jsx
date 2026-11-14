@@ -2,7 +2,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { toast } from 'react-hot-toast';
-import { ShoppingCart, LogIn, User, Package, LogOut, ChevronDown, KeyRound, Store, Star, HelpCircle, Workflow, Menu, X, LayoutDashboard } from 'lucide-react';
+import { ShoppingCart, LogIn, User, Package, LogOut, ChevronDown, KeyRound, Store, Star, HelpCircle, Workflow, Menu, X, LayoutDashboard, Activity, Megaphone, Info } from 'lucide-react';
+import { hasUnread } from '../../lib/announcements';
+import { isUp, statusOf } from '../../lib/status';
 import { auth } from '../../lib/firebase';
 import { useT } from '../../i18n';
 import { useShopStore, useDiscordUrl } from '../../store/useShopStore';
@@ -89,6 +91,26 @@ const LangSwitch = () => {
   );
 };
 
+const InfoMenu = ({ items }) => {
+  const { t } = useT();
+  const [open, setOpen] = useState(false);
+  const ref = useOutside(open, setOpen);
+  return (
+    <div className="nav-info" ref={ref}>
+      <button className={`nav-link ${open ? 'active' : ''}`} onClick={() => setOpen((o) => !o)} aria-haspopup="menu" aria-expanded={open}>
+        <Info size={15} /> {t('nav.info')} <ChevronDown size={13} className={`user-chevron ${open ? 'open' : ''}`} />
+      </button>
+      {open && (
+        <div className="user-dropdown nav-info-drop" role="menu">
+          {items.map(({ to, label, icon: Icon }) => (
+            <Link key={to} to={to} role="menuitem" onClick={() => setOpen(false)}><Icon size={15} /> {label}</Link>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const fmtCount = (n) => (n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1).replace('.0', '')}k+` : String(n));
 
 const Navbar = () => {
@@ -108,9 +130,17 @@ const Navbar = () => {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  const announcements = useShopStore((s) => s.announcements);
+  const allUp = useShopStore((s) => s.products.every((p) => isUp(statusOf(p))));
+  const unread = pathname !== '/announcements' && hasUnread(announcements);
+
   const links = [
     { to: '/products', label: t('nav.products'), icon: Store, match: (p) => p.startsWith('/products') },
+    { to: '/status', label: t('nav.statusLink'), icon: Activity, match: (p) => p === '/status', dot: allUp ? 'ok' : 'warn' },
     { to: '/reviews', label: t('nav.reviews'), icon: Star, match: (p) => p.startsWith('/reviews') },
+    { to: '/announcements', label: t('nav.announcements'), icon: Megaphone, match: (p) => p === '/announcements', dot: unread ? 'new' : null },
+  ];
+  const infoLinks = [
     { to: '/#how-it-works', label: t('nav.how'), icon: Workflow },
     { to: '/#faq', label: t('nav.faq'), icon: HelpCircle },
   ];
@@ -127,11 +157,13 @@ const Navbar = () => {
         </Link>
 
         <nav className="nav-menu">
-          {links.map(({ to, label, icon: Icon, match }) => (
+          {links.map(({ to, label, icon: Icon, match, dot }) => (
             <NavLink key={to} to={to} className={() => `nav-link ${match?.(pathname) ? 'active' : ''}`}>
               <Icon size={15} /> {label}
+              {dot && <i className={`nav-dot nav-dot-${dot}`} />}
             </NavLink>
           ))}
+          <InfoMenu items={infoLinks} />
         </nav>
 
         <div className="nav-actions">
@@ -163,8 +195,11 @@ const Navbar = () => {
 
       {mobileOpen && (
         <nav className="nav-mobile glass-bar">
-          {links.map(({ to, label, icon: Icon }) => (
-            <Link key={to} to={to} onClick={() => setMobileOpen(false)}><Icon size={17} /> {label}</Link>
+          {[...links, ...infoLinks].map(({ to, label, icon: Icon, dot }) => (
+            <Link key={to} to={to} onClick={() => setMobileOpen(false)}>
+              <Icon size={17} /> {label}
+              {dot && <i className={`nav-dot nav-dot-${dot}`} />}
+            </Link>
           ))}
           <a href={discordUrl} target="_blank" rel="noopener noreferrer"><DiscordIcon size={17} /> Discord</a>
           {user && <Link to="/account" onClick={() => setMobileOpen(false)}><LayoutDashboard size={17} /> {t('nav.panel')}</Link>}

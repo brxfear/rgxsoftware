@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowDown } from 'lucide-react';
-import ProductCard from '../components/ProductCard/ProductCard';
+import RichProductCard from '../components/ProductCard/RichProductCard';
 import Price from '../components/Price';
 import { useShopStore } from '../store/useShopStore';
 import { categorySlug, productPath } from '../lib/slug';
@@ -97,9 +97,9 @@ const CategoryPage = () => {
       </div>
 
       {list.length ? (
-        <div className="product-grid product-grid-4">
+        <div className="rpc-grid">
           {list.map((p, i) => (
-            <ProductCard key={p.id} product={p} to={productPath(p, categories)} categoryName={category.name} highlight={sort === 'featured' && i === 0} />
+            <RichProductCard key={p.id} product={p} to={productPath(p, categories)} categoryName={category.name} highlight={sort === 'featured' && i === 0} />
           ))}
         </div>
       ) : (
