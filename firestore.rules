@@ -199,6 +199,11 @@ service cloud.firestore {
         && request.resource.data.note is string && request.resource.data.note.size() <= 120;
       allow create, delete: if false;
     }
+    // Stok yokken açılan bayi siparişleri (yönetici keyleri sunucu üzerinden teslim eder)
+    match /reseller_orders/{id} {
+      allow read: if isAdmin() || (signedIn() && resource.data.reseller_id == request.auth.uid);
+      allow write: if false;
+    }
     match /reseller_tx/{id} {
       allow read: if isAdmin() || (signedIn() && resource.data.reseller_id == request.auth.uid);
       allow write: if false;

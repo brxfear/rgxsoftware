@@ -33,6 +33,22 @@
       ]
     },
     {
+      "collectionGroup": "reseller_orders",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "reseller_id", "order": "ASCENDING" },
+        { "fieldPath": "created_at", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "reseller_orders",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "created_at", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "hwid_requests",
       "queryScope": "COLLECTION",
       "fields": [

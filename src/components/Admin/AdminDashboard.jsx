@@ -13,6 +13,7 @@ import {
   writeBatch,
 } from 'firebase/firestore';
 import {
+  Activity,
   Megaphone,
   Briefcase,
   Cpu,
@@ -55,6 +56,8 @@ import DiscordSettings from './DiscordSettings';
 import AdminAnnouncements from './AdminAnnouncements';
 import AdminResellers from './AdminResellers';
 import AdminHwid from './AdminHwid';
+import AdminStatus from './AdminStatus';
+import AdminKeys from './AdminKeys';
 import './AdminDashboard.css';
 
 /* ------------------------------------------------------------------ */
@@ -1633,6 +1636,8 @@ const NAV = [
   { id: 'orders', label: 'Siparişler', icon: ShoppingBag },
   { id: 'products', label: 'Ürünler', icon: Package },
   { id: 'categories', label: 'Kategoriler', icon: FolderTree },
+  { id: 'status', label: 'Durum', icon: Activity },
+  { id: 'keys', label: 'Key stoğu', icon: KeyRound },
   { id: 'announcements', label: 'Duyurular', icon: Megaphone },
   { id: 'resellers', label: 'Bayiler', icon: Briefcase },
   { id: 'hwid', label: 'HWID istekleri', icon: Cpu },
@@ -1722,6 +1727,8 @@ const AdminDashboard = ({ admin }) => {
           {view === 'announcements' && <AdminAnnouncements me={me} />}
           {view === 'resellers' && <AdminResellers me={me} />}
           {view === 'hwid' && <AdminHwid me={me} />}
+          {view === 'status' && <AdminStatus products={products} categories={categories} me={me} />}
+          {view === 'keys' && <AdminKeys products={products} categories={categories} me={me} />}
         </div>
       </main>
     </div>

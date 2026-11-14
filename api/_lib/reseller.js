@@ -57,7 +57,7 @@ export const requireReseller = async (db, uid) => {
  * Stoktan key çıkarır: tek transaction içinde stok, bakiye ve limit kontrolü; keyler "used" olur,
  * bayinin listesine eklenir, bakiye düşer, işlem kaydı yazılır.
  */
-export const generateKeys = async (db, uid, { productId, planId, quantity, note }) => {
+export const generateKeys = async (db, uid, { productId, planId, quantity, note, backorder = false }) => {
   const qty = Math.max(1, Math.min(50, parseInt(quantity, 10) || 1));
   const keysPeriod = periodKeys();
   const resRef = db.collection('resellers').doc(uid);
@@ -86,11 +86,36 @@ export const generateKeys = async (db, uid, { productId, planId, quantity, note 
     const stock = await tx.get(
       db.collection('license_keys').where('product_id', '==', prodSnap.id).where('plan_id', '==', String(plan.id)).where('status', '==', 'available').limit(qty),
     );
-    if (stock.size < qty) throw new HttpError(409, stock.size ? `Stokta sadece ${stock.size} key var.` : 'Bu plan için stokta key yok.');
-
     const after = roundUsd(balance - cost);
     const txRef = db.collection('reseller_tx').doc();
     const now = FieldValue.serverTimestamp();
+    const usageAfter = { day: lim.usage.day, day_count: lim.usage.day_count + qty, month: lim.usage.month, month_count: lim.usage.month_count + qty };
+
+    if (stock.size < qty) {
+      if (!backorder) {
+        throw Object.assign(new HttpError(409, stock.size ? `Stokta sadece ${stock.size} key var.` : 'Bu plan için stokta key yok.'), { backorderable: true });
+      }
+      // Stok yetmiyor: sipariş açılır, bakiye düşer; keyleri yönetici panelden teslim eder (iptal ederse iade olur)
+      const orderRef = db.collection('reseller_orders').doc();
+      tx.set(orderRef, {
+        reseller_id: uid,
+        reseller_name: r.display_name || '',
+        product_id: prodSnap.id,
+        product_name: product.name,
+        plan_id: String(plan.id),
+        plan_label: plan.label,
+        quantity: qty,
+        unit_price_usd: unit,
+        cost_usd: cost,
+        note: String(note || '').slice(0, 120),
+        status: 'pending',
+        tx_id: txRef.id,
+        created_at: now,
+      });
+      tx.set(txRef, { reseller_id: uid, type: 'purchase', amount_usd: -cost, balance_after: after, note: `${qty} × ${product.name} (${plan.label}) — sipariş, teslim bekliyor`, ref: orderRef.id, at: now });
+      tx.update(resRef, { balance_usd: after, usage: usageAfter, total_keys: FieldValue.increment(qty), total_spent_usd: FieldValue.increment(cost), last_key_at: now });
+      return { pending: true, order_id: orderRef.id, keys: [], unit_price: unit, cost, balance: after };
+    }
     const issued = [];
     for (const k of stock.docs) {
       const keyRef = db.collection('reseller_keys').doc();
@@ -121,7 +146,7 @@ export const generateKeys = async (db, uid, { productId, planId, quantity, note 
     });
     tx.update(resRef, {
       balance_usd: after,
-      usage: { day: lim.usage.day, day_count: lim.usage.day_count + qty, month: lim.usage.month, month_count: lim.usage.month_count + qty },
+      usage: usageAfter,
       total_keys: FieldValue.increment(qty),
       total_spent_usd: FieldValue.increment(cost),
       last_key_at: now,

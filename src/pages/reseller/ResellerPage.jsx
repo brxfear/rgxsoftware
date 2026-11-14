@@ -6,7 +6,7 @@ import { signOut } from 'firebase/auth';
 import { toast } from 'react-hot-toast';
 import {
   LayoutDashboard, Package, Plus, KeyRound, Wallet, ArrowLeftRight, BookOpen, Gavel, MessageCircle, User, Cpu, LogIn,
-  Copy, Check, Search, ExternalLink, Loader2, Sparkles, CalendarClock, TrendingUp, ShieldCheck, LogOut, Download,
+  Copy, Check, Search, ExternalLink, Loader2, Sparkles, CalendarClock, TrendingUp, ShieldCheck, LogOut, Download, PackageCheck,
 } from 'lucide-react';
 import { auth, db } from '../../lib/firebase';
 import { toDate } from '../../lib/db';
@@ -47,6 +47,8 @@ const L = {
     notResellerSub: 'Bayi olmak istiyorsan Discord’dan bize yaz.', suspended: 'Bayi hesabın askıya alındı. Destekle iletişime geç.',
     logout: 'Çıkış yap', memberSince: 'Bayi: {date}', totalKeys: 'Toplam key', totalSpent: 'Toplam harcama', loader: 'Loader',
     allUp: 'Tüm ürünler aktif', someDown: '{n} üründe bakım var',
+    preorder: 'Stok yok · sipariş verilebilir', backorderNote: 'Stokta {n} key var. Sipariş verirsen bakiyen şimdi düşer, ekibimiz keyleri kısa sürede teslim eder (Lisanslarım’da görünür). Teslim edilemezse tutar iade edilir.',
+    orderBtn: 'Sipariş ver', ordered: 'Siparişin alındı! Keyler teslim edilince Lisanslarım’da görünecek.', orderPending: 'Teslim bekliyor', orderCanceled: 'İptal · iade edildi',
     signupTitle: 'RGX bayisi ol', signupSub: 'Bayi hesabını hemen aç: bakiye yükle, keyleri bayi fiyatıyla çıkar, kendi müşterilerine sat.',
     signupPerks: ['Satış fiyatının altında bayi fiyatları', 'Anında key çıkarma, stok ve limitler panelde', 'Shopier ile kartla bakiye yükleme', 'HWID reset ve destek tek yerden'],
     signupName: 'Bayi adın', signupNamePh: 'ör. Mağaza ya da Discord adın', signupAccept: 'Bayi kurallarını okudum ve kabul ediyorum.',
@@ -77,6 +79,8 @@ const L = {
     notResellerSub: 'Want to become a reseller? Message us on Discord.', suspended: 'Your reseller account is suspended. Contact support.',
     logout: 'Sign out', memberSince: 'Reseller since {date}', totalKeys: 'Total keys', totalSpent: 'Total spent', loader: 'Loader',
     allUp: 'All products online', someDown: '{n} products under maintenance',
+    preorder: 'Out of stock · order available', backorderNote: 'Only {n} keys in stock. If you order, your balance is charged now and our team delivers the keys shortly (shown in Licenses). If we cannot deliver, you get a refund.',
+    orderBtn: 'Place order', ordered: 'Order received! Keys appear in Licenses once delivered.', orderPending: 'Awaiting delivery', orderCanceled: 'Canceled · refunded',
     signupTitle: 'Become an RGX reseller', signupSub: 'Open your reseller account now: top up, generate keys at reseller prices and sell to your own customers.',
     signupPerks: ['Reseller prices below retail', 'Instant key generation, stock and limits in your panel', 'Top up by card via Shopier', 'HWID resets and support in one place'],
     signupName: 'Reseller name', signupNamePh: 'e.g. your shop or Discord name', signupAccept: 'I have read and accept the reseller rules.',
@@ -147,6 +151,7 @@ const ResellerPage = () => {
   const [keys, setKeys] = useState(null);
   const [txs, setTxs] = useState(null);
   const [reqs, setReqs] = useState(null);
+  const [orders, setOrders] = useState(null);
 
   const load = useCallback(async () => {
     try {
@@ -163,10 +168,12 @@ const ResellerPage = () => {
     const u1 = onSnapshot(query(collection(db, 'reseller_keys'), where('reseller_id', '==', user.uid), orderBy('created_at', 'desc'), limit(300)), (sn) => setKeys(sn.docs.map((d) => ({ id: d.id, ...d.data() }))), () => setKeys([]));
     const u2 = onSnapshot(query(collection(db, 'reseller_tx'), where('reseller_id', '==', user.uid), orderBy('at', 'desc'), limit(200)), (sn) => setTxs(sn.docs.map((d) => ({ id: d.id, ...d.data() }))), () => setTxs([]));
     const u3 = onSnapshot(query(collection(db, 'hwid_requests'), where('uid', '==', user.uid), orderBy('created_at', 'desc'), limit(100)), (sn) => setReqs(sn.docs.map((d) => ({ id: d.id, ...d.data() }))), () => setReqs([]));
+    const u4 = onSnapshot(query(collection(db, 'reseller_orders'), where('reseller_id', '==', user.uid), orderBy('created_at', 'desc'), limit(50)), (sn) => setOrders(sn.docs.map((d) => ({ id: d.id, ...d.data() }))), () => setOrders([]));
     return () => {
       u1();
       u2();
       u3();
+      u4();
     };
   }, [user]);
 
@@ -209,7 +216,7 @@ const ResellerPage = () => {
   const r = me.reseller;
   const current = NAV.flatMap(([, items]) => items).some(([k]) => k === tab) ? tab : 'dashboard';
   const go = (t) => navigate(t === 'dashboard' ? '/reseller' : `/reseller/${t}`);
-  const ctx = { s, f, me, r, keys, txs, reqs, load, go, user, discordUrl };
+  const ctx = { s, f, me, r, keys, txs, reqs, orders, load, go, user, discordUrl };
 
   return (
     <div className="page rs">
@@ -440,7 +447,7 @@ const Products = ({ s, f, me, r, go }) => (
               <span className="muted">{usd(pl.retail_usd)}</span>
               <span className="ok">{usd(pl.retail_usd - pl.price_usd)}</span>
               <span className={pl.stock ? '' : 'bad'}>{pl.stock || s.outOfStock}</span>
-              <button className="rs-btn rs-btn-red rs-btn-sm" disabled={!pl.stock} onClick={() => go(`generate?p=${p.id}&pl=${pl.id}`)}>{s.create}</button>
+              <button className="rs-btn rs-btn-red rs-btn-sm" onClick={() => go(`generate?p=${p.id}&pl=${pl.id}`)}>{s.create}</button>
             </div>
           ))}
         </div>
@@ -463,7 +470,9 @@ const Generate = ({ s, f, me, r, load }) => {
 
   const dayLeft = r.daily_limit > 0 ? r.daily_limit - r.usage.day_count : Infinity;
   const monthLeft = r.monthly_limit > 0 ? r.monthly_limit - r.usage.month_count : Infinity;
-  const maxQty = Math.max(0, Math.min(50, plan?.stock || 0, dayLeft, monthLeft, plan ? Math.floor((r.balance_usd + 1e-9) / plan.price_usd) : 0));
+  // Stok yetmezse sipariş verilebilir (ekip keyleri sonradan teslim eder); limit ve bakiye yine geçerli
+  const maxQty = Math.max(0, Math.min(50, dayLeft, monthLeft, plan ? Math.floor((r.balance_usd + 1e-9) / plan.price_usd) : 0));
+  const backorder = !!plan && qty > (plan.stock || 0);
   const total = plan ? plan.price_usd * qty : 0;
 
   const submit = async (e) => {
@@ -471,9 +480,14 @@ const Generate = ({ s, f, me, r, load }) => {
     if (!plan) return;
     setBusy(true);
     try {
-      const out = await api('POST', 'generate', { product_id: pid, plan_id: plid, quantity: qty, note });
-      setResult(out.keys);
-      toast.success(f('created', { n: out.keys.length }));
+      const out = await api('POST', 'generate', { product_id: pid, plan_id: plid, quantity: qty, note, backorder });
+      if (out.pending) {
+        setResult(null);
+        toast.success(s.ordered, { duration: 6000 });
+      } else {
+        setResult(out.keys);
+        toast.success(f('created', { n: out.keys.length }));
+      }
       setNote('');
       load();
     } catch (err) {
@@ -497,10 +511,10 @@ const Generate = ({ s, f, me, r, load }) => {
             <span>{s.plan}</span>
             <div className="rs-plan-pick">
               {product.plans.map((pl) => (
-                <button type="button" key={pl.id} disabled={!pl.stock} className={pl.id === plid ? 'on' : ''} onClick={() => { setPlid(pl.id); setQty(1); }}>
+                <button type="button" key={pl.id} className={`${pl.id === plid ? 'on' : ''} ${pl.stock ? '' : 'nostock'}`} onClick={() => { setPlid(pl.id); setQty(1); }}>
                   <strong>{pl.label}</strong>
                   <span>{usd(pl.price_usd)}</span>
-                  <small>{pl.stock ? `${s.stock}: ${pl.stock}` : s.outOfStock}</small>
+                  <small>{pl.stock ? `${s.stock}: ${pl.stock}` : s.preorder}</small>
                 </button>
               ))}
             </div>
@@ -516,11 +530,12 @@ const Generate = ({ s, f, me, r, load }) => {
             <input value={note} maxLength={120} placeholder={s.notePh} onChange={(e) => setNote(e.target.value)} />
           </label>
         </div>
+        {backorder && <div className="rs-note rs-note-warn"><PackageCheck size={15} /> {f('backorderNote', { n: plan.stock || 0 })}</div>}
         <p className="rs-muted">{f('limitNote', { d: r.daily_limit ? `${r.usage.day_count}/${r.daily_limit}` : s.unlimited, m: r.monthly_limit ? `${r.usage.month_count}/${r.monthly_limit}` : s.unlimited })}</p>
         <div className="rs-gen-foot">
           <div><span className="rs-muted">{s.total}</span><strong>{usd(total)}</strong><small className="rs-muted">{s.balance}: {usd(r.balance_usd)}</small></div>
           <button className="rs-btn rs-btn-red rs-btn-lg" disabled={busy || !plan || !maxQty || qty > maxQty}>
-            {busy ? <><Loader2 size={16} className="spin" /> {s.creating}</> : <><KeyRound size={16} /> {s.create}</>}
+            {busy ? <><Loader2 size={16} className="spin" /> {s.creating}</> : backorder ? <><PackageCheck size={16} /> {s.orderBtn}</> : <><KeyRound size={16} /> {s.create}</>}
           </button>
         </div>
       </form>
@@ -541,7 +556,7 @@ const Generate = ({ s, f, me, r, load }) => {
 };
 
 /* ---------------- Lisanslar ---------------- */
-const Licenses = ({ s, keys }) => {
+const Licenses = ({ s, keys, orders }) => {
   const [q, setQ] = useState('');
   const list = useMemo(() => {
     const t = q.trim().toLowerCase();
@@ -550,6 +565,17 @@ const Licenses = ({ s, keys }) => {
   return (
     <div className="rs-stack">
       <label className="rs-search"><Search size={16} /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder={s.searchPh} /></label>
+      {orders?.filter((o) => o.status !== 'fulfilled').length > 0 && (
+        <div className="rs-table">
+          {orders.filter((o) => o.status !== 'fulfilled').map((o) => (
+            <div key={o.id} className="rs-row">
+              <span className={`rs-req-st st-${o.status === 'pending' ? 'pending' : 'rejected'}`}>{o.status === 'pending' ? s.orderPending : s.orderCanceled}</span>
+              <div className="rs-row-main"><span className="rs-tx-note">{o.quantity} × {o.product_name} ({o.plan_label})</span><small>{o.note}{o.cancel_reason ? ` · ${o.cancel_reason}` : ''}</small></div>
+              <span className="rs-row-meta">{usd(o.cost_usd)}</span>
+            </div>
+          ))}
+        </div>
+      )}
       <KeyTable keys={list} s={s} loading={keys === null} />
     </div>
   );

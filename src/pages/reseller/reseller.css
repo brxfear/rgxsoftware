@@ -221,3 +221,6 @@
 .rs-check { display: flex; align-items: flex-start; gap: 10px; font-size: 13.5px; cursor: pointer; }
 .rs-check input { width: 18px; height: 18px; accent-color: #e0262f; margin-top: 1px; }
 @media (max-width: 860px) { .rs-signup { grid-template-columns: 1fr; } }
+.rs-plan-pick button.nostock small { color: #fbbf24; }
+.rs-note-warn { color: #fde68a; background: rgba(245, 158, 11, 0.08); border-color: rgba(245, 158, 11, 0.3); line-height: 1.5; }
+.rs-note-warn svg { flex-shrink: 0; }

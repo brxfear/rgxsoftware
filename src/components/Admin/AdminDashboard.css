@@ -605,3 +605,23 @@ select.adm-input option { background: #1a1214; }
 .adm-cat-move { position: absolute; top: 8px; left: 8px; z-index: 2; flex-direction: row; align-items: center; gap: 4px; padding: 3px; border-radius: 9px; background: rgba(10, 7, 8, 0.85); border: 1px solid rgba(255, 255, 255, 0.14); }
 .adm-cat-move button { width: 26px; height: 24px; font-size: 10px; }
 .adm-cat-move span { min-width: 16px; text-align: center; font-size: 12px; font-weight: 800; color: #fff; }
+
+/* Durum (admin) */
+.adm-status-group { padding: 4px 16px 16px; }
+.adm-status-group h3 { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-muted); margin: 8px 0 8px; }
+.adm-status-row { display: flex; align-items: center; gap: 14px; padding: 12px; margin-bottom: 8px; border-radius: 12px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.07); flex-wrap: wrap; }
+.adm-status-row img { width: 46px; height: 46px; border-radius: 11px; object-fit: cover; }
+.adm-status-info { flex: 1; min-width: 220px; display: flex; flex-direction: column; gap: 3px; }
+.adm-status-bars { display: grid; grid-template-columns: repeat(30, 1fr); gap: 2px; margin-top: 4px; max-width: 360px; }
+.adm-status-bars i { height: 10px; border-radius: 2px; }
+.adm-status-bars .st-ok { background: #10b981; } .adm-status-bars .st-info { background: #38bdf8; } .adm-status-bars .st-warn { background: #f59e0b; } .adm-status-bars .st-bad { background: #e0262f; } .adm-status-bars .st-none { background: rgba(255,255,255,0.08); }
+.adm-status-pick { display: flex; flex-wrap: wrap; gap: 6px; }
+.adm-st-btn { padding: 7px 11px; border-radius: 9px; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; color: var(--text-muted); background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.1); }
+.adm-st-btn:disabled { opacity: 0.5; cursor: wait; }
+.adm-st-btn.on.st-ok { color: #34d399; background: rgba(16, 185, 129, 0.14); border-color: rgba(16, 185, 129, 0.5); }
+.adm-st-btn.on.st-info { color: #7dd3fc; background: rgba(56, 189, 248, 0.14); border-color: rgba(56, 189, 248, 0.5); }
+.adm-st-btn.on.st-warn { color: #fbbf24; background: rgba(245, 158, 11, 0.14); border-color: rgba(245, 158, 11, 0.5); }
+.adm-st-btn.on.st-bad { color: #ff6a70; background: rgba(224, 38, 47, 0.16); border-color: rgba(224, 38, 47, 0.55); }
+/* Key stoğu */
+.adm-stock-plans { display: flex; flex-wrap: wrap; gap: 6px; }
+.adm-ok { color: #34d399; font-weight: 700; }

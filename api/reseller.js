@@ -135,6 +135,52 @@ export default async function handler(req, res) {
       return res.status(200).json({ balance: after });
     }
 
+    // Stok yokken açılan bayi siparişi: yönetici keyleri girer → bayinin listesine düşer
+    if (action === 'admin-fulfill' && req.method === 'POST') {
+      const admin = await requireAdmin(req);
+      const b = body(req);
+      const keys = [...new Set((Array.isArray(b.keys) ? b.keys : String(b.keys || '').split(/\r?\n/)).map((k) => String(k).trim()).filter(Boolean))];
+      const ref = db.collection('reseller_orders').doc(String(b.order_id));
+      const out = await db.runTransaction(async (tx) => {
+        const s = await tx.get(ref);
+        if (!s.exists) throw new HttpError(404, 'Sipariş bulunamadı.');
+        const o = s.data();
+        if (o.status !== 'pending') throw new HttpError(409, 'Bu sipariş zaten kapatılmış.');
+        if (keys.length !== o.quantity) throw new HttpError(400, `${o.quantity} key girmelisin (girilen: ${keys.length}).`);
+        const now = FieldValue.serverTimestamp();
+        for (const k of keys) {
+          tx.set(db.collection('reseller_keys').doc(), {
+            reseller_id: o.reseller_id, key: k.slice(0, 300), stock_id: null, order_id: ref.id,
+            product_id: o.product_id, product_name: o.product_name, plan_id: o.plan_id, plan_label: o.plan_label,
+            price_usd: o.unit_price_usd, note: o.note || '', tx_id: o.tx_id || null, created_at: now,
+          });
+        }
+        tx.update(ref, { status: 'fulfilled', fulfilled_at: now, fulfilled_by: admin.nickname || '?' });
+        return o;
+      });
+      await db.collection('admin_logs').add({ actor_uid: admin.uid, actor_nick: admin.nickname || '?', action: 'status', target_type: 'reseller', target_id: out.reseller_id, summary: `Bayi siparişi teslim edildi: ${out.reseller_name} — ${out.quantity} × ${out.product_name} (${out.plan_label})`, at: FieldValue.serverTimestamp() });
+      return res.status(200).json({ ok: true });
+    }
+
+    if (action === 'admin-cancel-order' && req.method === 'POST') {
+      const admin = await requireAdmin(req);
+      const b = body(req);
+      const ref = db.collection('reseller_orders').doc(String(b.order_id));
+      const out = await db.runTransaction(async (tx) => {
+        const s = await tx.get(ref);
+        if (!s.exists) throw new HttpError(404, 'Sipariş bulunamadı.');
+        const o = s.data();
+        if (o.status !== 'pending') throw new HttpError(409, 'Bu sipariş zaten kapatılmış.');
+        const resRef = db.collection('resellers').doc(o.reseller_id);
+        const rs = await tx.get(resRef);
+        if (rs.exists) applyBalance(tx, resRef, rs.get('balance_usd'), { amount: o.cost_usd, type: 'adjust', note: `Sipariş iptal, iade: ${o.quantity} × ${o.product_name}${b.reason ? ` (${String(b.reason).slice(0, 80)})` : ''}`, ref: ref.id });
+        tx.update(ref, { status: 'canceled', canceled_at: FieldValue.serverTimestamp(), canceled_by: admin.nickname || '?', cancel_reason: String(b.reason || '').slice(0, 200) });
+        return o;
+      });
+      await db.collection('admin_logs').add({ actor_uid: admin.uid, actor_nick: admin.nickname || '?', action: 'status', target_type: 'reseller', target_id: out.reseller_id, summary: `Bayi siparişi iptal edildi, $${out.cost_usd} iade: ${out.reseller_name} — ${out.quantity} × ${out.product_name}`, at: FieldValue.serverTimestamp() });
+      return res.status(200).json({ ok: true });
+    }
+
     /* ================= Bayi ================= */
     const user = await requireUser(req);
 
@@ -230,7 +276,7 @@ export default async function handler(req, res) {
 
     if (action === 'generate' && req.method === 'POST') {
       const b = body(req);
-      const r = await generateKeys(db, user.uid, { productId: b.product_id, planId: b.plan_id, quantity: b.quantity, note: b.note });
+      const r = await generateKeys(db, user.uid, { productId: b.product_id, planId: b.plan_id, quantity: b.quantity, note: b.note, backorder: b.backorder === true });
       return res.status(200).json(r);
     }
 
