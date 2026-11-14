@@ -598,6 +598,7 @@ const ProductForm = ({ initial, categories, onClose, me }) => {
       loader_url: (form.loader_url || '').trim(),
       loader_note: (form.loader_note || '').trim().slice(0, 500),
       reseller_only: !!form.reseller_only,
+      test_only: !!form.test_only,
       reseller_enabled: form.reseller_enabled !== false,
       badge: (form.badge || '').trim().toUpperCase().slice(0, 18),
       status: form.status || 'undetected',
@@ -786,6 +787,11 @@ const ProductForm = ({ initial, categories, onClose, me }) => {
             <input type="checkbox" checked={!!form.reseller_only} onChange={(e) => setForm((f) => ({ ...f, reseller_only: e.target.checked }))} />
             <span className="adm-switch-track"><span /></span>
             Sadece bayilere (sitede satışta değilken bile bayiler çıkarabilsin)
+          </label>
+          <label className="adm-switch">
+            <input type="checkbox" checked={!!form.test_only} onChange={(e) => setForm((f) => ({ ...f, test_only: e.target.checked }))} />
+            <span className="adm-switch-track"><span /></span>
+            Test ürünü (sadece test bayileri görür, kimse satın alamaz)
           </label>
 
           <label className="adm-switch">

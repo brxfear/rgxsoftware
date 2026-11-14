@@ -52,6 +52,7 @@ export default async function handler(req, res) {
         daily_limit: int(b.daily_limit),
         monthly_limit: int(b.monthly_limit),
         notes: String(b.notes || '').slice(0, 500),
+        is_test: b.is_test === true,
         updated_at: FieldValue.serverTimestamp(),
       };
       if (!data.display_name) throw new HttpError(400, 'Bayi adı gerekli.');
@@ -103,7 +104,7 @@ export default async function handler(req, res) {
         action: b.uid ? 'update' : 'create',
         target_type: 'reseller',
         target_id: uid,
-        summary: `Bayi ${b.uid ? 'güncellendi' : 'eklendi'}: ${data.display_name} (indirim %${data.discount_pct}, günlük ${data.daily_limit || '∞'}, aylık ${data.monthly_limit || '∞'}, ${data.status === 'active' ? 'aktif' : 'askıda'})`,
+        summary: `Bayi ${b.uid ? 'güncellendi' : 'eklendi'}: ${data.display_name}${data.is_test ? ' [TEST]' : ''} (indirim %${data.discount_pct}, günlük ${data.daily_limit || '∞'}, aylık ${data.monthly_limit || '∞'}, ${data.status === 'active' ? 'aktif' : 'askıda'})`,
         at: FieldValue.serverTimestamp(),
       });
       return res.status(200).json({ uid, created });

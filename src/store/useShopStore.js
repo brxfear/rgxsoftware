@@ -27,7 +27,7 @@ export const useShopStore = create((set, get) => ({
     set({ _loading: true, loading: true, loadError: false });
     try {
       const [categories, products] = await Promise.all([fetchCategories(), fetchProducts()]);
-      set({ categories, products: products.filter((p) => p.is_available !== false), loading: false });
+      set({ categories, products: products.filter((p) => p.is_available !== false && !p.test_only), loading: false });
     } catch (err) {
       console.error('Katalog yüklenemedi', err);
       set({ loading: false, loadError: true });

@@ -47,7 +47,7 @@ export default async function handler(req, res) {
     for (const it of items) {
       const qty = Math.max(1, Math.min(10, parseInt(it.quantity, 10) || 1));
       const snap = await db.collection('products').doc(String(it.product_id)).get();
-      if (!snap.exists || snap.get('is_available') === false) {
+      if (!snap.exists || snap.get('is_available') === false || snap.get('test_only')) {
         return res.status(400).json({ error: 'Sepetteki bir ürün artık satışta değil.' });
       }
       const product = snap.data();

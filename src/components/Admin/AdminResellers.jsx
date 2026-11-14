@@ -33,6 +33,7 @@ const ResellerForm = ({ initial, onClose }) => {
     monthly_limit: initial?.monthly_limit ?? 300,
     initial_balance: 0,
     notes: initial?.notes || '',
+    is_test: !!initial?.is_test,
   });
   const [busy, setBusy] = useState(false);
   const set = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.value }));
@@ -97,6 +98,11 @@ const ResellerForm = ({ initial, onClose }) => {
               <input className="adm-input" type="number" min={0} step="0.01" value={f.initial_balance} onChange={set('initial_balance')} />
             </label>
           )}
+          <label className="adm-switch">
+            <input type="checkbox" checked={f.is_test} onChange={(e) => setF((x) => ({ ...x, is_test: e.target.checked }))} />
+            <span className="adm-switch-track"><span /></span>
+            Test bayisi (sadece test ürünlerini de görür; gerçek bayiler test ürünlerini görmez)
+          </label>
           <label className="adm-field">
             <span className="adm-label">Not (sadece yöneticiler görür)</span>
             <textarea className="adm-input" rows={3} value={f.notes} onChange={set('notes')} />
@@ -272,7 +278,7 @@ const AdminResellers = ({ me }) => {
                   return (
                     <React.Fragment key={r.uid}>
                       <tr className="adm-row-click" onClick={() => setOpen(open === r.uid ? null : r.uid)}>
-                        <td><strong>{r.display_name}</strong><br /><small className="adm-muted">{r.email}</small></td>
+                        <td><strong>{r.display_name}</strong>{r.is_test && <> <span className="adm-pill adm-pill-info">TEST</span></>}<br /><small className="adm-muted">{r.email}</small></td>
                         <td><span className={`adm-pill adm-pill-${r.status === 'active' ? 'ok' : 'bad'}`}>{r.status === 'active' ? 'Aktif' : 'Askıda'}</span></td>
                         <td><strong>{usd(r.balance_usd)}</strong></td>
                         <td>{day}{r.daily_limit ? ` / ${r.daily_limit}` : ' / ∞'}</td>
