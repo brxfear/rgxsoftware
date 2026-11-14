@@ -601,3 +601,7 @@ select.adm-input option { background: #1a1214; }
 .adm-hwid-key code { font-size: 13px; overflow-wrap: anywhere; }
 .adm-plan-row .adm-usd-input.reseller span { color: #34d399; }
 @media (max-width: 800px) { .adm-rs-detail { grid-template-columns: 1fr; } }
+.adm-cat { position: relative; }
+.adm-cat-move { position: absolute; top: 8px; left: 8px; z-index: 2; flex-direction: row; align-items: center; gap: 4px; padding: 3px; border-radius: 9px; background: rgba(10, 7, 8, 0.85); border: 1px solid rgba(255, 255, 255, 0.14); }
+.adm-cat-move button { width: 26px; height: 24px; font-size: 10px; }
+.adm-cat-move span { min-width: 16px; text-align: center; font-size: 12px; font-weight: 800; color: #fff; }

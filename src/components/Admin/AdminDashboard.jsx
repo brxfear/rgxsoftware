@@ -10,6 +10,7 @@ import {
   orderBy,
   limit,
   serverTimestamp,
+  writeBatch,
 } from 'firebase/firestore';
 import {
   Megaphone,
@@ -43,7 +44,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { auth, db } from '../../lib/firebase';
-import { toDate, getStartPrice, getPlans } from '../../lib/db';
+import { toDate, getStartPrice, getPlans, sortCategories } from '../../lib/db';
 import { fmtUsd, fmtMoney } from '../../lib/currency';
 import { fileToCompressedDataUrl } from './imageUtils';
 import { loggedWrite, adminIdForEmail, logAdminLogin } from '../../lib/adminLog';
@@ -969,6 +970,40 @@ const Categories = ({ categories, products, me }) => {
     }
   };
 
+  const sorted = sortCategories(categories);
+  const [moving, setMoving] = useState(false);
+
+  // Sırayı değiştir: yer değiştiren her kategori için ayrı log (kurallar gereği), hepsi tek batch'te
+  const move = async (index, dir) => {
+    const j = index + dir;
+    if (j < 0 || j >= sorted.length) return;
+    const next = [...sorted];
+    [next[index], next[j]] = [next[j], next[index]];
+    setMoving(true);
+    try {
+      const batch = writeBatch(db);
+      next.forEach((c, i) => {
+        if (c.sort_order === i) return;
+        const logRef = doc(collection(db, 'admin_logs'));
+        batch.set(logRef, {
+          actor_uid: auth.currentUser.uid,
+          actor_nick: me.nickname,
+          action: 'update',
+          target_type: 'category',
+          target_id: c.id,
+          summary: `Kategori sırası: ${c.name} → ${i + 1}. sıra`,
+          at: serverTimestamp(),
+        });
+        batch.update(doc(db, 'categories', c.id), { sort_order: i, last_log_id: logRef.id });
+      });
+      await batch.commit();
+    } catch (err) {
+      toast.error('Sıra kaydedilemedi: ' + (err.code || err.message));
+    } finally {
+      setMoving(false);
+    }
+  };
+
   const remove = async (c) => {
     const count = products.filter((p) => p.category_id === c.id).length;
     if (count) return toast.error(`Bu kategoride ${count} ürün var. Önce ürünleri taşı veya sil.`);
@@ -1017,11 +1052,16 @@ const Categories = ({ categories, products, me }) => {
       </form>
 
       <section className="adm-card">
-        <header className="adm-card-head"><h2>Kategoriler ({categories.length})</h2></header>
+        <header className="adm-card-head"><h2>Kategoriler ({categories.length})</h2><span className="adm-muted">▲▼ ile sitedeki sırayı değiştir</span></header>
         {categories.length ? (
           <div className="adm-cat-grid">
-            {categories.map((c) => (
+            {sorted.map((c, i) => (
               <div key={c.id} className={`adm-cat ${editId === c.id ? 'on' : ''}`}>
+                <div className="adm-plan-move adm-cat-move">
+                  <button type="button" onClick={() => move(i, -1)} disabled={moving || i === 0} aria-label="Yukarı" title="Yukarı taşı">▲</button>
+                  <span>{i + 1}</span>
+                  <button type="button" onClick={() => move(i, 1)} disabled={moving || i === sorted.length - 1} aria-label="Aşağı" title="Aşağı taşı">▼</button>
+                </div>
                 <div className="adm-cat-img">{c.image_url ? <img src={c.image_url} alt="" /> : <img src="/logo.webp" alt="" className="contain" />}</div>
                 <div className="adm-cat-body">
                   <strong>{c.name}</strong>

@@ -20,9 +20,13 @@ export const toDate = (value) => {
 
 const withId = (snap) => ({ id: snap.id, ...snap.data() });
 
+/** Kategoriler: önce yöneticinin verdiği sıra (sort_order), sonra ada göre */
+export const sortCategories = (list) =>
+  [...list].sort((a, b) => (a.sort_order ?? 1e9) - (b.sort_order ?? 1e9) || String(a.name).localeCompare(String(b.name), 'tr'));
+
 export const fetchCategories = async () => {
   const snap = await getDocs(query(collection(db, 'categories'), orderBy('name')));
-  return snap.docs.map(withId);
+  return sortCategories(snap.docs.map(withId));
 };
 
 export const fetchProducts = async () => {
