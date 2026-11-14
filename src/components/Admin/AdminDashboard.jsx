@@ -13,6 +13,8 @@ import {
 } from 'firebase/firestore';
 import {
   Megaphone,
+  Briefcase,
+  Cpu,
   LayoutDashboard,
   ShoppingBag,
   Package,
@@ -50,6 +52,8 @@ import { useKeyCounts } from './useKeyCounts';
 import LoginSettings from './LoginSettings';
 import DiscordSettings from './DiscordSettings';
 import AdminAnnouncements from './AdminAnnouncements';
+import AdminResellers from './AdminResellers';
+import AdminHwid from './AdminHwid';
 import './AdminDashboard.css';
 
 /* ------------------------------------------------------------------ */
@@ -522,7 +526,7 @@ const ProductForm = ({ initial, categories, onClose, me }) => {
     ...EMPTY_PRODUCT,
     ...initial,
     extra_images: initial?.extra_images || [],
-    plans: initial?.id ? getPlans(initial).map((x) => ({ ...x, price_usd: String(x.price_usd) })) : [],
+    plans: initial?.id ? getPlans(initial).map((x) => ({ ...x, price_usd: String(x.price_usd), reseller_price_usd: x.reseller_price_usd ? String(x.reseller_price_usd) : '' })) : [],
     featured_plan_id: initial?.featured_plan_id || '',
   }));
 
@@ -566,7 +570,12 @@ const ProductForm = ({ initial, categories, onClose, me }) => {
     if (!form.name.trim()) return toast.error('Ürün adı gerekli.');
     if (!form.category_id) return toast.error('Kategori seç.');
     const plans = form.plans
-      .map((pl) => ({ id: pl.id, label: pl.label.trim(), price_usd: Math.round((parseFloat(pl.price_usd) || 0) * 100) / 100 }))
+      .map((pl) => ({
+        id: pl.id,
+        label: pl.label.trim(),
+        price_usd: Math.round((parseFloat(pl.price_usd) || 0) * 100) / 100,
+        ...(parseFloat(pl.reseller_price_usd) > 0 ? { reseller_price_usd: Math.round(parseFloat(pl.reseller_price_usd) * 100) / 100 } : {}),
+      }))
       .filter((pl) => pl.label || pl.price_usd);
     if (!plans.length) return toast.error('En az bir plan ekle.');
     if (plans.some((pl) => !pl.label || !(pl.price_usd > 0))) return toast.error('Her planın adı ve $ fiyatı olmalı.');
@@ -586,6 +595,10 @@ const ProductForm = ({ initial, categories, onClose, me }) => {
       video_url: form.video_url.trim(),
       extra_images: form.extra_images,
       menu_image_url: form.menu_image_url || '',
+      loader_url: (form.loader_url || '').trim(),
+      loader_note: (form.loader_note || '').trim().slice(0, 500),
+      reseller_only: !!form.reseller_only,
+      reseller_enabled: form.reseller_enabled !== false,
       badge: (form.badge || '').trim().toUpperCase().slice(0, 18),
       status: form.status || 'undetected',
       is_available: !!form.is_available,
@@ -688,7 +701,7 @@ const ProductForm = ({ initial, categories, onClose, me }) => {
           </details>
 
           <div className="adm-field">
-            <span className="adm-label">Planlar — fiyatlar $ (USD)</span>
+            <span className="adm-label">Planlar — satış $ ve bayi B$ fiyatı (USD)</span>
             <div className="adm-plans-editor">
               {form.plans.map((pl, i) => (
                 <div key={pl.id} className="adm-plan-row">
@@ -700,6 +713,10 @@ const ProductForm = ({ initial, categories, onClose, me }) => {
                   <label className="adm-usd-input">
                     <span>$</span>
                     <input className="adm-input" type="number" min="0" step="0.01" inputMode="decimal" placeholder="0" value={pl.price_usd} onChange={(e) => setPlan(i, 'price_usd', e.target.value)} />
+                  </label>
+                  <label className="adm-usd-input reseller" title="Bayi fiyatı (boşsa satış fiyatı)">
+                    <span>B$</span>
+                    <input className="adm-input" type="number" min="0" step="0.01" inputMode="decimal" placeholder="bayi" value={pl.reseller_price_usd || ''} onChange={(e) => setPlan(i, 'reseller_price_usd', e.target.value)} />
                   </label>
                   <button
                     type="button"
@@ -746,6 +763,29 @@ const ProductForm = ({ initial, categories, onClose, me }) => {
           <label className="adm-field">
             <span className="adm-label">Video URL (YouTube / mp4)</span>
             <input className="adm-input" value={form.video_url} onChange={set('video_url')} placeholder="https://…" />
+          </label>
+
+          <div className="adm-grid-2">
+            <label className="adm-field">
+              <span className="adm-label">Loader indirme linki</span>
+              <input className="adm-input" value={form.loader_url || ''} onChange={set('loader_url')} placeholder="https://…" />
+            </label>
+            <label className="adm-field">
+              <span className="adm-label">Loader notu (opsiyonel)</span>
+              <input className="adm-input" value={form.loader_note || ''} onChange={set('loader_note')} placeholder="ör. Şifre: rgx / yönetici olarak çalıştır" maxLength={500} />
+            </label>
+          </div>
+          <span className="adm-muted adm-help">Loader linki, ürünü satın almış müşterilerin panelindeki “Loader” sekmesinde ve bayi panelinde görünür.</span>
+
+          <label className="adm-switch">
+            <input type="checkbox" checked={form.reseller_enabled !== false} onChange={(e) => setForm((f) => ({ ...f, reseller_enabled: e.target.checked }))} />
+            <span className="adm-switch-track"><span /></span>
+            Bayiler satabilsin
+          </label>
+          <label className="adm-switch">
+            <input type="checkbox" checked={!!form.reseller_only} onChange={(e) => setForm((f) => ({ ...f, reseller_only: e.target.checked }))} />
+            <span className="adm-switch-track"><span /></span>
+            Sadece bayilere (sitede satışta değilken bile bayiler çıkarabilsin)
           </label>
 
           <label className="adm-switch">
@@ -1466,7 +1506,7 @@ const ACTION_META = {
   delete: { label: 'Silme', tone: 'bad' },
   login: { label: 'Giriş', tone: 'muted' },
 };
-const TYPE_LABEL = { product: 'Ürün', category: 'Kategori', order: 'Sipariş', admin: 'Yönetici', session: 'Oturum', settings: 'Ayarlar', announcement: 'Duyuru' };
+const TYPE_LABEL = { product: 'Ürün', category: 'Kategori', order: 'Sipariş', admin: 'Yönetici', session: 'Oturum', settings: 'Ayarlar', announcement: 'Duyuru', reseller: 'Bayi', hwid: 'HWID' };
 
 const Logs = () => {
   const [logs, ready] = useCollection('admin_logs', 'at', 'desc', 500);
@@ -1543,6 +1583,8 @@ const NAV = [
   { id: 'products', label: 'Ürünler', icon: Package },
   { id: 'categories', label: 'Kategoriler', icon: FolderTree },
   { id: 'announcements', label: 'Duyurular', icon: Megaphone },
+  { id: 'resellers', label: 'Bayiler', icon: Briefcase },
+  { id: 'hwid', label: 'HWID istekleri', icon: Cpu },
   { id: 'payments', label: 'Ödemeler', icon: CreditCard },
   { id: 'admins', label: 'Yöneticiler', icon: UserCog },
   { id: 'logs', label: 'Kayıtlar', icon: ScrollText },
@@ -1627,6 +1669,8 @@ const AdminDashboard = ({ admin }) => {
           {view === 'payments' && <Payments orders={orders} />}
           {view === 'settings' && <SettingsView me={me} />}
           {view === 'announcements' && <AdminAnnouncements me={me} />}
+          {view === 'resellers' && <AdminResellers me={me} />}
+          {view === 'hwid' && <AdminHwid me={me} />}
         </div>
       </main>
     </div>

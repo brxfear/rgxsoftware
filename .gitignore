@@ -34,3 +34,6 @@ mitamers*
 firebase-debug.log
 firestore-debug.log
 ui-debug.log
+
+# Test bayi hesaplarının giriş bilgileri (paylaşma)
+test-resellers.local.txt

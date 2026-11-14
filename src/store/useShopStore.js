@@ -15,6 +15,7 @@ export const useShopStore = create((set, get) => ({
   authReady: false,
   discord: { invite_url: DEFAULT_DISCORD },
   announcements: null,
+  reseller: null, // giriş yapan kullanıcı bayiyse resellers/{uid} kaydı
 
   authOpen: false,
   cartOpen: false,
@@ -53,7 +54,14 @@ export const useShopStore = create((set, get) => ({
     }
   },
 
-  setUser: (user) => set({ user, authReady: true }),
+  setUser: (user) => {
+    set({ user, authReady: true, reseller: null });
+    if (user) {
+      getDoc(doc(db, 'resellers', user.uid))
+        .then((s) => get().user?.uid === user.uid && set({ reseller: s.exists() ? { uid: s.id, ...s.data() } : null }))
+        .catch(() => {});
+    }
+  },
 
   openAuth: () => set({ authOpen: true }),
   closeAuth: () => set({ authOpen: false }),

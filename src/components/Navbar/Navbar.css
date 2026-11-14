@@ -383,3 +383,4 @@
   .nav-link { padding: 8px 10px; }
   .nav-discord-pill span { display: none; }
 }
+.user-dropdown button.accent { color: var(--red-bright); font-weight: 700; }

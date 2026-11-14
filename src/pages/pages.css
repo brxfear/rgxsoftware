@@ -467,3 +467,14 @@ a.product-card .select-btn { pointer-events: none; }
 .ann-foot img { width: 22px; height: 22px; border-radius: 50%; }
 .ann-foot a { margin-left: auto; display: inline-flex; align-items: center; gap: 5px; color: #c9cdfb; text-decoration: none; font-weight: 600; }
 .ann-foot a:hover { color: #fff; }
+/* Loader / HWID (müşteri) */
+.ap-loader { flex-direction: row !important; align-items: center; gap: 14px !important; }
+.ap-loader img { width: 52px; height: 52px; border-radius: 13px; object-fit: cover; flex-shrink: 0; }
+.ap-loader-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.ap-loader-info span { font-size: 13px; color: var(--text-muted); }
+.acc-muted-inline { font-size: 13px; color: var(--text-muted); }
+.ap-hwid-form { display: flex; flex-direction: column; gap: 8px; }
+.ap-hwid-form .acc-btn { align-self: flex-start; margin-top: 6px; }
+.ap-hwid-key { font-family: ui-monospace, monospace; font-size: 13px; overflow-wrap: anywhere; margin-bottom: 6px; }
+.ap-hwid-note { font-size: 13px; color: #c8f5df; margin: 4px 0 6px; }
+@media (max-width: 560px) { .ap-loader { flex-wrap: wrap; } }

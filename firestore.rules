@@ -186,6 +186,39 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // ---- Bayi sistemi: para ve key işlemleri sadece sunucuda (Admin SDK) yapılır ----
+    match /resellers/{uid} {
+      allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
+      allow write: if false;
+    }
+    match /reseller_keys/{id} {
+      allow read: if isAdmin() || (signedIn() && resource.data.reseller_id == request.auth.uid);
+      // Bayi sadece kendi keyinin notunu (müşteri etiketi) değiştirebilir
+      allow update: if signedIn() && resource.data.reseller_id == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['note'])
+        && request.resource.data.note is string && request.resource.data.note.size() <= 120;
+      allow create, delete: if false;
+    }
+    match /reseller_tx/{id} {
+      allow read: if isAdmin() || (signedIn() && resource.data.reseller_id == request.auth.uid);
+      allow write: if false;
+    }
+
+    // HWID sıfırlama talepleri: müşteri/bayi kendi talebini açar ve görür, yönetici loglu yanıtlar.
+    match /hwid_requests/{id} {
+      allow read: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow create: if signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.key is string && request.resource.data.key.size() > 0 && request.resource.data.key.size() <= 300
+        && request.resource.data.reason is string && request.resource.data.reason.size() <= 500
+        && request.resource.data.source in ['customer', 'reseller']
+        && !('last_log_id' in request.resource.data)
+        && !('admin_note' in request.resource.data);
+      allow update: if isAdmin() && loggedWrite(id);
+      allow delete: if false;
+    }
+
     // Duyurular: herkes okur, yönetici loglu yazar/siler.
     match /announcements/{id} {
       allow read: if true;

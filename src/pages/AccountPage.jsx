@@ -12,7 +12,7 @@ import {
 } from 'firebase/auth';
 import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import {
-  LayoutDashboard, Package, KeyRound, MessageCircle, LifeBuoy, Shield, Settings, LogOut, Trash2, Eye, EyeOff,
+  LayoutDashboard, Package, KeyRound, MessageCircle, LifeBuoy, Shield, Settings, LogOut, Trash2, Eye, EyeOff, Download, Cpu,
   BadgeCheck, Store, RefreshCw, ShoppingBag, Wallet, CalendarCheck, Copy, Check, ExternalLink, LogIn, ArrowRight,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -24,6 +24,7 @@ import { usePageTitle } from '../lib/usePageTitle';
 import { useCartStore } from '../store/useCartStore';
 import { useShopStore, useDiscordUrl } from '../store/useShopStore';
 import OrderDelivery from '../components/Account/OrderDelivery';
+import { LoaderTab, HwidTab } from '../components/Account/LoaderHwid';
 import GoogleIcon from '../components/GoogleIcon';
 import { useT, planLabel } from '../i18n';
 import '../components/Account/AccountModal.css';
@@ -52,6 +53,8 @@ const TABS = [
   ['overview', LayoutDashboard],
   ['orders', Package],
   ['keys', KeyRound],
+  ['loader', Download],
+  ['hwid', Cpu],
   ['discord', MessageCircle],
   ['support', LifeBuoy],
   ['security', Shield],
@@ -399,7 +402,7 @@ const AccountPage = () => {
     setRefreshing(true);
     try {
       const snap = await getDocs(query(collection(db, 'orders'), where('user_id', '==', uid), orderBy('created_at', 'desc'), limit(100)));
-      setOrders(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      setOrders(snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((o) => o.kind !== 'reseller_topup'));
     } catch (err) {
       console.error(err);
       setOrders((o) => o || []);
@@ -479,6 +482,8 @@ const AccountPage = () => {
           {current === 'discord' && <DiscordTab />}
           {current === 'support' && <Support />}
           {current === 'security' && <Security user={user} />}
+          {current === 'loader' && <LoaderTab orders={orders} />}
+          {current === 'hwid' && <HwidTab user={user} orders={orders} />}
           {current === 'settings' && <SettingsTab user={user} onSaved={() => setVersion((v) => v + 1)} />}
         </section>
       </div>

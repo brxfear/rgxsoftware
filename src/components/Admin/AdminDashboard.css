@@ -584,3 +584,20 @@ select.adm-input option { background: #1a1214; }
 .adm-ann-list li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-radius: 12px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.07); }
 .adm-ann-list li > div:first-child { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-width: 0; }
 .adm-ann-actions { display: flex; gap: 6px; flex-shrink: 0; }
+/* Bayiler / HWID */
+.adm-row-click { cursor: pointer; }
+.adm-drawer-sm { max-width: 440px; }
+.adm-rs-detail { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; padding: 6px 0; }
+.adm-rs-detail h4 { display: flex; align-items: center; gap: 6px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin: 0 0 8px; }
+.adm-rs-detail ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.adm-rs-detail li { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 9px; background: rgba(255, 255, 255, 0.03); font-size: 12.5px; }
+.adm-rs-detail code { color: #fff; overflow-wrap: anywhere; }
+.adm-rs-detail .pos { color: #34d399; }
+.adm-rs-detail .neg { color: #ff8a8f; }
+.adm-hwid-list li { align-items: flex-start; }
+.adm-hwid-main { display: flex; flex-direction: column; gap: 8px; min-width: 0; flex: 1; }
+.adm-hwid-top { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.adm-hwid-key { display: flex; align-items: center; gap: 8px; }
+.adm-hwid-key code { font-size: 13px; overflow-wrap: anywhere; }
+.adm-plan-row .adm-usd-input.reseller span { color: #34d399; }
+@media (max-width: 800px) { .adm-rs-detail { grid-template-columns: 1fr; } }

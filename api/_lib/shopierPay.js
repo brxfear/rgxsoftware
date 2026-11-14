@@ -7,6 +7,7 @@ import process from 'node:process';
 import { FieldValue } from 'firebase-admin/firestore';
 import { shopierRest, simplifyOrder } from './shopierRest.js';
 import { paymentLog } from './firebaseAdmin.js';
+import { applyBalance } from './reseller.js';
 
 const COVER_FALLBACK = 'https://raw.githubusercontent.com/brxfear/rgxsoftware/main/public/media/shopier-cover.jpg';
 export const PENDING_TTL_MS = 2 * 60 * 60 * 1000; // ödenmemiş geçici ürünler 2 saat sonra temizlenir
@@ -58,14 +59,21 @@ export const settleShopierOrder = async (db, rawOrder, source) => {
     const settled = await db.runTransaction(async (tx) => {
       const snap = await tx.get(ref);
       if (snap.get('status') !== 'pending_payment') return false;
+      // Bayi bakiye yüklemesi: ödeme onaylanınca bakiye aynı işlemde artar (iki kez yüklenemez)
+      const isTopup = snap.get('kind') === 'reseller_topup';
+      const resRef = isTopup ? db.collection('resellers').doc(String(snap.get('user_id'))) : null;
+      const resSnap = resRef ? await tx.get(resRef) : null;
       // Tutar ve para birimi tutmuyorsa ödendi yapma, incelemeye bırak
       const expected = Number(snap.get('total_amount'));
       if (Math.abs(expected - o.total) > 0.01 || (snap.get('currency') && o.currency && snap.get('currency') !== o.currency)) {
         tx.update(ref, { status: 'payment_review', review_reason: `Shopier ${o.total} ${o.currency}, beklenen ${expected} ${snap.get('currency')}`, shopier_order_id: o.id });
         return 'review';
       }
+      if (isTopup && resSnap?.exists) {
+        applyBalance(tx, resRef, resSnap.get('balance_usd'), { amount: Number(snap.get('credit_usd')) || 0, type: 'topup', note: 'Shopier ile bakiye yükleme', ref: ref.id });
+      }
       tx.update(ref, {
-        status: 'paid',
+        status: isTopup && resSnap?.exists ? 'Completed' : 'paid',
         paid_at: FieldValue.serverTimestamp(),
         shopier_order_id: o.id,
         paid_amount: o.total,

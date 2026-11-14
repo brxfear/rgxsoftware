@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { toast } from 'react-hot-toast';
-import { ShoppingCart, LogIn, User, Package, LogOut, ChevronDown, KeyRound, Store, Star, HelpCircle, Workflow, Menu, X, LayoutDashboard, Activity, Megaphone, Info } from 'lucide-react';
+import { ShoppingCart, LogIn, User, Package, LogOut, ChevronDown, KeyRound, Store, Star, HelpCircle, Workflow, Menu, X, LayoutDashboard, Activity, Megaphone, Info, Briefcase } from 'lucide-react';
 import { hasUnread } from '../../lib/announcements';
 import { isUp, statusOf } from '../../lib/status';
 import { auth } from '../../lib/firebase';
@@ -39,6 +39,7 @@ const UserMenu = ({ user }) => {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const ref = useOutside(open, setOpen);
+  const isReseller = useShopStore((s) => !!s.reseller);
   const label = user.displayName?.split(' ')[0] || user.email?.split('@')[0] || t('nav.account');
   const go = (path) => {
     setOpen(false);
@@ -57,6 +58,7 @@ const UserMenu = ({ user }) => {
           <div className="user-dropdown-head">
             <strong>{user.displayName || label}</strong>
           </div>
+          {isReseller && <button role="menuitem" className="accent" onClick={() => go('/reseller')}><Briefcase size={15} /> {t('nav.resellerPanel')}</button>}
           <button role="menuitem" onClick={() => go('/account')}><LayoutDashboard size={15} /> {t('nav.panel')}</button>
           <button role="menuitem" onClick={() => go('/account/orders')}><Package size={15} /> {t('nav.orders')}</button>
           <button role="menuitem" onClick={() => go('/account/keys')}><KeyRound size={15} /> {t('nav.keys')}</button>

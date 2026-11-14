@@ -36,6 +36,7 @@ import './pages/pages.css';
 import './fx.css';
 
 const AccountPage = lazy(() => import('./pages/AccountPage'));
+const ResellerPage = lazy(() => import('./pages/reseller/ResellerPage'));
 const AdminGate = lazy(() => import('./components/Admin/AdminGate'));
 
 const Footer = () => {
@@ -200,6 +201,8 @@ function App() {
           <Route path="announcements" element={<AnnouncementsPage />} />
           <Route path="account" element={<AccountPage />} />
           <Route path="account/:tab" element={<AccountPage />} />
+          <Route path="reseller" element={<ResellerPage />} />
+          <Route path="reseller/:tab" element={<ResellerPage />} />
         </Route>
         <Route
           path="/admin"
