@@ -14,6 +14,9 @@ const fail = (res, err) => {
   if (err instanceof HttpError) return sendError(res, err);
   const status = err.status && err.status < 500 ? err.status : 500;
   if (status === 500) console.error('discord', err);
+  if (err.code === 50001 || err.code === 50013) {
+    return res.status(502).json({ error: 'Bot vouch kanalını göremiyor. Discord’da kanal ayarları → İzinler → RGX WEB SERVICES botuna “Kanalı Görüntüle” ve “Mesaj Geçmişini Oku” izni ver.' });
+  }
   return res.status(status === 401 || status === 403 ? 502 : status).json({ error: err.message || 'Sunucu hatası.' });
 };
 
