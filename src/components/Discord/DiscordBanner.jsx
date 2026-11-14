@@ -1,11 +1,11 @@
 import React from 'react';
 import { useT } from '../../i18n';
 import { MessageCircle, Users, Headphones } from 'lucide-react';
-
-const DISCORD_URL = 'https://discord.gg/rgxsoftware1';
+import { useDiscordUrl } from '../../store/useShopStore';
 
 const DiscordBanner = () => {
   const { t } = useT();
+  const DISCORD_URL = useDiscordUrl();
   return (
     <section className="section-discord">
       <div className="container">

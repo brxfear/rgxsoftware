@@ -186,6 +186,12 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Discord vouch kanalından bot ile çekilen müşteri yorumları: herkes okur, sadece sunucu yazar.
+    match /vouches/{id} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     match /carts/{uid}/items/{itemId} {
       allow read, write: if signedIn() && request.auth.uid == uid;
     }

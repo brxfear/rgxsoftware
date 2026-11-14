@@ -316,3 +316,49 @@
 @media (max-width: 480px) {
   .lang-switch button { min-width: 30px; padding: 0 6px; }
 }
+
+/* ---------- Yeni üst bar ---------- */
+.nav-brand { text-decoration: none; color: inherit; }
+.navbar-fixed-container { transition: top 0.25s ease; }
+.navbar-fixed-container.is-scrolled { top: 8px; }
+.navbar-fixed-container.is-scrolled .nav-inner {
+  background: linear-gradient(180deg, rgba(22, 15, 17, 0.92) 0%, rgba(12, 8, 9, 0.88) 100%);
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.08), 0 18px 40px -12px rgba(0, 0, 0, 0.75);
+}
+.nav-link svg { opacity: 0.75; }
+.nav-link.active svg { opacity: 1; color: var(--red-bright); }
+.nav-discord-pill {
+  display: inline-flex; align-items: center; gap: 7px; height: 38px; padding: 0 12px; border-radius: 10px;
+  color: #c9cdfb; font-size: 13px; font-weight: 700; text-decoration: none;
+  background: rgba(88, 101, 242, 0.12); border: 1px solid rgba(88, 101, 242, 0.32);
+  transition: background 0.2s, border-color 0.2s;
+}
+.nav-discord-pill:hover { background: rgba(88, 101, 242, 0.22); border-color: rgba(88, 101, 242, 0.55); color: #fff; }
+.user-letter {
+  width: 22px; height: 22px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 800; background: linear-gradient(135deg, #f0333c, #8f0f16);
+}
+.nav-burger {
+  display: none; width: 40px; height: 40px; border-radius: 11px; align-items: center; justify-content: center;
+  color: var(--text-main); background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.1); cursor: pointer;
+}
+.nav-mobile {
+  position: absolute; top: 70px; left: 12px; right: 12px; border-radius: 16px; padding: 8px;
+  background: rgba(16, 11, 12, 0.97); box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.9);
+  display: flex; flex-direction: column; gap: 2px; animation: nav-drop 0.18s ease;
+}
+.nav-mobile a {
+  display: flex; align-items: center; gap: 12px; padding: 13px 14px; border-radius: 11px;
+  color: var(--text-main); text-decoration: none; font-weight: 600; font-size: 15px;
+}
+.nav-mobile a:hover { background: rgba(255, 255, 255, 0.06); }
+.nav-mobile a svg { color: var(--red-bright); }
+@keyframes nav-drop { from { opacity: 0; transform: translateY(-6px); } }
+@media (max-width: 900px) {
+  .nav-burger { display: inline-flex; }
+  .nav-discord-pill { display: none; }
+}
+@media (max-width: 560px) {
+  .auth-btn span { display: none; }
+  .nav-actions { gap: 6px; }
+}

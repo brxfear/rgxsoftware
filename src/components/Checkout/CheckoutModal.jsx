@@ -6,12 +6,12 @@ import { db } from '../../lib/firebase';
 import { useMoney, loadUsdTry, usdToTry, fmtTry } from '../../lib/currency';
 import { useT, planLabel } from '../../i18n';
 import { useCartStore } from '../../store/useCartStore';
+import { useDiscordUrl } from '../../store/useShopStore';
 import { triggerConfetti } from '../../utils/celebration';
 import { rememberGuestOrder } from '../../lib/guestOrders';
 import { openPaymentWindow, redirectSameTab, savePendingPayment, clearPendingPayment } from '../../lib/shopierWindow';
 import './CheckoutModal.css';
 
-const DISCORD_URL = 'https://discord.gg/rgxsoftware1';
 
 const CopyRow = ({ label, value }) => {
   const [copied, setCopied] = useState(false);
@@ -41,11 +41,12 @@ const CopyRow = ({ label, value }) => {
 const CheckoutModal = ({ isOpen, onClose, totalUsd, items = [], user, onComplete, fromCart = true }) => {
   const { t, lang } = useT();
   const { fmt } = useMoney();
+  const discordUrl = useDiscordUrl();
   const [step, setStep] = useState('info'); // info → method → (iban-done | shopier → paid / expired)
   const [tryRate, setTryRate] = useState(null);
   const [shopier, setShopier] = useState(null); // { url, orderId, key, opened }
   const popupRef = useRef(null);
-  const [info, setInfo] = useState({ name: '', email: '', phone: '' });
+  const [info, setInfo] = useState({ name: '', email: '' });
   const [method, setMethod] = useState('shopier');
   const [busy, setBusy] = useState(false);
   const [bank, setBank] = useState(null);
@@ -239,10 +240,6 @@ const CheckoutModal = ({ isOpen, onClose, totalUsd, items = [], user, onComplete
               <span>{t('checkout.email')} <small>{t('checkout.emailHint')}</small></span>
               <input type="email" value={info.email} onChange={set('email')} autoComplete="email" placeholder="ornek@gmail.com" required />
             </label>
-            <label className="co-field">
-              <span>{t('checkout.phone')}</span>
-              <input type="tel" value={info.phone} onChange={set('phone')} autoComplete="tel" placeholder={t('checkout.phonePh')} required />
-            </label>
             <button className="co-cta" type="submit">{t('checkout.next')} <ArrowRight size={16} /></button>
           </form>
         )}
@@ -302,7 +299,7 @@ const CheckoutModal = ({ isOpen, onClose, totalUsd, items = [], user, onComplete
             <p className="co-note">
               {(lang === 'tr' && bank?.iban_note) || t('checkout.bankDefault', { amount: ibanAmount ?? fmt(totalUsd) })}
             </p>
-            <a className="co-cta" href={DISCORD_URL} target="_blank" rel="noopener noreferrer">
+            <a className="co-cta" href={discordUrl} target="_blank" rel="noopener noreferrer">
               <MessageCircle size={16} /> {t('checkout.ticket')}
             </a>
           </div>

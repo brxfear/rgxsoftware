@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { useT } from '../../i18n';
 import { HelpCircle, ChevronDown } from 'lucide-react';
+import { useDiscordUrl } from '../../store/useShopStore';
 
 
 const FAQSection = () => {
   const { t } = useT();
+  const discordUrl = useDiscordUrl();
   const faqs = t('faq.items');
   const [openIndex, setOpenIndex] = useState(0);
 
@@ -29,7 +31,7 @@ const FAQSection = () => {
               <h4>{t('faq.boxTitle')}</h4>
               <p>{t('faq.boxText')}</p>
               <a 
-                href="https://discord.gg/rgxsoftware1" 
+                href={discordUrl} 
                 target="_blank" 
                 rel="noopener noreferrer" 
                 className="btn-primary support-btn"

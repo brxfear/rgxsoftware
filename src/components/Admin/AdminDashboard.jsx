@@ -47,6 +47,7 @@ import { loggedWrite, adminIdForEmail, logAdminLogin } from '../../lib/adminLog'
 import { KeyStockDrawer, DeliveryPanel } from './Fulfillment';
 import { useKeyCounts } from './useKeyCounts';
 import LoginSettings from './LoginSettings';
+import DiscordSettings from './DiscordSettings';
 import './AdminDashboard.css';
 
 /* ------------------------------------------------------------------ */
@@ -1410,7 +1411,10 @@ const SettingsView = ({ me }) => {
         </div>
       </form>
 
-      <ShopierConnection />
+      <div className="adm-stack">
+        <ShopierConnection />
+        <DiscordSettings me={me} />
+      </div>
     </div>
   );
 };

@@ -1,23 +1,27 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { useT, localized } from '../../i18n';
-import { ChevronRight, Star } from 'lucide-react';
+import { ArrowRight, Star } from 'lucide-react';
 import { getPlans, getStartPrice } from '../../lib/db';
 import Price from '../Price';
 import './ProductCard.css';
 
-const ProductCard = ({ product, onClick, highlight = false }) => {
+/** Ürün kartı: tıklanınca ürün sayfasına (/products/oyun/urun) gider. */
+const ProductCard = ({ product, to, categoryName, highlight = false }) => {
   const { t, lang } = useT();
   const planCount = getPlans(product).length;
   const startPrice = getStartPrice(product);
+  const image = product.image_url || product.image;
 
   return (
-    <div className="product-card glass-card" onClick={() => onClick(product)}>
+    <Link to={to} className={`product-card glass-card ${highlight ? 'is-highlight' : ''}`}>
       <div className="product-card-top">
         <div className="product-image-wrap">
-          <img 
-            src={product.image || product.image_url || '/logo.webp'} 
-            alt={product.name} 
-            className={`product-img ${product.image || product.image_url ? '' : 'product-img-fallback'}`}
+          <img
+            src={image || '/logo.webp'}
+            alt={product.name}
+            loading="lazy"
+            className={`product-img ${image ? '' : 'product-img-fallback'}`}
             onError={(e) => {
               e.currentTarget.onerror = null;
               e.currentTarget.src = '/logo.webp';
@@ -36,7 +40,7 @@ const ProductCard = ({ product, onClick, highlight = false }) => {
 
       <div className="product-card-body">
         <div className="product-meta">
-          <span className="product-category-tag">{product.category_name || t('card.fallbackCat')}</span>
+          <span className="product-category-tag">{categoryName || t('card.fallbackCat')}</span>
           <span className="product-features-count">{t('card.plans', { n: planCount })}</span>
         </div>
 
@@ -48,20 +52,13 @@ const ProductCard = ({ product, onClick, highlight = false }) => {
             <span className="price-label">{t('card.from')}</span>
             <Price usd={startPrice} className="price-value" />
           </div>
-
-          <button 
-            className="select-btn"
-            onClick={(e) => {
-              e.stopPropagation();
-              onClick(product);
-            }}
-          >
+          <span className="select-btn">
             <span>{t('card.view')}</span>
-            <ChevronRight size={16} />
-          </button>
+            <ArrowRight size={15} />
+          </span>
         </div>
       </div>
-    </div>
+    </Link>
   );
 };
 
