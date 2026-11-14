@@ -138,6 +138,52 @@ export default async function handler(req, res) {
     /* ================= Bayi ================= */
     const user = await requireUser(req);
 
+    // Herkes kendi bayiliğini açabilir (yönetici Ayarlar'dan kapatabilir). Bakiye 0 ile başlar;
+    // key çıkarmak için önce bakiye yüklemek gerekir. Varsayılan limit/indirim settings/reseller'dan gelir.
+    if (action === 'signup' && req.method === 'GET') {
+      const s = (await db.collection('settings').doc('reseller').get()).data() || {};
+      const exists = (await db.collection('resellers').doc(user.uid).get()).exists;
+      return res.status(200).json({ open: s.signup_open !== false, exists, rules: s.rules || '' });
+    }
+    if (action === 'signup' && req.method === 'POST') {
+      const s = (await db.collection('settings').doc('reseller').get()).data() || {};
+      if (s.signup_open === false) throw new HttpError(403, 'Bayi başvuruları şu an kapalı.');
+      const b = body(req);
+      const name = String(b.display_name || '').trim().replace(/\s+/g, ' ').slice(0, 40);
+      if (name.length < 2) throw new HttpError(400, 'Bayi adı en az 2 karakter olmalı.');
+      if (!b.accept_rules) throw new HttpError(400, 'Bayi kurallarını kabul etmelisin.');
+      const ref = db.collection('resellers').doc(user.uid);
+      await db.runTransaction(async (tx) => {
+        if ((await tx.get(ref)).exists) throw new HttpError(409, 'Zaten bayi hesabın var.');
+        tx.set(ref, {
+          email: user.email || '',
+          display_name: name,
+          status: 'active',
+          balance_usd: 0,
+          discount_pct: Math.min(90, Math.max(0, Number(s.default_discount_pct) || 0)),
+          daily_limit: int(s.default_daily_limit ?? 20),
+          monthly_limit: int(s.default_monthly_limit ?? 300),
+          usage: {},
+          total_keys: 0,
+          total_spent_usd: 0,
+          notes: '',
+          self_signup: true,
+          created_at: FieldValue.serverTimestamp(),
+          created_by: 'self',
+        });
+      });
+      await db.collection('admin_logs').add({
+        actor_uid: user.uid,
+        actor_nick: `bayi:${name}`,
+        action: 'create',
+        target_type: 'reseller',
+        target_id: user.uid,
+        summary: `Yeni bayi kaydı (kendi oluşturdu): ${name}`,
+        at: FieldValue.serverTimestamp(),
+      });
+      return res.status(200).json({ ok: true });
+    }
+
     if (action === 'me' && req.method === 'GET') {
       const { data: r } = await requireReseller(db, user.uid);
       const [prods, cats, setSnap] = await Promise.all([

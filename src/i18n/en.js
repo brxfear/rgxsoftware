@@ -15,6 +15,7 @@ const en = {
     langLabel: 'Language',
     panel: 'Dashboard',
     resellerPanel: 'Reseller panel',
+    becomeReseller: 'Become a reseller',
     statusLink: 'Status',
     announcements: 'News',
     info: 'Info',
@@ -110,7 +111,7 @@ const en = {
     join: 'Join Discord',
     widget: 'Join server',
   },
-  footer: { tagline: 'Private software, fast delivery and 24/7 support.', products: 'Products', how: 'How it works', reviews: 'Reviews', faq: 'FAQ', rights: 'All rights reserved.' },
+  footer: { reseller: 'Reseller', tagline: 'Private software, fast delivery and 24/7 support.', products: 'Products', how: 'How it works', reviews: 'Reviews', faq: 'FAQ', rights: 'All rights reserved.' },
   modal: {
     from: 'From',
     popular: 'Popular',

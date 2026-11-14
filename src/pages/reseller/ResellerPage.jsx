@@ -47,7 +47,10 @@ const L = {
     notResellerSub: 'Bayi olmak istiyorsan Discord’dan bize yaz.', suspended: 'Bayi hesabın askıya alındı. Destekle iletişime geç.',
     logout: 'Çıkış yap', memberSince: 'Bayi: {date}', totalKeys: 'Toplam key', totalSpent: 'Toplam harcama', loader: 'Loader',
     allUp: 'Tüm ürünler aktif', someDown: '{n} üründe bakım var',
-  },
+    signupTitle: 'RGX bayisi ol', signupSub: 'Bayi hesabını hemen aç: bakiye yükle, keyleri bayi fiyatıyla çıkar, kendi müşterilerine sat.',
+    signupPerks: ['Satış fiyatının altında bayi fiyatları', 'Anında key çıkarma, stok ve limitler panelde', 'Shopier ile kartla bakiye yükleme', 'HWID reset ve destek tek yerden'],
+    signupName: 'Bayi adın', signupNamePh: 'ör. Mağaza ya da Discord adın', signupAccept: 'Bayi kurallarını okudum ve kabul ediyorum.',
+    signupBtn: 'Bayiliğimi oluştur', signupDone: 'Bayi hesabın açıldı!', signupClosed: 'Bayi başvuruları şu an kapalı. Bilgi için Discord’dan yazabilirsin.',  },
   en: {
     title: 'Reseller panel', sell: 'Sell', money: 'Money', help: 'Help', account: 'Account',
     dashboard: 'Dashboard', products: 'Products & prices', generate: 'Generate', licenses: 'Licenses', wallet: 'Wallet',
@@ -74,7 +77,10 @@ const L = {
     notResellerSub: 'Want to become a reseller? Message us on Discord.', suspended: 'Your reseller account is suspended. Contact support.',
     logout: 'Sign out', memberSince: 'Reseller since {date}', totalKeys: 'Total keys', totalSpent: 'Total spent', loader: 'Loader',
     allUp: 'All products online', someDown: '{n} products under maintenance',
-  },
+    signupTitle: 'Become an RGX reseller', signupSub: 'Open your reseller account now: top up, generate keys at reseller prices and sell to your own customers.',
+    signupPerks: ['Reseller prices below retail', 'Instant key generation, stock and limits in your panel', 'Top up by card via Shopier', 'HWID resets and support in one place'],
+    signupName: 'Reseller name', signupNamePh: 'e.g. your shop or Discord name', signupAccept: 'I have read and accept the reseller rules.',
+    signupBtn: 'Create my reseller account', signupDone: 'Your reseller account is ready!', signupClosed: 'Reseller sign-ups are closed right now. Message us on Discord.',  },
 };
 
 const NAV = [
@@ -177,6 +183,15 @@ const ResellerPage = () => {
       </div>
     );
   }
+  if (err && err.status === 403 && !/askı|suspend/i.test(err.message)) {
+    return (
+      <Signup
+        s={s}
+        discordUrl={discordUrl}
+        onDone={() => api('GET', 'me').then((d) => { setMe(d); setErr(null); useShopStore.setState({ reseller: { uid: user.uid } }); }).catch(setErr)}
+      />
+    );
+  }
   if (err) {
     return (
       <div className="page container">
@@ -246,8 +261,72 @@ const ResellerPage = () => {
   );
 };
 
-/* ---------------- Panel ---------------- */
-const Dashboard = ({ s, f, me, r, keys, go }) => {
+/* ---------------- Bayi ol ---------------- */
+const Signup = ({ s, discordUrl, onDone }) => {
+  const user = useShopStore((st) => st.user);
+  const [info, setInfo] = useState(null);
+  const [name, setName] = useState(user?.displayName || '');
+  const [accept, setAccept] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    api('GET', 'signup').then(setInfo).catch(() => setInfo({ open: false }));
+  }, []);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setBusy(true);
+    try {
+      await api('POST', 'signup', { display_name: name, accept_rules: accept });
+      toast.success(s.signupDone);
+      onDone();
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="page container">
+      <div className="rs-signup">
+        <div className="rs-signup-intro">
+          <span className="rs-eyebrow">{s.reseller}</span>
+          <h1>{s.signupTitle}</h1>
+          <p>{s.signupSub}</p>
+          <ul>
+            {s.signupPerks.map((x) => <li key={x}><ShieldCheck size={15} /> {x}</li>)}
+          </ul>
+        </div>
+        {info === null ? (
+          <div className="rs-card"><Loader2 className="spin" size={18} /></div>
+        ) : !info.open ? (
+          <div className="rs-card">
+            <p>{s.signupClosed}</p>
+            <a className="rs-btn rs-btn-red" href={discordUrl} target="_blank" rel="noopener noreferrer"><MessageCircle size={15} /> Discord</a>
+          </div>
+        ) : (
+          <form className="rs-card rs-gen" onSubmit={submit}>
+            <label className="rs-field">
+              <span>{s.signupName}</span>
+              <input value={name} maxLength={40} minLength={2} required onChange={(e) => setName(e.target.value)} placeholder={s.signupNamePh} />
+            </label>
+            {info.rules && <div className="rs-signup-rules">{info.rules}</div>}
+            <label className="rs-check">
+              <input type="checkbox" checked={accept} onChange={(e) => setAccept(e.target.checked)} />
+              <span>{s.signupAccept}</span>
+            </label>
+            <button className="rs-btn rs-btn-red rs-btn-lg" disabled={busy || !accept || name.trim().length < 2}>
+              {busy ? <Loader2 size={16} className="spin" /> : <Sparkles size={16} />} {s.signupBtn}
+            </button>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+};
+
+/* ---------------- Panel ---------------- */const Dashboard = ({ s, f, me, r, keys, go }) => {
   const { lang } = useT();
   const [now] = useState(() => Date.now());
   const hour = new Date(now).getHours();

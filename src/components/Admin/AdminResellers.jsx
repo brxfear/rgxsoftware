@@ -198,7 +198,7 @@ const ResellerSettings = ({ me }) => {
   useEffect(() => {
     getDoc(doc(db, 'settings', 'reseller')).then((s) => {
       const d = s.exists() ? s.data() : {};
-      setForm({ rules: d.rules || '', guide: d.guide || '', min_topup_usd: d.min_topup_usd ?? 5 });
+      setForm({ rules: d.rules || '', guide: d.guide || '', min_topup_usd: d.min_topup_usd ?? 5, signup_open: d.signup_open !== false, default_daily_limit: d.default_daily_limit ?? 20, default_monthly_limit: d.default_monthly_limit ?? 300, default_discount_pct: d.default_discount_pct ?? 0 });
     });
   }, []);
   if (!form) return null;
@@ -206,7 +206,18 @@ const ResellerSettings = ({ me }) => {
     e.preventDefault();
     setSaving(true);
     try {
-      await loggedWrite({ me, mode: 'set', collectionName: 'settings', id: 'reseller', targetType: 'settings', action: 'update', data: { rules: form.rules, guide: form.guide, min_topup_usd: Math.max(1, Number(form.min_topup_usd) || 5), updated_at: serverTimestamp() }, summary: 'Bayi kuralları / rehberi güncellendi' });
+      await loggedWrite({ me, mode: 'set', collectionName: 'settings', id: 'reseller', targetType: 'settings', action: 'update', data: {
+          rules: form.rules,
+          guide: form.guide,
+          min_topup_usd: Math.max(1, Number(form.min_topup_usd) || 5),
+          signup_open: !!form.signup_open,
+          default_daily_limit: Math.max(0, parseInt(form.default_daily_limit, 10) || 0),
+          default_monthly_limit: Math.max(0, parseInt(form.default_monthly_limit, 10) || 0),
+          default_discount_pct: Math.min(90, Math.max(0, Number(form.default_discount_pct) || 0)),
+          updated_at: serverTimestamp(),
+        },
+        summary: `Bayi ayarları güncellendi (başvuru ${form.signup_open ? 'açık' : 'kapalı'}, varsayılan günlük ${form.default_daily_limit || '∞'} / aylık ${form.default_monthly_limit || '∞'})`,
+      });
       toast.success('Kaydedildi');
     } catch (err) {
       toast.error(err.code || err.message);
@@ -216,7 +227,27 @@ const ResellerSettings = ({ me }) => {
   };
   return (
     <form className="adm-card adm-card-pad" onSubmit={save}>
-      <h2 className="adm-card-title">Bayi paneli metinleri</h2>
+      <h2 className="adm-card-title">Bayilik ayarları</h2>
+      <label className="adm-switch">
+        <input type="checkbox" checked={form.signup_open} onChange={(e) => setForm((x) => ({ ...x, signup_open: e.target.checked }))} />
+        <span className="adm-switch-track"><span /></span>
+        Herkes bayilik açabilsin (sitede /reseller → “Bayiliğimi oluştur”)
+      </label>
+      <div className="adm-grid-2">
+        <label className="adm-field">
+          <span className="adm-label">Yeni bayi: günlük key limiti (0 = sınırsız)</span>
+          <input className="adm-input" type="number" min={0} value={form.default_daily_limit} onChange={(e) => setForm((x) => ({ ...x, default_daily_limit: e.target.value }))} />
+        </label>
+        <label className="adm-field">
+          <span className="adm-label">Yeni bayi: aylık key limiti (0 = sınırsız)</span>
+          <input className="adm-input" type="number" min={0} value={form.default_monthly_limit} onChange={(e) => setForm((x) => ({ ...x, default_monthly_limit: e.target.value }))} />
+        </label>
+      </div>
+      <label className="adm-field">
+        <span className="adm-label">Yeni bayi: ek indirim (%)</span>
+        <input className="adm-input" type="number" min={0} max={90} value={form.default_discount_pct} onChange={(e) => setForm((x) => ({ ...x, default_discount_pct: e.target.value }))} />
+      </label>
+      <p className="adm-muted adm-help">Kendi açılan bayiler 0 bakiye ile başlar; key çıkarmak için önce bakiye yüklemeleri gerekir. İstediğin bayiyi listeden askıya alabilir, limitini değiştirebilirsin.</p>
       <label className="adm-field">
         <span className="adm-label">Bayi kuralları</span>
         <textarea className="adm-input" rows={6} value={form.rules} onChange={(e) => setForm((x) => ({ ...x, rules: e.target.value }))} placeholder="- Keyleri sadece kendi müşterilerine sat&#10;- Fiyatların sitedeki fiyatın altına inmesin…" />
@@ -278,7 +309,7 @@ const AdminResellers = ({ me }) => {
                   return (
                     <React.Fragment key={r.uid}>
                       <tr className="adm-row-click" onClick={() => setOpen(open === r.uid ? null : r.uid)}>
-                        <td><strong>{r.display_name}</strong>{r.is_test && <> <span className="adm-pill adm-pill-info">TEST</span></>}<br /><small className="adm-muted">{r.email}</small></td>
+                        <td><strong>{r.display_name}</strong>{r.self_signup && <> <span className="adm-pill adm-pill-muted">kendi açtı</span></>}{r.is_test && <> <span className="adm-pill adm-pill-info">TEST</span></>}<br /><small className="adm-muted">{r.email}</small></td>
                         <td><span className={`adm-pill adm-pill-${r.status === 'active' ? 'ok' : 'bad'}`}>{r.status === 'active' ? 'Aktif' : 'Askıda'}</span></td>
                         <td><strong>{usd(r.balance_usd)}</strong></td>
                         <td>{day}{r.daily_limit ? ` / ${r.daily_limit}` : ' / ∞'}</td>

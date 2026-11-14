@@ -15,6 +15,7 @@ const tr = {
     langLabel: 'Dil',
     panel: 'Müşteri paneli',
     resellerPanel: 'Bayi paneli',
+    becomeReseller: 'Bayi ol',
     statusLink: 'Durum',
     announcements: 'Duyurular',
     info: 'Bilgi',
@@ -110,7 +111,7 @@ const tr = {
     join: "Discord'a katıl",
     widget: 'Sunucuya katıl',
   },
-  footer: { tagline: 'Private yazılımlar, hızlı teslimat ve 7/24 Türkçe destek.', products: 'Ürünler', how: 'Nasıl çalışır', reviews: 'Yorumlar', faq: 'SSS', rights: 'Tüm hakları saklıdır.' },
+  footer: { reseller: 'Bayilik', tagline: 'Private yazılımlar, hızlı teslimat ve 7/24 Türkçe destek.', products: 'Ürünler', how: 'Nasıl çalışır', reviews: 'Yorumlar', faq: 'SSS', rights: 'Tüm hakları saklıdır.' },
   modal: {
     from: 'Başlangıç',
     popular: 'Popüler',

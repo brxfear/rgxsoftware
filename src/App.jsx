@@ -56,6 +56,7 @@ const Footer = () => {
           <Link to="/products">{t('footer.products')}</Link>
           <Link to="/#how-it-works">{t('footer.how')}</Link>
           <Link to="/reviews">{t('footer.reviews')}</Link>
+          <Link to="/reseller">{t('footer.reseller')}</Link>
           <Link to="/#faq">{t('footer.faq')}</Link>
           <a href={discordUrl} target="_blank" rel="noopener noreferrer">Discord</a>
         </nav>

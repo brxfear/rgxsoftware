@@ -93,7 +93,7 @@ service cloud.firestore {
         && request.resource.data.actor_uid == request.auth.uid
         && request.resource.data.actor_nick == myNick()
         && request.resource.data.action in ['create', 'update', 'delete', 'status', 'login']
-        && request.resource.data.target_type in ['product', 'category', 'order', 'admin', 'session', 'settings', 'key']
+        && request.resource.data.target_type in ['product', 'category', 'order', 'admin', 'session', 'settings', 'key', 'announcement', 'hwid', 'reseller']
         && request.resource.data.target_id is string
         && request.resource.data.summary is string
         && request.resource.data.summary.size() <= 500

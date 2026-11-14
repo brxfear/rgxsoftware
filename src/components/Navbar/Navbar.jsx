@@ -58,7 +58,7 @@ const UserMenu = ({ user }) => {
           <div className="user-dropdown-head">
             <strong>{user.displayName || label}</strong>
           </div>
-          {isReseller && <button role="menuitem" className="accent" onClick={() => go('/reseller')}><Briefcase size={15} /> {t('nav.resellerPanel')}</button>}
+          <button role="menuitem" className="accent" onClick={() => go('/reseller')}><Briefcase size={15} /> {isReseller ? t('nav.resellerPanel') : t('nav.becomeReseller')}</button>
           <button role="menuitem" onClick={() => go('/account')}><LayoutDashboard size={15} /> {t('nav.panel')}</button>
           <button role="menuitem" onClick={() => go('/account/orders')}><Package size={15} /> {t('nav.orders')}</button>
           <button role="menuitem" onClick={() => go('/account/keys')}><KeyRound size={15} /> {t('nav.keys')}</button>
