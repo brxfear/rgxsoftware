@@ -11,6 +11,8 @@ import OrderLookup from './components/Account/OrderLookup';
 import PendingPaymentWatcher from './components/Checkout/PendingPaymentWatcher';
 import SmokeTrail from './components/Effects/SmokeTrail';
 import CursorDot from './components/Effects/CursorDot';
+import StarField from './components/Effects/StarField';
+import LiveFx from './components/Effects/LiveFx';
 
 import HomePage from './pages/HomePage';
 import ShopPage from './pages/ShopPage';
@@ -31,6 +33,7 @@ import { useT, translate } from './i18n';
 import './App.css';
 import './brand.css';
 import './pages/pages.css';
+import './fx.css';
 
 const AccountPage = lazy(() => import('./pages/AccountPage'));
 const AdminGate = lazy(() => import('./components/Admin/AdminGate'));
@@ -82,6 +85,16 @@ const ScrollManager = () => {
   return null;
 };
 
+/** Sayfa değişince içerik yumuşakça belirir */
+const PageFade = () => {
+  const { pathname } = useLocation();
+  return (
+    <div key={pathname} className="page-fade">
+      <Outlet />
+    </div>
+  );
+};
+
 function Shell() {
   const { lang } = useT();
   const user = useShopStore((s) => s.user);
@@ -128,14 +141,16 @@ function Shell() {
 
   return (
     <div className="main-wrapper">
+      <StarField />
       <SmokeTrail />
       <CursorDot />
+      <LiveFx />
       <ScrollManager />
       <Navbar />
 
       <main>
         <Suspense fallback={<div className="page-loading" />}>
-          <Outlet />
+          <PageFade />
         </Suspense>
       </main>
 

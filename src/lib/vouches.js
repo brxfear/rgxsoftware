@@ -15,3 +15,7 @@ export const requestVouchSync = () =>
 
 /** Görsel: Discord bağlantıları süreli olduğu için sunucu üzerinden açılır. */
 export const vouchImageUrl = (vouchId, index) => `/api/discord?action=image&id=${encodeURIComponent(vouchId)}&i=${index}`;
+export const announcementImageUrl = (id, index) => `/api/discord?action=image&c=a&id=${encodeURIComponent(id)}&i=${index}`;
+
+/** Eski kayıtlardaki ham Discord kanal bağlantılarını gizler (yeni eşitlemede sunucu #kanal-adı yazar). */
+export const cleanVouchText = (s = '') => String(s).replace(/https?:\/\/(?:ptb\.|canary\.)?discord(?:app)?\.com\/channels\/[\d/]+/g, '#kanal').replace(/\s+\+\s+#kanal/g, ' #kanal').trim();

@@ -132,7 +132,7 @@ const Navbar = () => {
 
   const announcements = useShopStore((s) => s.announcements);
   const allUp = useShopStore((s) => s.products.every((p) => isUp(statusOf(p))));
-  const unread = pathname !== '/announcements' && hasUnread(announcements);
+  const unread = pathname !== '/announcements' && hasUnread(announcements?.filter((a) => !a.hidden));
 
   const links = [
     { to: '/products', label: t('nav.products'), icon: Store, match: (p) => p.startsWith('/products') },

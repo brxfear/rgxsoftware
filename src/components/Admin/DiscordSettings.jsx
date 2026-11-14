@@ -22,7 +22,7 @@ const INVITE_RE = /^https:\/\/(discord\.gg|discord\.com\/invite)\/[\w-]+\/?$/i;
 
 const DiscordSettings = ({ me }) => {
   const [current, setCurrent] = useState(null);
-  const [form, setForm] = useState({ invite_url: '', vouch_channel_id: '' });
+  const [form, setForm] = useState({ invite_url: '', vouch_channel_id: '', announce_channel_id: '' });
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState({ loading: true, data: null, error: null });
   const [syncing, setSyncing] = useState(false);
@@ -41,7 +41,7 @@ const DiscordSettings = ({ me }) => {
       .then((s) => {
         const d = s.exists() ? s.data() : {};
         setCurrent(d);
-        setForm({ invite_url: d.invite_url || 'https://discord.gg/rgxsoftware1', vouch_channel_id: d.vouch_channel_id || '' });
+        setForm({ invite_url: d.invite_url || 'https://discord.gg/rgxsoftware1', vouch_channel_id: d.vouch_channel_id || '', announce_channel_id: d.announce_channel_id || '' });
       })
       .catch((err) => toast.error('Discord ayarları okunamadı: ' + err.code));
     loadStatus();
@@ -53,16 +53,18 @@ const DiscordSettings = ({ me }) => {
     e.preventDefault();
     const invite = form.invite_url.trim();
     const channel = form.vouch_channel_id.trim();
+    const annChannel = form.announce_channel_id.trim();
     if (!INVITE_RE.test(invite)) return toast.error('Davet linki https://discord.gg/… biçiminde olmalı.');
-    if (channel && !/^\d{15,25}$/.test(channel)) return toast.error('Kanal kimliği sadece rakamlardan oluşur.');
+    if ([channel, annChannel].some((c) => c && !/^\d{15,25}$/.test(c))) return toast.error('Kanal kimliği sadece rakamlardan oluşur.');
     const changed = [];
     if (invite !== (current.invite_url || '')) changed.push('davet linki');
     if (channel !== (current.vouch_channel_id || '')) changed.push('vouch kanalı');
+    if (annChannel !== (current.announce_channel_id || '')) changed.push('duyuru kanalı');
     if (!changed.length) return toast('Değişiklik yok');
     setSaving(true);
     try {
       const { last_log_id: _l, updated_at: _u, ...rest } = current;
-      const data = { ...rest, invite_url: invite, vouch_channel_id: channel, updated_at: serverTimestamp() };
+      const data = { ...rest, invite_url: invite, vouch_channel_id: channel, announce_channel_id: annChannel, updated_at: serverTimestamp() };
       await loggedWrite({ me, mode: 'set', collectionName: 'settings', id: 'discord', targetType: 'settings', action: 'update', data, summary: `Discord ayarları güncellendi (${changed.join(', ')})` });
       setCurrent(data);
       useShopStore.setState((s) => ({ discord: { ...s.discord, ...data } }));
@@ -79,7 +81,7 @@ const DiscordSettings = ({ me }) => {
     setSyncing(true);
     try {
       const r = await api('POST', '/api/discord?action=sync', { full });
-      toast.success(`${r.added} yorum işlendi${r.removed ? `, ${r.removed} kaldırıldı` : ''}`);
+      toast.success(`${r.vouches?.added || 0} yorum, ${r.announcements?.added || 0} duyuru işlendi${r.removed ? `, ${r.removed} kaldırıldı` : ''}`);
       loadStatus();
     } catch (err) {
       toast.error(err.message);
@@ -117,12 +119,27 @@ const DiscordSettings = ({ me }) => {
             <input className="adm-input" value={form.vouch_channel_id} placeholder="Kanal kimliği (ör. 1234567890123456789)" onChange={(e) => setForm((f) => ({ ...f, vouch_channel_id: e.target.value }))} />
           )}
         </label>
+
+        <label className="adm-field">
+          <span className="adm-label">Duyuru kanalı (opsiyonel)</span>
+          {channels.length ? (
+            <select className="adm-input" value={form.announce_channel_id} onChange={(e) => setForm((f) => ({ ...f, announce_channel_id: e.target.value }))}>
+              <option value="">— Kapalı —</option>
+              {channels.map((c) => (
+                <option key={c.id} value={c.id}>{c.guild} · #{c.name}</option>
+              ))}
+            </select>
+          ) : (
+            <input className="adm-input" value={form.announce_channel_id} placeholder="Kanal kimliği" onChange={(e) => setForm((f) => ({ ...f, announce_channel_id: e.target.value }))} />
+          )}
+        </label>
+        <p className="adm-muted adm-help">Bu kanala atılan mesajlar sitedeki Duyurular sayfasına otomatik gelir (ilk satır başlık olur). Panelden yazdığın duyurular da yanında durur.</p>
         <div className="adm-form-actions">
           <button className="adm-btn adm-btn-primary" disabled={saving}>{saving ? 'Kaydediliyor…' : 'Kaydet'}</button>
         </div>
       </form>
 
-      <h3 className="adm-card-title" style={{ marginTop: 18 }}>Vouch botu</h3>
+      <h3 className="adm-card-title" style={{ marginTop: 18 }}>Discord botu</h3>
       {status.loading ? (
         <p className="adm-muted">Bot kontrol ediliyor…</p>
       ) : status.error ? (
@@ -143,17 +160,17 @@ const DiscordSettings = ({ me }) => {
               Mesaj içeriği izni:{' '}
               <span className={`adm-pill adm-pill-${st.content_intent ? 'ok' : 'warn'}`}>{st.content_intent ? 'Açık' : 'Kapalı — Developer Portal → Bot → Message Content Intent'}</span>
             </li>
-            <li>Sitedeki yorum sayısı: <strong>{st.vouch_count}</strong>{st.last_run && <> · son eşitleme {new Date(st.last_run).toLocaleString('tr-TR')}</>}</li>
+            <li>Sitedeki yorum: <strong>{st.vouch_count}</strong> · Discord duyurusu: <strong>{st.announce_count ?? 0}</strong>{st.last_run && <> · son eşitleme {new Date(st.last_run).toLocaleString('tr-TR')}</>}</li>
           </ul>
           {!st.guilds.length && inviteUrl && (
             <p className="adm-muted adm-help">
               Botu sunucuna eklemek için: <a href={inviteUrl} target="_blank" rel="noopener noreferrer">bu bağlantıyı aç</a> (sadece kanalları görme ve mesaj geçmişini okuma izni ister).
             </p>
           )}
-          <p className="adm-muted adm-help">Yeni yorumlar, biri yorumlar sayfasını açtığında en fazla 10 dakikada bir ve her gün otomatik olarak çekilir.</p>
+          <p className="adm-muted adm-help">Yeni yorumlar ve duyurular, biri sayfayı açtığında en fazla 10 dakikada bir ve her gün otomatik olarak çekilir.</p>
           <div className="adm-form-actions">
-            <button className="adm-btn adm-btn-ghost" onClick={() => sync(true)} disabled={syncing || !current.vouch_channel_id}>Baştan tara</button>
-            <button className="adm-btn adm-btn-primary" onClick={() => sync(false)} disabled={syncing || !current.vouch_channel_id}>{syncing ? 'Çekiliyor…' : 'Şimdi çek'}</button>
+            <button className="adm-btn adm-btn-ghost" onClick={() => sync(true)} disabled={syncing || !(current.vouch_channel_id || current.announce_channel_id)}>Baştan tara</button>
+            <button className="adm-btn adm-btn-primary" onClick={() => sync(false)} disabled={syncing || !(current.vouch_channel_id || current.announce_channel_id)}>{syncing ? 'Çekiliyor…' : 'Şimdi çek'}</button>
           </div>
         </>
       )}

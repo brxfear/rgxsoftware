@@ -1,6 +1,8 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Megaphone, Pin, Sparkles, Info, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Megaphone, Pin, Sparkles, Info, AlertTriangle, RefreshCw, ExternalLink } from 'lucide-react';
+import Lightbox from '../components/Lightbox';
+import { announcementImageUrl, requestVouchSync } from '../lib/vouches';
 import { useShopStore, useDiscordUrl } from '../store/useShopStore';
 import { markAnnouncementsSeen } from '../lib/announcements';
 import { toDate } from '../lib/db';
@@ -15,12 +17,18 @@ const AnnouncementsPage = () => {
   usePageTitle(t('ann.title'));
   const list = useShopStore((s) => s.announcements);
   const discordUrl = useDiscordUrl();
+  const [zoom, setZoom] = useState(null);
+
+  useEffect(() => {
+    // Discord duyuru kanalında yeni mesaj varsa çek, listeyi yenile
+    requestVouchSync().then((r) => r?.added > 0 && useShopStore.getState().loadAnnouncements());
+  }, []);
 
   useEffect(() => {
     if (list?.length) markAnnouncementsSeen(list[0]);
   }, [list]);
 
-  const sorted = (list || []).slice().sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
+  const sorted = (list || []).filter((a) => !a.hidden).sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
   const pick = (a, k) => (lang === 'en' && a[`${k}_en`]) || a[k];
 
   return (
@@ -58,13 +66,32 @@ const AnnouncementsPage = () => {
                     {date && <time>{date.toLocaleDateString(lang === 'tr' ? 'tr-TR' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</time>}
                   </div>
                   <h2>{pick(a, 'title')}</h2>
-                  <p>{pick(a, 'body')}</p>
+                  {pick(a, 'body') && <p>{pick(a, 'body')}</p>}
+                  {a.image_count > 0 && (
+                    <div className={`ann-images n${Math.min(a.image_count, 2)}`}>
+                      {Array.from({ length: Math.min(a.image_count, 4) }, (_, i) => (
+                        <button key={i} onClick={() => setZoom(announcementImageUrl(a.id, i))}>
+                          <img src={announcementImageUrl(a.id, i)} alt="" loading="lazy" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {a.source === 'discord' && (
+                    <div className="ann-foot">
+                      {a.author_avatar && <img src={a.author_avatar} alt="" referrerPolicy="no-referrer" />}
+                      <span>{a.author_name}</span>
+                      {a.message_url && (
+                        <a href={a.message_url} target="_blank" rel="noopener noreferrer">{t('ann.openDiscord')} <ExternalLink size={12} /></a>
+                      )}
+                    </div>
+                  )}
                 </div>
               </article>
             );
           })}
         </div>
       )}
+      <Lightbox src={zoom} onClose={() => setZoom(null)} />
     </div>
   );
 };

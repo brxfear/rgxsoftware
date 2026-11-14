@@ -304,8 +304,10 @@ const tr = {
     sub: 'Güncellemeler, yeni ürünler ve bakım duyuruları.',
     empty: 'Henüz duyuru yok. Anlık duyurular için Discord sunucumuzu takip et.',
     pinned: 'Sabit',
+    openDiscord: 'Discord’da aç',
     types: { update: 'Güncelleme', new: 'Yeni ürün', info: 'Bilgi', warning: 'Bakım / uyarı' },
   },
+  marquee: { label: 'Discord’da canlı müşteri yorumları' },
   rich: {
     pp: 'Ürün PP',
     menu: 'Menü SS',

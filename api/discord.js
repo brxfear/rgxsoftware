@@ -1,4 +1,4 @@
-// /api/discord — Discord vouch botu
+// /api/discord — Discord botu (vouch + duyuru kanalları)
 //   GET  ?action=sync          → yeni vouch'ları çeker (herkes tetikleyebilir; 10 dakikada en fazla bir kez çalışır)
 //   POST ?action=sync          → (yönetici) hemen eşitle; body { full: true } ile kanalı baştan tara
 //   GET  ?action=image&id&i    → vouch görseli (Discord bağlantıları süreli; taze bağlantıya yönlendirir)
@@ -6,7 +6,7 @@
 import { FieldValue } from 'firebase-admin/firestore';
 import { adminDb } from './_lib/firebaseAdmin.js';
 import { requireAdmin, sendError, HttpError } from './_lib/adminAuth.js';
-import { discord, botToken, syncVouches, imageAttachments } from './_lib/discord.js';
+import { discord, botToken, syncDiscord, messageImages, hasAnyChannel } from './_lib/discord.js';
 
 const AUTO_EVERY_MS = 10 * 60 * 1000;
 
@@ -15,7 +15,7 @@ const fail = (res, err) => {
   const status = err.status && err.status < 500 ? err.status : 500;
   if (status === 500) console.error('discord', err);
   if (err.code === 50001 || err.code === 50013) {
-    return res.status(502).json({ error: 'Bot vouch kanalını göremiyor. Discord’da kanal ayarları → İzinler → RGX WEB SERVICES botuna “Kanalı Görüntüle” ve “Mesaj Geçmişini Oku” izni ver.' });
+    return res.status(502).json({ error: 'Bot seçilen kanalı (vouch veya duyuru) göremiyor. Discord’da kanal ayarları → İzinler → RGX WEB SERVICES botuna “Kanalı Görüntüle” ve “Mesaj Geçmişini Oku” izni ver.' });
   }
   return res.status(status === 401 || status === 403 ? 502 : status).json({ error: err.message || 'Sunucu hatası.' });
 };
@@ -33,13 +33,13 @@ export default async function handler(req, res) {
       const id = String(q.id || '');
       const i = Math.max(0, Math.min(3, parseInt(q.i, 10) || 0));
       if (!/^\d{5,25}$/.test(id)) return res.status(400).end();
-      const v = await db.collection('vouches').doc(id).get();
-      if (!v.exists) return res.status(404).end();
+      const v = await db.collection(q.c === 'a' ? 'announcements' : 'vouches').doc(id).get();
+      if (!v.exists || !v.get('channel_id')) return res.status(404).end();
       const msg = await discord(`/channels/${v.get('channel_id')}/messages/${id}`);
-      const att = imageAttachments(msg)[i];
-      if (!att) return res.status(404).end();
+      const url = messageImages(msg)[i];
+      if (!url) return res.status(404).end();
       res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=43200');
-      res.setHeader('Location', att.proxy_url || att.url);
+      res.setHeader('Location', url);
       return res.status(302).end();
     }
 
@@ -47,7 +47,7 @@ export default async function handler(req, res) {
     if (action === 'sync' && req.method === 'GET') {
       if (!botToken()) return res.status(200).json({ skipped: 'no-token', added: 0 });
       const cfg = (await db.collection('settings').doc('discord').get()).data() || {};
-      if (!cfg.vouch_channel_id) return res.status(200).json({ skipped: 'no-channel', added: 0 });
+      if (!hasAnyChannel(cfg)) return res.status(200).json({ skipped: 'no-channel', added: 0 });
       const stateRef = db.collection('private').doc('discord_sync');
       // Aynı anda gelen istekler tek eşitleme yapsın diye kilit: transaction ile "son çalışma" zamanı
       const go = await db.runTransaction(async (tx) => {
@@ -58,14 +58,14 @@ export default async function handler(req, res) {
         return true;
       });
       if (!go) return res.status(200).json({ skipped: 'throttled', added: 0 });
-      const r = await syncVouches(db);
+      const r = await syncDiscord(db);
       return res.status(200).json(r);
     }
 
     if (action === 'sync' && req.method === 'POST') {
       const admin = await requireAdmin(req);
       const { full = false } = readBody(req);
-      const r = await syncVouches(db, { full: !!full });
+      const r = await syncDiscord(db, { full: !!full });
       await db.collection('private').doc('discord_sync').set({ last_attempt: FieldValue.serverTimestamp() }, { merge: true });
       await db.collection('admin_logs').add({
         actor_uid: admin.uid,
@@ -73,7 +73,7 @@ export default async function handler(req, res) {
         action: 'update',
         target_type: 'settings',
         target_id: 'discord',
-        summary: `Discord vouch eşitlendi${full ? ' (tam tarama)' : ''}: ${r.added} yorum işlendi${r.removed ? `, ${r.removed} silinen kaldırıldı` : ''}`,
+        summary: `Discord eşitlendi${full ? ' (tam tarama)' : ''}: ${r.vouches.added || 0} yorum, ${r.announcements.added || 0} duyuru işlendi${r.removed ? `, ${r.removed} silinen kaldırıldı` : ''}`,
         at: FieldValue.serverTimestamp(),
       });
       return res.status(200).json(r);
@@ -100,6 +100,7 @@ export default async function handler(req, res) {
       }
       const state = (await db.collection('private').doc('discord_sync').get()).data() || {};
       const count = (await db.collection('vouches').count().get()).data().count;
+      const annCount = (await db.collection('announcements').where('source', '==', 'discord').count().get()).data().count;
       // flags: 1<<18 GATEWAY_MESSAGE_CONTENT, 1<<19 ..._LIMITED
       const contentIntent = app ? Boolean(app.flags & ((1 << 18) | (1 << 19))) : null;
       return res.status(200).json({
@@ -109,6 +110,7 @@ export default async function handler(req, res) {
         content_intent: contentIntent,
         guilds: out,
         vouch_count: count,
+        announce_count: annCount,
         last_run: state.last_run?.toDate?.()?.toISOString() || null,
       });
     }

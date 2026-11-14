@@ -1,6 +1,6 @@
 import React from 'react';
 import { toDate } from '../../lib/db';
-import { vouchImageUrl } from '../../lib/vouches';
+import { vouchImageUrl, cleanVouchText } from '../../lib/vouches';
 import { useT } from '../../i18n';
 
 const DiscordGlyph = () => (
@@ -41,7 +41,7 @@ const VouchCard = ({ vouch, onImage }) => {
         </div>
       )}
 
-      {vouch.content && <p className="vouch-text">“{vouch.content}”</p>}
+      {vouch.content && <p className="vouch-text">“{cleanVouchText(vouch.content)}”</p>}
     </article>
   );
 };

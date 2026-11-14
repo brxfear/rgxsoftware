@@ -1,0 +1,117 @@
+/* ==========================================================================
+   Canlılık katmanı: yıldızlar, kaydırınca belirme, ışıklı kartlar, parlayan düğmeler
+   ========================================================================== */
+.fx-stars { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; opacity: 0.85; }
+
+/* Arka planda yavaşça dolaşan kırmızı ışık lekeleri */
+.main-wrapper::before {
+  content: ''; position: fixed; inset: -20vmax; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(40vmax 30vmax at 15% 20%, rgba(224, 38, 47, 0.10), transparent 70%),
+    radial-gradient(35vmax 28vmax at 85% 70%, rgba(143, 15, 22, 0.12), transparent 70%),
+    radial-gradient(30vmax 22vmax at 60% 10%, rgba(255, 90, 96, 0.06), transparent 70%);
+  animation: fx-aurora 26s ease-in-out infinite alternate;
+}
+@keyframes fx-aurora {
+  0% { transform: translate3d(0, 0, 0) rotate(0deg); }
+  50% { transform: translate3d(3vmax, -2vmax, 0) rotate(6deg); }
+  100% { transform: translate3d(-3vmax, 2vmax, 0) rotate(-4deg); }
+}
+
+/* Sayfa geçişi */
+.page-fade { animation: fx-page 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
+@keyframes fx-page { from { opacity: 0; translate: 0 14px; } }
+
+/* ---------- Kaydırınca belirme ---------- */
+.fx-live .rv {
+  opacity: 0;
+  translate: 0 26px;
+  transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1) var(--rv-d, 0ms), translate 0.8s cubic-bezier(0.16, 1, 0.3, 1) var(--rv-d, 0ms);
+}
+.fx-live .rv.rv-in { opacity: 1; translate: 0 0; }
+
+/* ---------- Fareyi takip eden ışık + parlayan kenar ---------- */
+.fx-live :is(.rpc, .gs-card, .product-card, .vouch-card, .st-row, .ann-card, .ap-stat, .payment-tile, .pp-box, .about-feature, .ap-panel, .st-summary) { position: relative; }
+.fx-live :is(.rpc, .gs-card, .product-card, .vouch-card, .st-row, .ann-card, .ap-stat, .payment-tile, .pp-box, .about-feature, .ap-panel, .st-summary)::after {
+  content: ''; position: absolute; inset: 0; z-index: 3; border-radius: inherit; pointer-events: none; opacity: 0;
+  background: radial-gradient(360px circle at var(--sx, 50%) var(--sy, 50%), rgba(255, 90, 96, 0.12), transparent 60%);
+  transition: opacity 0.35s ease;
+}
+.fx-live :is(.rpc, .gs-card, .product-card, .vouch-card, .st-row, .ann-card, .ap-stat, .payment-tile, .pp-box, .about-feature, .ap-panel, .st-summary)::before {
+  content: ''; position: absolute; inset: 0; z-index: 4; border-radius: inherit; padding: 1px; pointer-events: none; opacity: 0;
+  background: radial-gradient(240px circle at var(--sx, 50%) var(--sy, 50%), rgba(255, 110, 115, 0.95), rgba(224, 38, 47, 0.25) 45%, transparent 70%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  transition: opacity 0.35s ease;
+}
+.fx-live .fx-hot::after, .fx-live .fx-hot::before { opacity: 1; }
+
+/* 3B eğim (sadece fareli cihazlarda; JS --rx/--ry verir) */
+.fx-live :is(.gs-card, .product-card, .rpc) { transform-style: preserve-3d; will-change: transform; transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s, box-shadow 0.25s; }
+.fx-live :is(.gs-card, .product-card, .rpc).fx-hot {
+  transform: perspective(1000px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translateY(-4px);
+  transition: transform 0.12s linear, border-color 0.25s, box-shadow 0.25s;
+  box-shadow: 0 34px 70px -34px rgba(224, 38, 47, 0.75), 0 0 0 1px rgba(224, 38, 47, 0.25);
+}
+
+/* ---------- Parlayan düğmeler ---------- */
+:is(.btn-primary, .pm-cta, .rpc-cta, .ap-btn-primary, .co-cta) { position: relative; overflow: hidden; isolation: isolate; }
+:is(.btn-primary, .pm-cta, .rpc-cta, .ap-btn-primary, .co-cta)::after {
+  content: ''; position: absolute; top: 0; bottom: 0; left: -60%; width: 45%; z-index: 1; pointer-events: none;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+  transform: skewX(-20deg);
+  animation: fx-shine 4.5s ease-in-out infinite;
+}
+:is(.btn-primary, .pm-cta, .rpc-cta, .ap-btn-primary, .co-cta):hover::after { animation-duration: 1.2s; }
+@keyframes fx-shine { 0%, 70% { left: -60%; } 100% { left: 130%; } }
+
+/* ---------- Canlı durum noktaları ---------- */
+.st-pill .st-dot, .status-dot-green { position: relative; }
+.st-pill.st-ok .st-dot::after, .status-dot-green::after {
+  content: ''; position: absolute; inset: -3px; border-radius: 50%; border: 1.5px solid currentColor; opacity: 0;
+  animation: fx-ping 2.2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+.status-dot-green { color: #10b981; }
+@keyframes fx-ping { 0% { transform: scale(0.6); opacity: 0.9; } 80%, 100% { transform: scale(2.4); opacity: 0; } }
+
+/* ---------- Başlıklarda akan parıltı ---------- */
+.hero-accent, .page-title .hero-accent {
+  background-size: 220% 100%;
+  animation: fx-text 6s ease-in-out infinite alternate;
+}
+@keyframes fx-text { from { background-position: 0% 50%; } to { background-position: 100% 50%; } }
+
+/* Öne çıkan kartın dönen kenar ışığı */
+@property --fx-angle { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
+.rpc.is-highlight, .product-card.is-highlight {
+  border-color: transparent;
+  background:
+    linear-gradient(180deg, rgba(24, 16, 18, 0.97), rgba(13, 9, 10, 0.97)) padding-box,
+    conic-gradient(from var(--fx-angle), rgba(224, 38, 47, 0.15), #ff4d55, rgba(224, 38, 47, 0.15) 30%, rgba(255, 255, 255, 0.08) 60%, rgba(224, 38, 47, 0.15)) border-box;
+  border: 1px solid transparent;
+  animation: fx-spin 6s linear infinite;
+}
+@keyframes fx-spin { to { --fx-angle: 360deg; } }
+
+/* ---------- Canlı yorum şeridi (ana sayfa) ---------- */
+.marquee { position: relative; overflow: hidden; padding: 6px 0; margin: 10px 0 0; -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); }
+.marquee-track { display: flex; gap: 12px; width: max-content; animation: fx-marquee var(--mq-dur, 60s) linear infinite; }
+.marquee:hover .marquee-track { animation-play-state: paused; }
+@keyframes fx-marquee { to { transform: translateX(-50%); } }
+.mq-item {
+  display: inline-flex; align-items: center; gap: 10px; max-width: 360px; padding: 9px 14px 9px 9px; border-radius: 14px; text-decoration: none; color: var(--text-main);
+  background: rgba(20, 13, 15, 0.8); border: 1px solid rgba(255, 255, 255, 0.08); backdrop-filter: blur(8px);
+}
+.mq-item:hover { border-color: rgba(224, 38, 47, 0.5); }
+.mq-item img, .mq-item .mq-letter { width: 30px; height: 30px; border-radius: 9px; flex-shrink: 0; object-fit: cover; }
+.mq-letter { display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; background: linear-gradient(135deg, #f0333c, #8f0f16); }
+.mq-item span { display: flex; flex-direction: column; min-width: 0; }
+.mq-item strong { font-size: 12.5px; }
+.mq-item small { font-size: 12.5px; color: #cfc8c9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mq-label { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-muted); margin-top: 26px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .main-wrapper::before, .page-fade, .marquee-track, .hero-accent, .rpc.is-highlight, .product-card.is-highlight,
+  :is(.btn-primary, .pm-cta, .rpc-cta, .ap-btn-primary, .co-cta)::after, .status-dot-green::after, .st-pill .st-dot::after { animation: none !important; }
+}

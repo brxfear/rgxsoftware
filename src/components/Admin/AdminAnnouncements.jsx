@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { collection, onSnapshot, orderBy, query, serverTimestamp } from 'firebase/firestore';
 import { toast } from 'react-hot-toast';
-import { Pencil, Pin, Plus, Trash2, X } from 'lucide-react';
+import { Eye, EyeOff, Pencil, Pin, Plus, Trash2, X } from 'lucide-react';
 import { db } from '../../lib/firebase';
 import { toDate } from '../../lib/db';
 import { loggedWrite } from '../../lib/adminLog';
@@ -122,6 +122,14 @@ const AdminAnnouncements = ({ me }) => {
     }
   };
 
+  const toggleHidden = async (a) => {
+    try {
+      await loggedWrite({ me, mode: 'update', collectionName: 'announcements', id: a.id, targetType: 'announcement', data: { hidden: !a.hidden }, summary: `Discord duyurusu ${a.hidden ? 'gösterildi' : 'gizlendi'}: "${a.title}"` });
+    } catch (err) {
+      toast.error('Kaydedilemedi: ' + (err.code || err.message));
+    }
+  };
+
   const typeLabel = Object.fromEntries(ANN_TYPES);
 
   return (
@@ -129,7 +137,7 @@ const AdminAnnouncements = ({ me }) => {
       <div className="adm-card-head adm-card-pad">
         <div>
           <h2 className="adm-card-title">Duyurular</h2>
-          <p className="adm-muted">Sitedeki “Duyurular” sayfasında yayınlanır; yeni duyuruda üst bardaki menüde kırmızı nokta çıkar.</p>
+          <p className="adm-muted">Duyurular sayfasında yayınlanır; yeni duyuruda üst bardaki menüde kırmızı nokta çıkar.“Duyurular” sayfasında yayınlanır; yeni duyuruda üst bardaki menüde kırmızı nokta çıkar.</p>
         </div>
         <button className="adm-btn adm-btn-primary" onClick={() => setEditing({})}><Plus size={15} /> Yeni duyuru</button>
       </div>
@@ -143,13 +151,19 @@ const AdminAnnouncements = ({ me }) => {
             <li key={a.id}>
               <div>
                 <span className="adm-pill adm-pill-info">{typeLabel[a.type] || a.type}</span>
+                {a.source === 'discord' && <span className="adm-pill adm-pill-muted">Discord</span>}
+                {a.hidden && <span className="adm-pill adm-pill-bad">Gizli</span>}
                 {a.pinned && <span className="adm-pill adm-pill-warn"><Pin size={11} /> Sabit</span>}
                 <strong>{a.title}</strong>
                 <small className="adm-muted">{toDate(a.created_at)?.toLocaleString('tr-TR') || '—'}</small>
               </div>
               <div className="adm-ann-actions">
                 <button className="adm-icon-btn" onClick={() => setEditing(a)} aria-label="Düzenle"><Pencil size={14} /></button>
-                <button className="adm-icon-btn danger" onClick={() => remove(a)} aria-label="Sil"><Trash2 size={14} /></button>
+                {a.source === 'discord' ? (
+                  <button className="adm-icon-btn" onClick={() => toggleHidden(a)} title={a.hidden ? 'Sitede göster' : 'Sitede gizle'} aria-label="Gizle/göster">{a.hidden ? <Eye size={14} /> : <EyeOff size={14} />}</button>
+                ) : (
+                  <button className="adm-icon-btn danger" onClick={() => remove(a)} aria-label="Sil"><Trash2 size={14} /></button>
+                )}
               </div>
             </li>
           ))}

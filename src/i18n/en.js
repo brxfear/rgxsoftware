@@ -304,8 +304,10 @@ const en = {
     sub: 'Updates, new products and maintenance notices.',
     empty: 'No announcements yet. Follow our Discord for instant updates.',
     pinned: 'Pinned',
+    openDiscord: 'Open in Discord',
     types: { update: 'Update', new: 'New product', info: 'Info', warning: 'Maintenance' },
   },
+  marquee: { label: 'Live customer reviews from Discord' },
   rich: {
     pp: 'Product',
     menu: 'Menu SS',

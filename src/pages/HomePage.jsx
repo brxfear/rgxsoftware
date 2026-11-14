@@ -7,6 +7,8 @@ import FAQSection from '../components/FAQ/FAQSection';
 import ReviewsSection from '../components/Reviews/ReviewsSection';
 import HowItWorksSection from '../components/HowItWorks/HowItWorksSection';
 import DiscordBanner from '../components/Discord/DiscordBanner';
+import VouchMarquee from '../components/Reviews/VouchMarquee';
+import CountUp from '../components/CountUp';
 import { useShopStore, useDiscordUrl } from '../store/useShopStore';
 import { productPath } from '../lib/slug';
 import { usePageTitle } from '../lib/usePageTitle';
@@ -76,12 +78,12 @@ const HomePage = () => {
 
           <div className="hero-stats-bar">
             <div className="stat-item">
-              <span className="stat-num">{products.length || '—'}</span>
+              <span className="stat-num"><CountUp to={products.length} /></span>
               <span className="stat-label">{t('hero.statProducts')}</span>
             </div>
             <div className="stat-divider"></div>
             <div className="stat-item">
-              <span className="stat-num">{categories.length || '—'}</span>
+              <span className="stat-num"><CountUp to={categories.length} /></span>
               <span className="stat-label">{t('hero.statGames')}</span>
             </div>
             <div className="stat-divider"></div>
@@ -95,6 +97,8 @@ const HomePage = () => {
               <span className="stat-label">{t('hero.statSupport')}</span>
             </div>
           </div>
+
+          <VouchMarquee />
         </div>
       </section>
 
