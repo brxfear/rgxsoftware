@@ -48,7 +48,19 @@ export default async function handler(req, res) {
       const tokens = {};
       for (const event of EVENTS) {
         if (ours.some((w) => w.event === event)) continue;
-        const created = await shopierRest('POST', '/webhooks', { event, url: hookUrl });
+        let created = null;
+        try {
+          created = await shopierRest('POST', '/webhooks', { event, url: hookUrl });
+        } catch (err) {
+          // Shopier mağaza başına her olay için tek abonelik kabul eder; başka adrese bağlıysa atla
+          if (err.status === 409) {
+            if (event === 'order.created') {
+              throw new HttpError(409, 'Shopier "sipariş oluştu" webhook’u başka bir siteye bağlı (mağaza başına bir tane olabiliyor). Ödemeler yine de otomatik kontrolle onaylanır; webhook’u bu siteye almak için Shopier panelinden diğerini kaldır.');
+            }
+            continue;
+          }
+          throw err;
+        }
         if (created?.token) tokens[event] = created.token;
       }
       // Shopier her abonelik için ayrı token döner; imzalar order.created token'ı ile doğrulanır,
