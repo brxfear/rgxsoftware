@@ -192,17 +192,21 @@ export default async function handler(req, res) {
         db.collection('settings').doc('reseller').get(),
       ]);
       const catName = Object.fromEntries(cats.docs.map((c) => [c.id, c.get('name')]));
-      const catalog = [];
-      for (const d of prods.docs) {
-        const p = d.data();
-        if (!resellerVisible(p, r)) continue;
-        const plans = [];
-        for (const pl of getPlans(p)) {
-          const stock = (await db.collection('license_keys').where('product_id', '==', d.id).where('plan_id', '==', String(pl.id)).where('status', '==', 'available').count().get()).data().count;
-          plans.push({ id: String(pl.id), label: pl.label, retail_usd: roundUsd(pl.price_usd), price_usd: resellerPrice(pl, r), stock });
-        }
-        catalog.push({ id: d.id, name: p.name, category: catName[p.category_id] || '', image_url: p.image_url || '', status: p.status || 'undetected', loader_url: p.loader_url || '', plans });
-      }
+      // Stok sayımları paralel (sırayla yapınca panel yavaş açılıyordu)
+      const catalog = await Promise.all(
+        prods.docs
+          .filter((d) => resellerVisible(d.data(), r))
+          .map(async (d) => {
+            const p = d.data();
+            const plans = await Promise.all(
+              getPlans(p).map(async (pl) => {
+                const stock = (await db.collection('license_keys').where('product_id', '==', d.id).where('plan_id', '==', String(pl.id)).where('status', '==', 'available').count().get()).data().count;
+                return { id: String(pl.id), label: pl.label, retail_usd: roundUsd(pl.price_usd), price_usd: resellerPrice(pl, r), stock };
+              }),
+            );
+            return { id: d.id, name: p.name, category: catName[p.category_id] || '', image_url: p.image_url || '', status: p.status || 'undetected', loader_url: p.loader_url || '', plans };
+          }),
+      );
       const s = setSnap.exists ? setSnap.data() : {};
       return res.status(200).json({
         reseller: {

@@ -91,7 +91,8 @@ const ScrollManager = () => {
 const PageFade = () => {
   const { pathname } = useLocation();
   return (
-    <div key={pathname} className="page-fade">
+    // Panellerde (/account/…, /reseller/…) sekme değişince sayfa yeniden kurulmasın: anahtar ilk bölüm
+    <div key={/^\/(account|reseller)(\/|$)/.test(pathname) ? pathname.split('/')[1] : pathname} className="page-fade">
       <Outlet />
     </div>
   );
@@ -200,10 +201,8 @@ function App() {
           <Route path="reviews" element={<ReviewsPage />} />
           <Route path="status" element={<StatusPage />} />
           <Route path="announcements" element={<AnnouncementsPage />} />
-          <Route path="account" element={<AccountPage />} />
-          <Route path="account/:tab" element={<AccountPage />} />
-          <Route path="reseller" element={<ResellerPage />} />
-          <Route path="reseller/:tab" element={<ResellerPage />} />
+          <Route path="account/:tab?" element={<AccountPage />} />
+          <Route path="reseller/:tab?" element={<ResellerPage />} />
         </Route>
         <Route
           path="/admin"

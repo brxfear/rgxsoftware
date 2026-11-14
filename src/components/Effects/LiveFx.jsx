@@ -35,6 +35,7 @@ const LiveFx = () => {
     const scan = (root = document) => {
       root.querySelectorAll?.(REVEAL).forEach((el) => {
         if (seen.has(el) || el.classList.contains('rv-in')) return;
+        if (el.closest('.rs, .ap-body, .adm-shell')) return; // panellerde anında göster
         seen.add(el);
         // Aynı kapsayıcıdaki kardeşler sırayla gelsin
         const siblings = el.parentElement ? [...el.parentElement.children].filter((c) => c.matches(REVEAL)) : [];
