@@ -15,7 +15,7 @@ const GamesGrid = ({ categories, products }) => {
         const list = products.filter((p) => p.category_id === cat.id);
         const minPrice = list.length ? Math.min(...list.map(getStartPrice)) : null;
         return (
-          <Link key={cat.id} to={categoryPath(cat)} className="gs-card">
+          <Link key={cat.id} to={categoryPath(cat)} className={`gs-card ${cat.hide_name && cat.image_url ? 'gs-text-img' : ''}`}>
             {cat.image_url ? (
               <img className="gs-art" src={cat.image_url} alt="" loading="lazy" />
             ) : (
@@ -27,7 +27,7 @@ const GamesGrid = ({ categories, products }) => {
               <span className="gs-chip">{t('games.count', { n: list.length })}</span>
             </div>
             <div className="gs-bottom">
-              <strong className="gs-name">{cat.name}</strong>
+              {!(cat.hide_name && cat.image_url) && <strong className="gs-name">{cat.name}</strong>}
               <span className="gs-sub">
                 {minPrice !== null ? <>{t('games.from')} <Price usd={minPrice} className="gs-price" /></> : t('games.soon')}
                 <ArrowRight size={16} />

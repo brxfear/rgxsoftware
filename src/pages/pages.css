@@ -478,3 +478,7 @@ a.product-card .select-btn { pointer-events: none; }
 .ap-hwid-key { font-family: ui-monospace, monospace; font-size: 13px; overflow-wrap: anywhere; margin-bottom: 6px; }
 .ap-hwid-note { font-size: 13px; color: #c8f5df; margin: 4px 0 6px; }
 @media (max-width: 560px) { .ap-loader { flex-wrap: wrap; } }
+/* Görselinde oyun adı yazan kartlar: gölge hafif, fiyat sağ üstte */
+.gs-text-img .gs-shade { background: linear-gradient(180deg, rgba(10, 7, 8, 0.35) 0%, transparent 22%); }
+.gs-text-img .gs-bottom { top: 50px; bottom: auto; left: auto; right: 14px; align-items: flex-end; }
+.gs-text-img .gs-sub { padding: 6px 11px; border-radius: 10px; font-size: 12.5px; background: rgba(10, 7, 8, 0.72); border: 1px solid rgba(255, 255, 255, 0.14); backdrop-filter: blur(8px); }

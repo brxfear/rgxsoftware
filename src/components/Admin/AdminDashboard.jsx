@@ -932,7 +932,7 @@ const Products = ({ products, categories, me }) => {
 /* Kategoriler                                                         */
 /* ------------------------------------------------------------------ */
 const Categories = ({ categories, products, me }) => {
-  const empty = { name: '', slug: '', image_url: '' };
+  const empty = { name: '', slug: '', image_url: '', hide_name: false };
   const [form, setForm] = useState(empty);
   const [editId, setEditId] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -940,7 +940,7 @@ const Categories = ({ categories, products, me }) => {
   const save = async (e) => {
     e.preventDefault();
     if (!form.name.trim()) return toast.error('Kategori adı gerekli.');
-    const data = { name: form.name.trim(), slug: form.slug.trim() || slugify(form.name), image_url: form.image_url || '' };
+    const data = { name: form.name.trim(), slug: form.slug.trim() || slugify(form.name), image_url: form.image_url || '', hide_name: !!form.hide_name };
     if (docBytes(data) > MAX_DOC_BYTES) return toast.error('Görsel çok büyük.');
     setSaving(true);
     try {
@@ -1003,6 +1003,11 @@ const Categories = ({ categories, products, me }) => {
           <input className="adm-input" value={form.slug} onChange={(e) => setForm((f) => ({ ...f, slug: slugify(e.target.value) }))} placeholder="valorant" />
         </label>
         <ImageField label="Oyun görseli (kart)" value={form.image_url} onChange={(v) => setForm((f) => ({ ...f, image_url: v }))} />
+        <label className="adm-switch">
+          <input type="checkbox" checked={!!form.hide_name} onChange={(e) => setForm((f) => ({ ...f, hide_name: e.target.checked }))} />
+          <span className="adm-switch-track"><span /></span>
+          Görselde oyun adı yazıyor (kartta tekrar yazma)
+        </label>
         <div className="adm-form-actions">
           {editId && (
             <button type="button" className="adm-btn adm-btn-ghost" onClick={() => { setEditId(null); setForm(empty); }}>Vazgeç</button>
@@ -1023,7 +1028,7 @@ const Categories = ({ categories, products, me }) => {
                   <span className="adm-muted">{products.filter((p) => p.category_id === c.id).length} ürün · /{c.slug}</span>
                 </div>
                 <div className="adm-row-actions">
-                  <button className="adm-icon-btn" onClick={() => { setEditId(c.id); setForm({ name: c.name, slug: c.slug || '', image_url: c.image_url || '' }); }} aria-label="Düzenle"><Pencil size={15} /></button>
+                  <button className="adm-icon-btn" onClick={() => { setEditId(c.id); setForm({ name: c.name, slug: c.slug || '', image_url: c.image_url || '', hide_name: !!c.hide_name }); }} aria-label="Düzenle"><Pencil size={15} /></button>
                   <button className="adm-icon-btn danger" onClick={() => remove(c)} aria-label="Sil"><Trash2 size={15} /></button>
                 </div>
               </div>
