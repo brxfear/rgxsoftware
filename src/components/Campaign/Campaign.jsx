@@ -54,7 +54,7 @@ export const CampaignBar = () => {
 };
 
 // Kıvılcımlar: sabit (her çizimde aynı) konum / süre değerleri
-const EMBERS = Array.from({ length: 18 }, (_, i) => ({
+const EMBERS = Array.from({ length: 7 }, (_, i) => ({
   '--x': `${(i * 37 + 11) % 100}%`,
   '--s': `${2 + (i % 3)}px`,
   '--t': `${5 + ((i * 7) % 6)}s`,
@@ -72,7 +72,6 @@ const CampaignArt = ({ percent }) => {
       <div className="cp-art-beam cp-art-beam-1" />
       <div className="cp-art-beam cp-art-beam-2" />
       <div className="cp-art-orbit cp-art-orbit-1"><i /></div>
-      <div className="cp-art-orbit cp-art-orbit-2"><i /></div>
       <div className="cp-art-halo" />
       <div className="cp-art-ring" />
       <img src="/logo.webp" alt="" className="cp-art-logo" />

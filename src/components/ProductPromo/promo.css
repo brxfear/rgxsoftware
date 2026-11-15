@@ -3,7 +3,7 @@
 
 .promo {
   --pc: #e0262f;
-  --cycle: 10s;
+  --cycle: 16s;
   position: absolute;
   inset: 0;
   overflow: hidden;
@@ -20,7 +20,7 @@
     repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.018) 0 1px, transparent 1px 3px),
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='104' viewBox='0 0 120 104'%3E%3Cpath d='M4 0h26l30 40 30-40h26L60 74z' fill='%23fff' fill-opacity='.05'/%3E%3Cpath d='M44 80h32L60 102z' fill='%23fff' fill-opacity='.035'/%3E%3C/svg%3E");
   background-size: auto, 12cqw auto;
-  animation: promo-drift 9s linear infinite;
+  animation: promo-drift 24s linear infinite;
   -webkit-mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.55), #000 70%);
   mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.55), #000 70%);
 }
@@ -33,7 +33,7 @@
   background:
     radial-gradient(90% 55% at 50% 118%, color-mix(in srgb, var(--pc) 75%, transparent), transparent 72%),
     linear-gradient(0deg, color-mix(in srgb, var(--pc) 30%, transparent), transparent 58%);
-  animation: promo-pulse 5s ease-in-out infinite alternate;
+  animation: promo-pulse 8s ease-in-out infinite alternate;
 }
 
 /* ---- 3D kutu ---- */
@@ -62,7 +62,7 @@
   height: var(--h);
   transform-style: preserve-3d;
   transform: rotateX(12deg) rotateY(32deg);
-  animation: promo-sway 5s ease-in-out infinite alternate;
+  animation: promo-sway 9s ease-in-out infinite alternate;
 }
 .pb-face { position: absolute; }
 .pb-front,
@@ -263,14 +263,14 @@
   to { opacity: 1; }
 }
 @keyframes promo-sway {
-  from { transform: rotateX(14deg) rotateY(38deg) translateY(0); }
-  to { transform: rotateX(9deg) rotateY(24deg) translateY(-1.6cqw); }
+  from { transform: rotateX(12deg) rotateY(34deg) translateY(0); }
+  to { transform: rotateX(10deg) rotateY(28deg) translateY(-0.8cqw); }
 }
 @keyframes promo-enter {
   0% { opacity: 0; transform: translateX(-46cqw) rotateY(-160deg) scale(0.8); }
   10% { opacity: 1; transform: translateX(2cqw) rotateY(12deg) scale(1.02); }
-  15%, 86% { opacity: 1; transform: translateX(0) rotateY(0) scale(1); }
-  94%, 100% { opacity: 0; transform: translateX(0) translateY(4cqw) rotateY(0) scale(0.9); }
+  12%, 90% { opacity: 1; transform: translateX(0) rotateY(0) scale(1); }
+  97%, 100% { opacity: 0; transform: translateX(0) translateY(2cqw) rotateY(0) scale(0.9); }
 }
 @keyframes promo-line {
   0%, 13% { opacity: 0; transform: translateX(5cqw); filter: blur(6px); }
@@ -278,6 +278,6 @@
   91%, 100% { opacity: 0; transform: translateX(-3cqw); filter: blur(6px); }
 }
 @keyframes promo-gloss {
-  0%, 22% { transform: translateX(-60%); }
-  36%, 100% { transform: translateX(60%); }
+  0%, 30% { transform: translateX(-60%); }
+  42%, 100% { transform: translateX(60%); }
 }
