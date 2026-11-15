@@ -635,3 +635,12 @@ select.adm-input option { background: #1a1214; }
 .adm-chip.on { color: #fff; background: rgba(224, 38, 47, 0.25); border-color: rgba(224, 38, 47, 0.6); }
 .adm-media-prod label.adm-chip { cursor: pointer; }
 .adm-camp-switches { display: flex; flex-wrap: wrap; gap: 18px; margin: 4px 0 14px; }
+
+/* Ürün formu: hareketli tanıtım */
+.adm-promo-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.adm-promo-colors { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
+.adm-promo-colors button { width: 26px; height: 26px; border-radius: 8px; border: 2px solid rgba(255, 255, 255, 0.15); cursor: pointer; }
+.adm-promo-colors button.on { border-color: #fff; box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.15); }
+.adm-promo-colors input[type='color'] { width: 34px; height: 28px; padding: 0; border: none; background: none; cursor: pointer; }
+.adm-promo-preview { position: relative; aspect-ratio: 16 / 10; margin-top: 12px; border-radius: 14px; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.08); }
+@media (max-width: 640px) { .adm-promo-row { grid-template-columns: 1fr; } }

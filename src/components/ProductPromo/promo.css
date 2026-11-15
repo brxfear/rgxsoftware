@@ -1,0 +1,278 @@
+/* Nova tarzı hareketli ürün tanıtımı (tamamı CSS, döngü 10 sn).
+   Ölçüler kapsayıcıya göre (cqw), kartta da ürün sayfasında da aynı oranda durur. */
+
+.promo {
+  --pc: #e0262f;
+  --cycle: 10s;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  container-type: inline-size;
+  background: #040405;
+  isolation: isolate;
+}
+
+/* Ok (chevron) desenli zemin, yavaşça aşağı akar */
+.promo-bg {
+  position: absolute;
+  inset: -40% 0 0;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.018) 0 1px, transparent 1px 3px),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='104' viewBox='0 0 120 104'%3E%3Cpath d='M4 0h26l30 40 30-40h26L60 74z' fill='%23fff' fill-opacity='.05'/%3E%3Cpath d='M44 80h32L60 102z' fill='%23fff' fill-opacity='.035'/%3E%3C/svg%3E");
+  background-size: auto, 12cqw auto;
+  animation: promo-drift 9s linear infinite;
+  -webkit-mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.55), #000 70%);
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.55), #000 70%);
+}
+
+/* Alttan ürün renginde ışıma */
+.promo-glow {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(90% 55% at 50% 118%, color-mix(in srgb, var(--pc) 75%, transparent), transparent 72%),
+    linear-gradient(0deg, color-mix(in srgb, var(--pc) 30%, transparent), transparent 58%);
+  animation: promo-pulse 5s ease-in-out infinite alternate;
+}
+
+/* ---- 3D kutu ---- */
+.promo-stage {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 44%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  perspective: 62cqw;
+}
+.promo-enter {
+  position: relative;
+  transform-style: preserve-3d;
+  animation: promo-enter var(--cycle) cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+}
+.promo-box {
+  --w: 20cqw;
+  --h: 33cqw;
+  --d: 6cqw;
+  position: relative;
+  width: var(--w);
+  height: var(--h);
+  transform-style: preserve-3d;
+  transform: rotateX(12deg) rotateY(32deg);
+  animation: promo-sway 5s ease-in-out infinite alternate;
+}
+.pb-face { position: absolute; }
+.pb-front,
+.pb-back { inset: 0; }
+.pb-front {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transform: translateZ(calc(var(--d) / 2));
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='52' viewBox='0 0 120 104'%3E%3Cpath d='M4 0h26l30 40 30-40h26L60 74z' fill='%23fff' fill-opacity='.04'/%3E%3C/svg%3E") center / 5cqw auto,
+    linear-gradient(165deg, color-mix(in srgb, var(--pc) 30%, #111114) 0%, #0b0b0e 72%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+}
+.pb-back {
+  transform: rotateY(180deg) translateZ(calc(var(--d) / 2));
+  background: #0b0b0e;
+}
+.pb-side,
+.pb-right {
+  width: var(--d);
+  height: var(--h);
+  left: calc((var(--w) - var(--d)) / 2);
+}
+.pb-side {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  transform: rotateY(-90deg) translateZ(calc(var(--w) / 2));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--pc) 22%, #0d0d10), #08080a);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+.pb-side span {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 1.35cqw;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--pc) 70%, #fff);
+}
+.pb-right {
+  transform: rotateY(90deg) translateZ(calc(var(--w) / 2));
+  background: #070708;
+}
+.pb-top,
+.pb-bottom {
+  width: var(--w);
+  height: var(--d);
+  top: calc((var(--h) - var(--d)) / 2);
+}
+.pb-top {
+  transform: rotateX(90deg) translateZ(calc(var(--h) / 2));
+  background: linear-gradient(90deg, color-mix(in srgb, var(--pc) 85%, #fff), var(--pc));
+  box-shadow: 0 0 3cqw color-mix(in srgb, var(--pc) 70%, transparent);
+}
+.pb-bottom {
+  transform: rotateX(-90deg) translateZ(calc(var(--h) / 2));
+  background: color-mix(in srgb, var(--pc) 60%, #000);
+}
+.pb-bar {
+  flex: none;
+  height: 6.5%;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--pc) 80%, #fff), var(--pc));
+  box-shadow: 0 0 2.4cqw color-mix(in srgb, var(--pc) 75%, transparent);
+}
+.pb-front-mid {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.9cqw;
+  padding: 0 1.2cqw;
+  text-align: center;
+}
+.promo .pb-logo {
+  width: 36%;
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 0 1.6cqw color-mix(in srgb, var(--pc) 80%, transparent));
+}
+.pb-name {
+  max-width: 100%;
+  font-family: var(--font-display);
+  font-size: 2.5cqw;
+  font-weight: 900;
+  line-height: 0.95;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #fff;
+  text-shadow: 0 0 1.4cqw color-mix(in srgb, var(--pc) 70%, transparent);
+  overflow-wrap: anywhere;
+}
+.pb-brand {
+  font-family: var(--font-mono);
+  font-size: 0.9cqw;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  color: rgba(255, 255, 255, 0.55);
+}
+/* Kutunun önünden geçen parlama */
+.pb-gloss {
+  position: absolute;
+  inset: -20% -60%;
+  background: linear-gradient(105deg, transparent 42%, rgba(255, 255, 255, 0.16) 50%, transparent 58%);
+  transform: translateX(-60%);
+  animation: promo-gloss var(--cycle) ease-in-out infinite;
+  pointer-events: none;
+}
+.promo-shadow {
+  position: absolute;
+  left: 50%;
+  bottom: -5cqw;
+  width: 24cqw;
+  height: 3cqw;
+  border-radius: 50%;
+  transform: translateX(-50%) rotateX(90deg);
+  background: radial-gradient(closest-side, rgba(0, 0, 0, 0.8), transparent);
+}
+
+/* ---- Yazılar ---- */
+.promo-copy {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 3%;
+  width: 53%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7cqw;
+  text-align: center;
+  font-family: var(--font-tight);
+}
+.promo-title,
+.promo-line {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  animation: promo-line var(--cycle) cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+  animation-delay: calc(var(--i, 0) * 0.22s);
+}
+.promo-title {
+  font-size: 3.3cqw;
+  font-weight: 900;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  background: linear-gradient(180deg, #fff 35%, #b4b7bf);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.promo-title i {
+  font-style: normal;
+  color: var(--pc);
+  -webkit-text-fill-color: var(--pc);
+  text-shadow: 0 0 1.2cqw var(--pc);
+}
+.promo-line {
+  font-size: 2.55cqw;
+  font-weight: 700;
+  line-height: 1.25;
+  background: linear-gradient(100deg, #9fa2aa 0%, #fff 40%, #fff 60%, #9fa2aa 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Küçük kartlarda yazılar ve kutu biraz büyür */
+.promo-compact .promo-title { font-size: 4cqw; }
+.promo-compact .promo-line { font-size: 3.1cqw; }
+
+/* Ekran dışındayken dur */
+.promo.is-paused,
+.promo.is-paused * { animation-play-state: paused !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  .promo * { animation: none !important; }
+}
+
+/* ---- Hareketler ---- */
+@keyframes promo-drift {
+  to { transform: translateY(calc(12cqw * 104 / 120)); }
+}
+@keyframes promo-pulse {
+  from { opacity: 0.75; }
+  to { opacity: 1; }
+}
+@keyframes promo-sway {
+  from { transform: rotateX(14deg) rotateY(38deg) translateY(0); }
+  to { transform: rotateX(9deg) rotateY(24deg) translateY(-1.6cqw); }
+}
+@keyframes promo-enter {
+  0% { opacity: 0; transform: translateX(-46cqw) rotateY(-160deg) scale(0.8); }
+  10% { opacity: 1; transform: translateX(2cqw) rotateY(12deg) scale(1.02); }
+  15%, 86% { opacity: 1; transform: translateX(0) rotateY(0) scale(1); }
+  94%, 100% { opacity: 0; transform: translateX(0) translateY(4cqw) rotateY(0) scale(0.9); }
+}
+@keyframes promo-line {
+  0%, 13% { opacity: 0; transform: translateX(5cqw); filter: blur(6px); }
+  20%, 84% { opacity: 1; transform: none; filter: blur(0); }
+  91%, 100% { opacity: 0; transform: translateX(-3cqw); filter: blur(6px); }
+}
+@keyframes promo-gloss {
+  0%, 22% { transform: translateX(-60%); }
+  36%, 100% { transform: translateX(60%); }
+}

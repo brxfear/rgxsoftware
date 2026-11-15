@@ -325,6 +325,7 @@ const tr = {
   },  campaign: { barText: 'Tüm ürünlerde %{n} indirim — kod:', sub: 'tüm ürünlerde', useCode: 'KOD', copy: 'Kopyala', copied: 'Kopyalandı', shop: 'Ürünlere göz at', days: 'GÜN', hours: 'SAAT', mins: 'DAK', secs: 'SN' },  rv: { leave: 'Bu siparişi değerlendir', ph: 'Deneyimini birkaç kelimeyle yaz (opsiyonel)', send: 'Yorumu gönder', saved: 'Yorumun için teşekkürler!', thanks: 'Yorumun yayında, teşekkürler!' },
   marquee: { label: 'Discord’da canlı müşteri yorumları' },
   rich: {
+    promo: 'Tanıtım',
     pp: 'Ürün PP',
     menu: 'Menü SS',
     menuTitle: 'Menü / GUI SS',

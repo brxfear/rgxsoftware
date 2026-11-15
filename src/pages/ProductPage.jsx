@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ShoppingCart, Zap, ShieldCheck, Headphones, ChevronLeft, ChevronRight, Check, Star, Minus, Plus, Lock, Lightbulb } from 'lucide-react';
 import RichProductCard from '../components/ProductCard/RichProductCard';
+import ProductPromo from '../components/ProductPromo/ProductPromo';
+import { hasPromo, promoColor } from '../lib/promo';
 import StatusPill from '../components/StatusPill';
 import { useShopStore, useDiscordUrl } from '../store/useShopStore';
 import { useCartStore } from '../store/useCartStore';
@@ -36,6 +38,7 @@ const ProductView = ({ product, category, categories, products }) => {
 
   const media = useMemo(() => {
     const list = [];
+    if (hasPromo(product)) list.push({ type: 'promo' });
     if (product.video_url) list.push({ type: 'video', url: product.video_url });
     if (product.image_url) list.push({ type: 'image', url: product.image_url });
     (product.extra_images || []).forEach((url) => url && list.push({ type: 'image', url }));
@@ -130,6 +133,8 @@ const ProductView = ({ product, category, categories, products }) => {
               ) : (
                 <video src={current.url} controls playsInline />
               )
+            ) : current?.type === 'promo' ? (
+              <ProductPromo product={product} />
             ) : (
               <img src={current?.url} alt={product.name} className={current?.fallback ? 'is-fallback' : ''} />
             )}
@@ -144,7 +149,7 @@ const ProductView = ({ product, category, categories, products }) => {
             <div className="pm-thumbs">
               {media.map((m, i) => (
                 <button key={i} className={i === index ? 'on' : ''} onClick={() => setIndex(i)} aria-label={`${t('product.media')} ${i + 1}`}>
-                  {m.type === 'video' ? <span className="pm-thumb-video">▶</span> : <img src={m.url} alt="" />}
+                  {m.type === 'video' ? <span className="pm-thumb-video">▶</span> : m.type === 'promo' ? <span className="pm-thumb-promo" style={{ '--pc': promoColor(product) }}><img src="/logo.webp" alt="" /></span> : <img src={m.url} alt="" />}
                 </button>
               ))}
             </div>

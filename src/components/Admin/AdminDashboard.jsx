@@ -62,6 +62,8 @@ import AdminStatus from './AdminStatus';
 import AdminKeys from './AdminKeys';
 import AdminSupport from './AdminSupport';
 import AdminCampaign from './AdminCampaign';
+import ProductPromo from '../ProductPromo/ProductPromo';
+import { PROMO_COLORS } from '../../lib/promo';
 import './AdminDashboard.css';
 
 /* ------------------------------------------------------------------ */
@@ -146,6 +148,7 @@ const FIELD_LABELS = {
   price_1day: '1 gün fiyatı', price_7day: '7 gün fiyatı', price_30day: '30 gün fiyatı', price_lifetime: 'sınırsız fiyatı',
   plans: 'planlar', image_url: 'kapak görseli', video_url: 'video', extra_images: 'ek görseller', is_available: 'satış durumu', slug: 'slug',
   status: 'durum', badge: 'rozet', menu_image_url: 'menü SS',
+  media_mode: 'kart görseli', promo_color: 'tanıtım rengi', promo_tagline: 'tanıtım sloganı',
 };
 
 /** Değişen alanları okunur bir özete çevirir (görseller için sadece "değişti"). */
@@ -520,6 +523,9 @@ const EMPTY_PRODUCT = {
   status: 'undetected',
   badge: '',
   menu_image_url: '',
+  media_mode: 'promo',
+  promo_color: '#e0262f',
+  promo_tagline: '',
 };
 
 const STATUS_OPTIONS = [
@@ -603,6 +609,9 @@ const ProductForm = ({ initial, categories, onClose, me }) => {
       video_url: form.video_url.trim(),
       extra_images: form.extra_images,
       menu_image_url: form.menu_image_url || '',
+      media_mode: form.media_mode === 'image' ? 'image' : 'promo',
+      promo_color: /^#[0-9a-f]{6}$/i.test(form.promo_color || '') ? form.promo_color : '#e0262f',
+      promo_tagline: (form.promo_tagline || '').trim().slice(0, 40),
       loader_url: (form.loader_url || '').trim(),
       loader_note: (form.loader_note || '').trim().slice(0, 500),
       reseller_only: !!form.reseller_only,
@@ -746,6 +755,29 @@ const ProductForm = ({ initial, categories, onClose, me }) => {
                 <button type="button" className="adm-chip" onClick={() => addPlan('')}>+ Özel</button>
               </div>
             </div>
+          </div>
+
+          <div className="adm-field adm-promo-edit">
+            <span className="adm-label">Hareketli tanıtım (Nova tarzı kutu animasyonu)</span>
+            <div className="adm-promo-row">
+              <select className="adm-input" value={form.media_mode === 'image' ? 'image' : 'promo'} onChange={set('media_mode')}>
+                <option value="promo">Kartta önce tanıtım animasyonu</option>
+                <option value="image">Sadece fotoğraf (animasyon kapalı)</option>
+              </select>
+              <input className="adm-input" value={form.promo_tagline || ''} onChange={set('promo_tagline')} maxLength={40} placeholder="Kutu yanı yazısı: UNDETECTED · RGX SOFTWARE" />
+            </div>
+            <div className="adm-promo-colors">
+              {PROMO_COLORS.map(([c, label]) => (
+                <button key={c} type="button" title={label} className={form.promo_color === c ? 'on' : ''} style={{ background: c }} onClick={() => setForm((f) => ({ ...f, promo_color: c }))} />
+              ))}
+              <input type="color" value={/^#[0-9a-f]{6}$/i.test(form.promo_color || '') ? form.promo_color : '#e0262f'} onChange={set('promo_color')} title="Özel renk" />
+            </div>
+            {form.media_mode !== 'image' && (
+              <div className="adm-promo-preview">
+                <ProductPromo product={{ ...form, name: form.name || 'Ürün adı' }} compact />
+              </div>
+            )}
+            <span className="adm-muted adm-help">Yazılar ürün adından ve “-” ile başlayan özellik satırlarından otomatik gelir.</span>
           </div>
 
           <ImageField label="Kapak görseli (Ürün PP)" value={form.image_url} onChange={set('image_url')} hint="Otomatik WebP'ye küçültülür." />

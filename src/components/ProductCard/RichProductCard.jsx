@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { ArrowRight, Check, Maximize2, Star } from 'lucide-react';
 import StatusPill from '../StatusPill';
 import Lightbox from '../Lightbox';
+import ProductPromo from '../ProductPromo/ProductPromo';
+import { hasPromo } from '../../lib/promo';
 import { getPlans } from '../../lib/db';
 import { featureBullets, statusOf, STATUS_TONE } from '../../lib/status';
 import { useMoney } from '../../lib/currency';
@@ -15,29 +17,34 @@ import { useT, localized, planLabel } from '../../i18n';
 const RichProductCard = ({ product, to, categoryName, highlight = false }) => {
   const { t, lang } = useT();
   const { fmt } = useMoney();
-  const [tab, setTab] = useState('pp');
+  const promo = hasPromo(product);
+  const [tab, setTab] = useState(promo ? 'promo' : 'pp');
   const [zoom, setZoom] = useState(null);
   const plans = getPlans(product);
   const bullets = featureBullets(localized(product, 'details', lang));
   const menu = product.menu_image_url || product.extra_images?.[0] || '';
   const cover = product.image_url || '';
   const shown = tab === 'menu' && menu ? menu : cover;
+  const tabs = [promo && ['promo', t('rich.promo')], (cover || !promo) && ['pp', t('rich.pp')], menu && ['menu', t('rich.menu')]].filter(Boolean);
   const tone = STATUS_TONE[statusOf(product)];
 
   return (
     <article className={`rpc ${highlight ? 'is-highlight' : ''} rpc-${tone}`}>
       <div className="rpc-media">
-        {shown ? (
+        {tab === 'promo' ? (
+          <ProductPromo product={product} compact />
+        ) : shown ? (
           <img src={shown} alt={product.name} loading="lazy" className={tab === 'menu' ? 'is-menu' : ''} />
         ) : (
           <div className="rpc-fallback"><img src="/logo.webp" alt="" /><strong>{product.name}</strong></div>
         )}
         <div className="rpc-media-top">
           <StatusPill product={product} />
-          {menu && (
+          {tabs.length > 1 && (
             <div className="rpc-tabs" role="tablist">
-              <button role="tab" aria-selected={tab === 'pp'} className={tab === 'pp' ? 'on' : ''} onClick={() => setTab('pp')}>{t('rich.pp')}</button>
-              <button role="tab" aria-selected={tab === 'menu'} className={tab === 'menu' ? 'on' : ''} onClick={() => setTab('menu')}>{t('rich.menu')}</button>
+              {tabs.map(([k, label]) => (
+                <button key={k} role="tab" aria-selected={tab === k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{label}</button>
+              ))}
             </div>
           )}
         </div>

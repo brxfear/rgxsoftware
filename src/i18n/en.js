@@ -325,6 +325,7 @@ const en = {
   },  campaign: { barText: '{n}% off everything with code', sub: 'on everything in the store', useCode: 'USE CODE', copy: 'Copy', copied: 'Copied', shop: 'Shop products', days: 'DAYS', hours: 'HRS', mins: 'MIN', secs: 'SEC' },  rv: { leave: 'Review this order', ph: 'Share your experience (optional)', send: 'Submit review', saved: 'Thanks for your review!', thanks: 'Your review is live, thanks!' },
   marquee: { label: 'Live customer reviews from Discord' },
   rich: {
+    promo: 'Promo',
     pp: 'Product',
     menu: 'Menu SS',
     menuTitle: 'Menu / GUI SS',
