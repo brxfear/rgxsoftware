@@ -13,6 +13,8 @@ import {
   writeBatch,
 } from 'firebase/firestore';
 import {
+  BadgePercent,
+  LifeBuoy,
   Activity,
   Megaphone,
   Briefcase,
@@ -58,6 +60,8 @@ import AdminResellers from './AdminResellers';
 import AdminHwid from './AdminHwid';
 import AdminStatus from './AdminStatus';
 import AdminKeys from './AdminKeys';
+import AdminSupport from './AdminSupport';
+import AdminCampaign from './AdminCampaign';
 import './AdminDashboard.css';
 
 /* ------------------------------------------------------------------ */
@@ -1639,7 +1643,9 @@ const NAV = [
   { id: 'status', label: 'Durum', icon: Activity },
   { id: 'keys', label: 'Key stoğu', icon: KeyRound },
   { id: 'announcements', label: 'Duyurular', icon: Megaphone },
+  { id: 'campaign', label: 'Kampanya & kodlar', icon: BadgePercent },
   { id: 'resellers', label: 'Bayiler', icon: Briefcase },
+  { id: 'support', label: 'Destek', icon: LifeBuoy },
   { id: 'hwid', label: 'HWID istekleri', icon: Cpu },
   { id: 'payments', label: 'Ödemeler', icon: CreditCard },
   { id: 'admins', label: 'Yöneticiler', icon: UserCog },
@@ -1725,8 +1731,10 @@ const AdminDashboard = ({ admin }) => {
           {view === 'payments' && <Payments orders={orders} />}
           {view === 'settings' && <SettingsView me={me} />}
           {view === 'announcements' && <AdminAnnouncements me={me} />}
-          {view === 'resellers' && <AdminResellers me={me} />}
+          {view === 'resellers' && <AdminResellers me={me} products={products} />}
           {view === 'hwid' && <AdminHwid me={me} />}
+          {view === 'support' && <AdminSupport me={me} />}
+          {view === 'campaign' && <AdminCampaign me={me} />}
           {view === 'status' && <AdminStatus products={products} categories={categories} me={me} />}
           {view === 'keys' && <AdminKeys products={products} categories={categories} me={me} />}
         </div>

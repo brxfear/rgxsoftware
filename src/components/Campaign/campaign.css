@@ -1,0 +1,62 @@
+/* Kampanya: Saira (display) metal + kırmızı başlık, geri sayım, kod kutusu */
+.cp-bar {
+  display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 10px; width: 100%; max-width: 1240px;
+  margin: 0 auto 8px; padding: 6px 14px; border-radius: 12px; font-size: 12.5px; color: #e9e3e4;
+  background: linear-gradient(90deg, rgba(224, 38, 47, 0.18), rgba(20, 12, 14, 0.85) 40%, rgba(20, 12, 14, 0.85) 60%, rgba(224, 38, 47, 0.18));
+  border: 1px solid rgba(224, 38, 47, 0.35); backdrop-filter: blur(12px);
+}
+.cp-bar-badge { padding: 2px 9px; border-radius: 999px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.1em; color: #fff; background: linear-gradient(135deg, #ff3b47, #b3141c); }
+.cp-bar code { padding: 2px 8px; border-radius: 7px; font-weight: 800; letter-spacing: 0.08em; color: #fff; border: 1px dashed rgba(255, 255, 255, 0.35); }
+.cp-bar-time { display: inline-flex; align-items: center; gap: 5px; color: #fbbf24; font-variant-numeric: tabular-nums; }
+.navbar-fixed-container { flex-direction: column; align-items: center; }
+
+.cp-hero { position: relative; overflow: hidden; padding: 150px 0 50px; }
+.cp-hero-beams {
+  position: absolute; inset: 0; pointer-events: none;
+  background:
+    conic-gradient(from 200deg at 72% -10%, transparent 0deg, rgba(255, 255, 255, 0.07) 12deg, transparent 26deg),
+    conic-gradient(from 160deg at 82% -10%, transparent 0deg, rgba(224, 38, 47, 0.18) 14deg, transparent 30deg),
+    radial-gradient(ellipse 50% 40% at 75% 70%, rgba(224, 38, 47, 0.18), transparent 70%);
+}
+.cp-hero-inner { position: relative; display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr); gap: 30px; align-items: center; }
+.cp-chip { display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px; border-radius: 999px; font-size: 12px; font-weight: 800; letter-spacing: 0.08em; color: #fff; background: rgba(20, 12, 14, 0.8); border: 1px solid rgba(255, 255, 255, 0.14); }
+.cp-chip i { width: 7px; height: 7px; border-radius: 50%; background: var(--red-bright); box-shadow: 0 0 10px var(--red-bright); }
+.cp-chip em { font-style: normal; font-weight: 600; letter-spacing: 0; color: var(--text-muted); }
+.cp-title { display: flex; flex-direction: column; margin: 18px 0 10px; font-family: var(--font-display); font-weight: 800; line-height: 0.86; letter-spacing: -0.01em; text-transform: uppercase; }
+.cp-title-1 {
+  font-size: clamp(64px, 11vw, 140px);
+  background: linear-gradient(180deg, #ffffff 0%, #e7e9ec 42%, #8b9097 55%, #f2f3f5 75%, #b8bcc2 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.7));
+}
+.cp-title-2 {
+  font-size: clamp(64px, 11vw, 140px);
+  background: linear-gradient(180deg, #ff8a90 0%, #ff3b47 45%, #c4111b 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 0 28px rgba(224, 38, 47, 0.65));
+}
+.cp-sub { font-size: 18px; color: #e6dfe0; margin-bottom: 20px; }
+.cp-sub strong { font-family: var(--font-display); font-size: 26px; color: #fff; margin-right: 6px; }
+.cp-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: stretch; }
+.cp-count { position: relative; display: flex; align-items: center; gap: 6px; padding: 12px 14px 16px; border-radius: 16px; background: rgba(20, 12, 14, 0.85); border: 1px solid rgba(255, 255, 255, 0.1); overflow: hidden; }
+.cp-cell { display: flex; flex-direction: column; align-items: center; min-width: 54px; padding: 8px 6px; border-radius: 11px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); }
+.cp-cell strong { font-family: var(--font-display); font-size: 28px; line-height: 1; font-variant-numeric: tabular-nums; }
+.cp-cell small { font-size: 9.5px; font-weight: 800; letter-spacing: 0.14em; color: var(--text-muted); margin-top: 3px; }
+.cp-colon { font-weight: 800; color: var(--text-muted); }
+.cp-progress { position: absolute; left: 14px; right: 14px; bottom: 7px; height: 3px; border-radius: 3px; background: rgba(255, 255, 255, 0.08); }
+.cp-progress i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #ff3b47, #ff8a90); }
+.cp-code { display: flex; align-items: center; gap: 16px; padding: 12px 14px 12px 18px; border-radius: 16px; background: rgba(20, 12, 14, 0.85); border: 1px solid rgba(255, 255, 255, 0.1); }
+.cp-code small { display: block; font-size: 10px; font-weight: 800; letter-spacing: 0.16em; color: var(--text-muted); }
+.cp-code strong { font-family: var(--font-display); font-size: 30px; letter-spacing: 0.04em; }
+.cp-copy, .cp-copy-big { display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 14px; border-radius: 999px; border: none; cursor: pointer; font: inherit; font-weight: 700; font-size: 13px; color: #111; background: #f5f5f6; }
+.cp-ctas { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+.cp-hero-art { position: relative; display: flex; justify-content: center; align-items: center; min-height: 360px; }
+.cp-hero-art img { position: relative; z-index: 1; width: min(80%, 360px); filter: drop-shadow(0 0 40px rgba(224, 38, 47, 0.55)); animation: cp-float 6s ease-in-out infinite; }
+.cp-pedestal { position: absolute; bottom: 10px; width: 70%; height: 46px; border-radius: 50%; border: 1px solid rgba(255, 90, 96, 0.6); background: radial-gradient(ellipse, rgba(224, 38, 47, 0.35), transparent 70%); box-shadow: 0 0 40px rgba(224, 38, 47, 0.45); }
+@keyframes cp-float { 50% { transform: translateY(-14px); } }
+@media (max-width: 900px) {
+  .cp-hero { padding-top: 130px; }
+  .cp-hero-inner { grid-template-columns: 1fr; }
+  .cp-hero-art { min-height: 220px; order: -1; }
+}
+@media (prefers-reduced-motion: reduce) { .cp-hero-art img { animation: none; } }

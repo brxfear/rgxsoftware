@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { toast } from 'react-hot-toast';
-import { ShoppingCart, LogIn, User, Package, LogOut, ChevronDown, KeyRound, Store, Star, HelpCircle, Workflow, Menu, X, LayoutDashboard, Activity, Megaphone, Info, Briefcase } from 'lucide-react';
+import { ShoppingCart, LogIn, User, Package, LogOut, ChevronDown, KeyRound, Store, Star, HelpCircle, Workflow, Menu, X, LayoutDashboard, Activity, Megaphone, Info, Briefcase, Video, LifeBuoy } from 'lucide-react';
 import { hasUnread } from '../../lib/announcements';
 import { isUp, statusOf } from '../../lib/status';
 import { auth } from '../../lib/firebase';
@@ -10,6 +10,7 @@ import { useT } from '../../i18n';
 import { useShopStore, useDiscordUrl } from '../../store/useShopStore';
 import { useCartStore } from '../../store/useCartStore';
 import './Navbar.css';
+import { CampaignBar } from '../Campaign/Campaign';
 
 const DiscordIcon = ({ size = 16 }) => (
   <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true">
@@ -145,10 +146,14 @@ const Navbar = () => {
   const infoLinks = [
     { to: '/#how-it-works', label: t('nav.how'), icon: Workflow },
     { to: '/#faq', label: t('nav.faq'), icon: HelpCircle },
+    { to: '/reseller', label: t('nav.reseller'), icon: Briefcase },
+    { to: '/media', label: t('nav.media'), icon: Video },
+    { to: '/account/support', label: t('nav.support'), icon: LifeBuoy },
   ];
 
   return (
     <header className={`navbar-fixed-container ${scrolled ? 'is-scrolled' : ''}`}>
+      {!scrolled && <CampaignBar />}
       <div className="glass-bar nav-inner">
         <Link to="/" className="nav-brand" aria-label="RGX Software">
           <img src="/logo.webp" alt="" className="brand-logo-img" width="40" height="40" />

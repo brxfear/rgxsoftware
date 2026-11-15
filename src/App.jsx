@@ -13,6 +13,7 @@ import SmokeTrail from './components/Effects/SmokeTrail';
 import CursorDot from './components/Effects/CursorDot';
 import StarField from './components/Effects/StarField';
 import LiveFx from './components/Effects/LiveFx';
+import SupportFab from './components/Support/SupportFab';
 
 import HomePage from './pages/HomePage';
 import ShopPage from './pages/ShopPage';
@@ -21,6 +22,7 @@ import ProductPage from './pages/ProductPage';
 import ReviewsPage from './pages/ReviewsPage';
 import StatusPage from './pages/StatusPage';
 import AnnouncementsPage from './pages/AnnouncementsPage';
+import MediaPage from './pages/MediaPage';
 
 import { auth } from './lib/firebase';
 import { roundUsd } from './lib/currency';
@@ -172,6 +174,7 @@ function Shell() {
       />
 
       <AuthModal isOpen={authOpen} onClose={closeAuth} />
+      <SupportFab />
 
       {!lookup && <PendingPaymentWatcher />}
       {lookup && (
@@ -201,6 +204,7 @@ function App() {
           <Route path="reviews" element={<ReviewsPage />} />
           <Route path="status" element={<StatusPage />} />
           <Route path="announcements" element={<AnnouncementsPage />} />
+          <Route path="media" element={<MediaPage />} />
           <Route path="account/:tab?" element={<AccountPage />} />
           <Route path="reseller/:tab?" element={<ResellerPage />} />
         </Route>

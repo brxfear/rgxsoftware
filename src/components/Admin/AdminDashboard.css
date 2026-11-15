@@ -625,3 +625,13 @@ select.adm-input option { background: #1a1214; }
 /* Key stoğu */
 .adm-stock-plans { display: flex; flex-wrap: wrap; gap: 6px; }
 .adm-ok { color: #34d399; font-weight: 700; }
+/* Başvuru / medya (admin) */
+.adm-app-box { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-radius: 12px; font-size: 13px; background: rgba(56, 189, 248, 0.06); border: 1px solid rgba(56, 189, 248, 0.25); margin-bottom: 12px; }
+.adm-app-box p { margin: 4px 0 0; color: var(--text-muted); white-space: pre-wrap; }
+.adm-media-box { padding: 12px 14px; border-radius: 12px; background: rgba(255, 255, 255, 0.025); border: 1px solid rgba(255, 255, 255, 0.08); margin-bottom: 12px; }
+.adm-media-allowed { display: flex; flex-direction: column; gap: 8px; margin: 8px 0; }
+.adm-media-prod { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13px; }
+.adm-media-prod > div { display: flex; flex-wrap: wrap; gap: 6px; }
+.adm-chip.on { color: #fff; background: rgba(224, 38, 47, 0.25); border-color: rgba(224, 38, 47, 0.6); }
+.adm-media-prod label.adm-chip { cursor: pointer; }
+.adm-camp-switches { display: flex; flex-wrap: wrap; gap: 18px; margin: 4px 0 14px; }

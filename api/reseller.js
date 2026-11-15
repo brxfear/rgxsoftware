@@ -13,7 +13,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { adminDb, adminAuth, getPlans, roundUsd, getUsdTry, usdToTry, paymentLog } from './_lib/firebaseAdmin.js';
 import { requireAdmin, sendError, HttpError } from './_lib/adminAuth.js';
 import { createShopierProduct, checkPendingOrder } from './_lib/shopierPay.js';
-import { requireReseller, generateKeys, resellerPrice, resellerVisible, currentUsage, applyBalance } from './_lib/reseller.js';
+import { requireReseller, generateKeys, generateMediaKeys, resellerPrice, resellerVisible, currentUsage, applyBalance, canSell, isMedia, mediaUsage, STATUS_MSG } from './_lib/reseller.js';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const lastCheck = new Map();
@@ -47,7 +47,13 @@ export default async function handler(req, res) {
       const email = String(b.email || '').trim().toLowerCase();
       const data = {
         display_name: String(b.display_name || '').trim().slice(0, 40),
-        status: b.status === 'suspended' ? 'suspended' : 'active',
+        status: ['active', 'suspended', 'pending', 'rejected'].includes(b.status) ? b.status : 'active',
+        role: ['reseller', 'media', 'both'].includes(b.role) ? b.role : 'reseller',
+        media: {
+          enabled: b.media?.enabled !== false,
+          weekly_limit: int(b.media?.weekly_limit, 100),
+          allowed: (Array.isArray(b.media?.allowed) ? b.media.allowed : []).map(String).filter((x) => /^[\w-]+:[\w-]+$/.test(x)).slice(0, 50),
+        },
         discount_pct: Math.min(90, Math.max(0, Number(b.discount_pct) || 0)),
         daily_limit: int(b.daily_limit),
         monthly_limit: int(b.monthly_limit),
@@ -189,7 +195,7 @@ export default async function handler(req, res) {
     if (action === 'signup' && req.method === 'GET') {
       const s = (await db.collection('settings').doc('reseller').get()).data() || {};
       const exists = (await db.collection('resellers').doc(user.uid).get()).exists;
-      return res.status(200).json({ open: s.signup_open !== false, exists, rules: s.rules || '' });
+      return res.status(200).json({ open: s.signup_open !== false, exists, rules: s.rules || '', media_rules: s.media_rules || '' });
     }
     if (action === 'signup' && req.method === 'POST') {
       const s = (await db.collection('settings').doc('reseller').get()).data() || {};
@@ -197,14 +203,24 @@ export default async function handler(req, res) {
       const b = body(req);
       const name = String(b.display_name || '').trim().replace(/\s+/g, ' ').slice(0, 40);
       if (name.length < 2) throw new HttpError(400, 'Bayi adı en az 2 karakter olmalı.');
-      if (!b.accept_rules) throw new HttpError(400, 'Bayi kurallarını kabul etmelisin.');
+      if (!b.accept_rules) throw new HttpError(400, 'Kuralları kabul etmelisin.');
+      const role = b.role === 'media' ? 'media' : 'reseller';
+      const discord = String(b.discord || '').trim().slice(0, 60);
+      const channel = String(b.channel_url || '').trim().slice(0, 200);
+      const about = String(b.about || '').trim().slice(0, 600);
+      if (discord.length < 2) throw new HttpError(400, 'Discord kullanıcı adını yaz.');
+      if (role === 'media' && !/^https?:\/\//i.test(channel)) throw new HttpError(400, 'Kanal / profil linkini yaz (https://…).');
+      const auto = s.auto_approve === true;
       const ref = db.collection('resellers').doc(user.uid);
       await db.runTransaction(async (tx) => {
         if ((await tx.get(ref)).exists) throw new HttpError(409, 'Zaten bayi hesabın var.');
         tx.set(ref, {
           email: user.email || '',
           display_name: name,
-          status: 'active',
+          status: auto ? 'active' : 'pending',
+          role,
+          media: { enabled: role === 'media', weekly_limit: 0, allowed: [] },
+          application: { discord, channel_url: channel, about, at: new Date().toISOString() },
           balance_usd: 0,
           discount_pct: Math.min(90, Math.max(0, Number(s.default_discount_pct) || 0)),
           daily_limit: int(s.default_daily_limit ?? 20),
@@ -224,14 +240,19 @@ export default async function handler(req, res) {
         action: 'create',
         target_type: 'reseller',
         target_id: user.uid,
-        summary: `Yeni bayi kaydı (kendi oluşturdu): ${name}`,
+        summary: `Yeni ${role === 'media' ? 'medya' : 'bayi'} başvurusu: ${name} (${discord})${auto ? ' — otomatik onaylandı' : ''}`,
         at: FieldValue.serverTimestamp(),
       });
       return res.status(200).json({ ok: true });
     }
 
     if (action === 'me' && req.method === 'GET') {
-      const { data: r } = await requireReseller(db, user.uid);
+      const rs = await db.collection('resellers').doc(user.uid).get();
+      if (!rs.exists) throw new HttpError(403, 'Bayi hesabı değil.');
+      const r = rs.data();
+      if (r.status !== 'active') {
+        return res.status(200).json({ reseller: { uid: user.uid, status: r.status, role: r.role || 'reseller', display_name: r.display_name, message: STATUS_MSG[r.status] || STATUS_MSG.suspended }, catalog: [], media: null, info: {} });
+      }
       const [prods, cats, setSnap] = await Promise.all([
         db.collection('products').get(),
         db.collection('categories').get(),
@@ -241,7 +262,7 @@ export default async function handler(req, res) {
       // Stok sayımları paralel (sırayla yapınca panel yavaş açılıyordu)
       const catalog = await Promise.all(
         prods.docs
-          .filter((d) => resellerVisible(d.data(), r))
+          .filter((d) => canSell(r) && resellerVisible(d.data(), r))
           .map(async (d) => {
             const p = d.data();
             const plans = await Promise.all(
@@ -254,12 +275,31 @@ export default async function handler(req, res) {
           }),
       );
       const s = setSnap.exists ? setSnap.data() : {};
+      // Medya: sadece yöneticinin seçtiği ürün/planlar
+      let media = null;
+      if (isMedia(r)) {
+        const allowed = Array.isArray(r.media?.allowed) ? r.media.allowed : [];
+        const items = await Promise.all(
+          allowed.map(async (a) => {
+            const [pid, plid] = a.split(':');
+            const d = prods.docs.find((x) => x.id === pid);
+            if (!d) return null;
+            const pl = getPlans(d.data()).find((x) => String(x.id) === plid);
+            if (!pl) return null;
+            const stock = (await db.collection('license_keys').where('product_id', '==', pid).where('plan_id', '==', plid).where('status', '==', 'available').count().get()).data().count;
+            return { product_id: pid, plan_id: plid, name: d.get('name'), plan_label: pl.label, image_url: d.get('image_url') || '', stock };
+          }),
+        );
+        media = { weekly_limit: Number(r.media?.weekly_limit) || 0, usage: mediaUsage(r), items: items.filter(Boolean) };
+      }
       return res.status(200).json({
+        media,
         reseller: {
           uid: user.uid,
           display_name: r.display_name,
           email: r.email,
           status: r.status,
+          role: r.role || 'reseller',
           balance_usd: roundUsd(r.balance_usd || 0),
           discount_pct: r.discount_pct || 0,
           daily_limit: r.daily_limit || 0,
@@ -272,6 +312,11 @@ export default async function handler(req, res) {
         catalog,
         info: { rules: s.rules || '', guide: s.guide || '', min_topup_usd: Number(s.min_topup_usd) || 5 },
       });
+    }
+
+    if (action === 'media-generate' && req.method === 'POST') {
+      const b = body(req);
+      return res.status(200).json(await generateMediaKeys(db, user.uid, { productId: b.product_id, planId: b.plan_id, quantity: b.quantity, note: b.note }));
     }
 
     if (action === 'generate' && req.method === 'POST') {

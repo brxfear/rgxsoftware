@@ -15,6 +15,7 @@ export const useShopStore = create((set, get) => ({
   authReady: false,
   discord: { invite_url: DEFAULT_DISCORD },
   announcements: null,
+  campaign: null, // settings/campaign (aktif ve süresi dolmamışsa)
   reseller: null, // giriş yapan kullanıcı bayiyse resellers/{uid} kaydı
 
   authOpen: false,
@@ -38,8 +39,11 @@ export const useShopStore = create((set, get) => ({
 
   loadSettings: async () => {
     try {
-      const s = await getDoc(doc(db, 'settings', 'discord'));
+      const [s, c] = await Promise.all([getDoc(doc(db, 'settings', 'discord')), getDoc(doc(db, 'settings', 'campaign'))]);
       if (s.exists()) set({ discord: { invite_url: DEFAULT_DISCORD, ...s.data() } });
+      const cd = c.exists() ? c.data() : null;
+      const ends = cd?.ends_at ? new Date(cd.ends_at).getTime() : 0;
+      if (cd?.active && (!ends || ends > Date.now())) set({ campaign: cd });
     } catch {
       /* varsayılan link kalır */
     }

@@ -224,3 +224,19 @@
 .rs-plan-pick button.nostock small { color: #fbbf24; }
 .rs-note-warn { color: #fde68a; background: rgba(245, 158, 11, 0.08); border-color: rgba(245, 158, 11, 0.3); line-height: 1.5; }
 .rs-note-warn svg { flex-shrink: 0; }
+
+/* Başvuru / medya */
+.rs-role-pick { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.rs-role-pick button { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 14px; border-radius: 14px; cursor: pointer; text-align: left; font: inherit; color: var(--text-main); background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); }
+.rs-role-pick button svg { color: var(--red-bright); }
+.rs-role-pick button small { color: var(--text-muted); font-size: 12px; }
+.rs-role-pick button.on { border-color: var(--red); background: rgba(224,38,47,0.12); box-shadow: 0 0 0 1px rgba(224,38,47,0.35); }
+.rs-textarea { padding: 12px 14px; border-radius: 12px; font: inherit; font-size: 14px; color: var(--text-main); background: rgba(0,0,0,0.35); border: 1px solid rgba(255,255,255,0.12); resize: vertical; }
+.rs-pending-ico { width: 64px; height: 64px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: #fbbf24; background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.35); }
+.rs-media-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.rs-media-card { display: flex; flex-direction: column; gap: 6px; }
+.rs-media-card img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 12px; margin-bottom: 6px; }
+.rs-media-actions { display: flex; gap: 8px; margin-top: 6px; }
+.rs-media-actions input { width: 70px; height: 40px; padding: 0 10px; border-radius: 10px; font: inherit; color: #fff; background: rgba(0,0,0,0.35); border: 1px solid rgba(255,255,255,0.12); }
+.rs-media-actions .rs-btn { flex: 1; }
+@media (max-width: 560px) { .rs-role-pick { grid-template-columns: 1fr; } }

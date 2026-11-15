@@ -214,3 +214,11 @@
 .co-wait-card span { font-size: 13px; line-height: 1.55; color: #d8d1d2; }
 .co-cta-ghost { height: 44px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.04); color: var(--text-main); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
 .co-cta-ghost:hover { background: rgba(255,255,255,0.09); }
+
+/* İndirim kodu */
+.co-coupon { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.co-coupon input { flex: 1; min-width: 140px; height: 38px; padding: 0 12px; border-radius: 10px; font: inherit; font-size: 13px; font-weight: 700; letter-spacing: 0.06em; color: #fff; background: rgba(0,0,0,0.35); border: 1px dashed rgba(255,255,255,0.2); }
+.co-coupon button { height: 38px; padding: 0 14px; border-radius: 10px; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; color: #fff; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); }
+.co-coupon button:disabled { opacity: 0.5; cursor: default; }
+.co-coupon .co-coupon-hint { color: #fbbf24; background: rgba(245,158,11,0.1); border-color: rgba(245,158,11,0.4); }
+.co-discount span:last-child { color: #34d399; font-weight: 700; }

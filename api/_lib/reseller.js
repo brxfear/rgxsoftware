@@ -46,11 +46,73 @@ export const limitCheck = (r, qty, keys) => {
   return { usage: u, dayLeft, monthLeft, ok: qty <= dayLeft && qty <= monthLeft };
 };
 
+export const STATUS_MSG = {
+  pending: 'Başvurun inceleniyor. Onaylanınca panelin açılacak.',
+  rejected: 'Başvurun onaylanmadı. Bilgi için Discord’dan destek al.',
+  suspended: 'Hesabın askıya alınmış. Destekle iletişime geç.',
+};
+
+/** role: 'reseller' (satış) | 'media' (sadece haftalık ücretsiz medya keyleri) | 'both' */
+export const canSell = (r) => (r.role || 'reseller') !== 'media';
+export const isMedia = (r) => (r.role === 'media' || r.role === 'both') && r.media?.enabled !== false;
+
 export const requireReseller = async (db, uid) => {
   const snap = await db.collection('resellers').doc(uid).get();
   if (!snap.exists) throw new HttpError(403, 'Bayi hesabı değil.');
-  if (snap.get('status') !== 'active') throw new HttpError(403, 'Bayi hesabın askıya alınmış. Destekle iletişime geç.');
+  if (snap.get('status') !== 'active') throw new HttpError(403, STATUS_MSG[snap.get('status')] || STATUS_MSG.suspended);
   return { ref: snap.ref, data: snap.data() };
+};
+
+/** Haftanın anahtarı (İstanbul, pazartesi başlar): '2026-11-09' */
+export const weekKey = (d = new Date()) => {
+  const day = d.toLocaleDateString('sv-SE', { timeZone: 'Europe/Istanbul' });
+  const dt = new Date(`${day}T00:00:00Z`);
+  const dow = (dt.getUTCDay() + 6) % 7; // pazartesi = 0
+  dt.setUTCDate(dt.getUTCDate() - dow);
+  return dt.toISOString().slice(0, 10);
+};
+
+export const mediaUsage = (r, wk = weekKey()) => ({ week: wk, count: r.media_usage?.week === wk ? r.media_usage.count || 0 : 0 });
+
+/**
+ * Medya keyi: haftalık ücretsiz kota, sadece yöneticinin seçtiği ürün/plan(lar) (media.allowed: ['urunId:planId']).
+ * Stoktan çekilir, bakiyeden düşmez.
+ */
+export const generateMediaKeys = async (db, uid, { productId, planId, quantity, note }) => {
+  const qty = Math.max(1, Math.min(20, parseInt(quantity, 10) || 1));
+  const resRef = db.collection('resellers').doc(uid);
+  const prodRef = db.collection('products').doc(String(productId));
+  const wk = weekKey();
+  return db.runTransaction(async (tx) => {
+    const [resSnap, prodSnap] = await Promise.all([tx.get(resRef), tx.get(prodRef)]);
+    if (!resSnap.exists) throw new HttpError(403, 'Hesap bulunamadı.');
+    const r = resSnap.data();
+    if (r.status !== 'active') throw new HttpError(403, STATUS_MSG[r.status] || STATUS_MSG.suspended);
+    if (!isMedia(r)) throw new HttpError(403, 'Medya programında değilsin.');
+    const allowed = Array.isArray(r.media?.allowed) ? r.media.allowed : [];
+    if (!allowed.includes(`${productId}:${planId}`)) throw new HttpError(403, 'Bu ürün/plan medya kotana dahil değil.');
+    if (!prodSnap.exists) throw new HttpError(404, 'Ürün bulunamadı.');
+    const product = prodSnap.data();
+    const plan = getPlans(product).find((p) => String(p.id) === String(planId));
+    if (!plan) throw new HttpError(404, 'Plan bulunamadı.');
+    const u = mediaUsage(r, wk);
+    const limit = Number(r.media?.weekly_limit) || 0;
+    if (u.count + qty > limit) throw new HttpError(429, `Haftalık medya kotan doldu (bu hafta kalan: ${Math.max(0, limit - u.count)}).`);
+    const stock = await tx.get(db.collection('license_keys').where('product_id', '==', prodSnap.id).where('plan_id', '==', String(plan.id)).where('status', '==', 'available').limit(qty));
+    if (stock.size < qty) throw new HttpError(409, stock.size ? `Stokta sadece ${stock.size} key var.` : 'Bu plan için stokta key yok, ekibe yaz.');
+    const now = FieldValue.serverTimestamp();
+    const txRef = db.collection('reseller_tx').doc();
+    const issued = [];
+    for (const k of stock.docs) {
+      const keyRef = db.collection('reseller_keys').doc();
+      issued.push({ id: keyRef.id, key: k.get('key') });
+      tx.update(k.ref, { status: 'used', reseller_id: uid, used_at: now, sold_price_usd: 0, media: true });
+      tx.set(keyRef, { reseller_id: uid, key: k.get('key'), stock_id: k.id, product_id: prodSnap.id, product_name: product.name, plan_id: String(plan.id), plan_label: plan.label, price_usd: 0, media: true, note: String(note || '').slice(0, 120), tx_id: txRef.id, created_at: now });
+    }
+    tx.set(txRef, { reseller_id: uid, type: 'media', amount_usd: 0, balance_after: roundUsd(r.balance_usd || 0), note: `Medya: ${qty} × ${product.name} (${plan.label})`, ref: prodSnap.id, at: now });
+    tx.update(resRef, { media_usage: { week: wk, count: u.count + qty }, total_keys: FieldValue.increment(qty), last_key_at: now });
+    return { keys: issued, week_left: limit - u.count - qty };
+  });
 };
 
 /**
@@ -67,7 +129,8 @@ export const generateKeys = async (db, uid, { productId, planId, quantity, note,
     const [resSnap, prodSnap] = await Promise.all([tx.get(resRef), tx.get(prodRef)]);
     if (!resSnap.exists) throw new HttpError(403, 'Bayi hesabı değil.');
     const r = resSnap.data();
-    if (r.status !== 'active') throw new HttpError(403, 'Bayi hesabın askıya alınmış.');
+    if (r.status !== 'active') throw new HttpError(403, STATUS_MSG[r.status] || STATUS_MSG.suspended);
+    if (!canSell(r)) throw new HttpError(403, 'Hesabın sadece medya keyleri için açık.');
     if (!prodSnap.exists || !resellerVisible(prodSnap.data(), r)) throw new HttpError(404, 'Ürün bayilere açık değil.');
     const product = prodSnap.data();
     const plan = getPlans(product).find((p) => String(p.id) === String(planId));

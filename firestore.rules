@@ -93,7 +93,7 @@ service cloud.firestore {
         && request.resource.data.actor_uid == request.auth.uid
         && request.resource.data.actor_nick == myNick()
         && request.resource.data.action in ['create', 'update', 'delete', 'status', 'login']
-        && request.resource.data.target_type in ['product', 'category', 'order', 'admin', 'session', 'settings', 'key', 'announcement', 'hwid', 'reseller']
+        && request.resource.data.target_type in ['product', 'category', 'order', 'admin', 'session', 'settings', 'key', 'announcement', 'hwid', 'reseller', 'coupon']
         && request.resource.data.target_id is string
         && request.resource.data.summary is string
         && request.resource.data.summary.size() <= 500
@@ -222,6 +222,68 @@ service cloud.firestore {
         && !('admin_note' in request.resource.data);
       allow update: if isAdmin() && loggedWrite(id);
       allow delete: if false;
+    }
+
+    // Doğrulanmış site yorumları: belge kimliği = sipariş id'si; sadece o siparişin sahibi,
+    // sipariş teslim edildiyse (Completed) bir kez yazabilir. Herkes okur, yönetici siler.
+    match /reviews/{orderId} {
+      allow read: if true;
+      allow create: if signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.order_id == orderId
+        && get(/databases/$(database)/documents/orders/$(orderId)).data.user_id == request.auth.uid
+        && get(/databases/$(database)/documents/orders/$(orderId)).data.status == 'Completed'
+        && request.resource.data.rating is int && request.resource.data.rating >= 1 && request.resource.data.rating <= 5
+        && request.resource.data.text is string && request.resource.data.text.size() <= 500
+        && request.resource.data.keys().hasOnly(['uid', 'order_id', 'name', 'product_name', 'rating', 'text', 'created_at']);
+      allow update: if false;
+      allow delete: if isAdmin() && loggedDelete(orderId);
+    }
+
+    // İndirim kodları: istemci okuyamaz (sunucu doğrular), yönetici loglu yazar
+    match /coupons/{code} {
+      allow read: if isAdmin();
+      allow create, update: if isAdmin() && loggedWrite(code);
+      allow delete: if isAdmin() && loggedDelete(code);
+    }
+
+    // ---- Destek talepleri ----
+    // tickets/{id}: { uid, name, email, subject, category, status: open|answered|closed, last_from, unread_admin, unread_user, created_at, updated_at }
+    function ticketFields() {
+      return ['status', 'updated_at', 'last_from', 'unread_admin', 'unread_user'];
+    }
+    match /tickets/{id} {
+      allow read: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow create: if signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.status == 'open'
+        && request.resource.data.last_from == 'user'
+        && request.resource.data.subject is string && request.resource.data.subject.size() > 0 && request.resource.data.subject.size() <= 120
+        && request.resource.data.keys().hasOnly(['uid', 'name', 'email', 'subject', 'category', 'product_name', 'order_ref', 'status', 'last_from', 'unread_admin', 'unread_user', 'created_at', 'updated_at']);
+      // Sahibi: yeni mesajda "open" yapar ya da talebi kapatır
+      allow update: if signedIn() && resource.data.uid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(ticketFields())
+        && (request.resource.data.status in ['open', 'closed'] || request.resource.data.status == resource.data.status)
+        && request.resource.data.last_from == 'user';
+      // Yönetici: yanıtlar / durum değiştirir
+      allow update: if isAdmin() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(ticketFields())
+        && request.resource.data.status in ['open', 'answered', 'closed'];
+      allow delete: if false;
+
+      match /messages/{mid} {
+        allow read: if isAdmin() || (signedIn() && get(/databases/$(database)/documents/tickets/$(id)).data.uid == request.auth.uid);
+        allow create: if request.resource.data.text is string
+          && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 3000
+          && request.resource.data.at == request.time
+          && (
+            (signedIn() && request.resource.data.from == 'user'
+              && getAfter(/databases/$(database)/documents/tickets/$(id)).data.uid == request.auth.uid
+              && request.resource.data.keys().hasOnly(['from', 'text', 'at']))
+            || (isAdmin() && request.resource.data.from == 'admin' && request.resource.data.nick == myNick()
+              && request.resource.data.keys().hasOnly(['from', 'text', 'at', 'nick']))
+          );
+        allow update, delete: if false;
+      }
     }
 
     // Duyurular: herkes okur, yönetici loglu yazar/siler.

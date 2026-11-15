@@ -6,7 +6,7 @@ import { db } from '../../lib/firebase';
 import { useMoney, loadUsdTry, usdToTry, fmtTry } from '../../lib/currency';
 import { useT, planLabel } from '../../i18n';
 import { useCartStore } from '../../store/useCartStore';
-import { useDiscordUrl } from '../../store/useShopStore';
+import { useDiscordUrl, useShopStore } from '../../store/useShopStore';
 import { triggerConfetti } from '../../utils/celebration';
 import { rememberGuestOrder } from '../../lib/guestOrders';
 import { openPaymentWindow, redirectSameTab, savePendingPayment, clearPendingPayment } from '../../lib/shopierWindow';
@@ -38,7 +38,7 @@ const CopyRow = ({ label, value }) => {
 };
 
 // fromCart=false: "Hemen satın al" ile tek ürün; ödeme sonrası sepet boşaltılmaz.
-const CheckoutModal = ({ isOpen, onClose, totalUsd, items = [], user, onComplete, fromCart = true }) => {
+const CheckoutModal = ({ isOpen, onClose, totalUsd: baseTotal, items = [], user, onComplete, fromCart = true }) => {
   const { t, lang } = useT();
   const { fmt } = useMoney();
   const discordUrl = useDiscordUrl();
@@ -52,6 +52,30 @@ const CheckoutModal = ({ isOpen, onClose, totalUsd, items = [], user, onComplete
   const [bank, setBank] = useState(null);
   const [ibanOrder, setIbanOrder] = useState(null);
   const [ibanAmount, setIbanAmount] = useState(null);
+  // İndirim kodu (sunucu doğrular; Shopier'de fiyatı sunucu uygular)
+  const campaign = useShopStore((st) => st.campaign);
+  const [couponText, setCouponText] = useState('');
+  const [coupon, setCoupon] = useState(null);
+  const [couponBusy, setCouponBusy] = useState(false);
+  const totalUsd = coupon ? Math.round(baseTotal * (1 - coupon.percent / 100) * 100) / 100 : baseTotal;
+  const applyCoupon = async (code = couponText) => {
+    const c = String(code || '').trim();
+    if (!c) return;
+    setCouponBusy(true);
+    try {
+      const r = await fetch(`/api/shopier-session?coupon=${encodeURIComponent(c)}`, { cache: 'no-store' });
+      const d = await r.json().catch(() => null);
+      if (!r.ok) throw new Error(d?.error || t('checkout.couponBad'));
+      setCoupon(d);
+      setCouponText(d.code);
+      toast.success(t('checkout.couponOk', { n: d.percent }));
+    } catch (err) {
+      setCoupon(null);
+      toast.error(err.message);
+    } finally {
+      setCouponBusy(false);
+    }
+  };
 
   useEffect(() => {
     if (!isOpen) return;
@@ -132,7 +156,7 @@ const CheckoutModal = ({ isOpen, onClose, totalUsd, items = [], user, onComplete
     let popup = null;
     if (method === 'shopier') popup = openPaymentWindow(t('checkout.processing'));
     try {
-      const result = await onComplete({ ...info, payment_method: method });
+      const result = await onComplete({ ...info, payment_method: method, coupon });
       if (result?.type === 'iban') {
         setIbanOrder(result.orderId);
         setIbanAmount(fmt(totalUsd));
@@ -184,6 +208,20 @@ const CheckoutModal = ({ isOpen, onClose, totalUsd, items = [], user, onComplete
               </div>
             ))}
           </div>
+          {step === 'info' || step === 'method' ? (
+            <div className="co-coupon">
+              <input value={couponText} onChange={(e) => { setCouponText(e.target.value.toUpperCase()); if (coupon) setCoupon(null); }} placeholder={t('checkout.couponPh')} maxLength={30} />
+              <button type="button" onClick={() => applyCoupon()} disabled={couponBusy || !couponText.trim() || !!coupon}>{coupon ? '✓' : t('checkout.couponApply')}</button>
+              {!coupon && campaign?.code && campaign.code !== couponText && (
+                <button type="button" className="co-coupon-hint" onClick={() => applyCoupon(campaign.code)}>{campaign.code} · %{campaign.percent}</button>
+              )}
+            </div>
+          ) : null}
+          {coupon && (
+            <div className="co-summary-items co-discount">
+              <div><span>{t('checkout.discount')} ({coupon.code} · %{coupon.percent})</span><span>−{fmt(baseTotal - totalUsd)}</span></div>
+            </div>
+          )}
           <div className="co-summary-total">
             <span>{t('checkout.total')}</span>
             <strong>{fmt(totalUsd)}</strong>

@@ -9,6 +9,7 @@ import HowItWorksSection from '../components/HowItWorks/HowItWorksSection';
 import DiscordBanner from '../components/Discord/DiscordBanner';
 import VouchMarquee from '../components/Reviews/VouchMarquee';
 import CountUp from '../components/CountUp';
+import { CampaignHero } from '../components/Campaign/Campaign';
 import { useShopStore, useDiscordUrl } from '../store/useShopStore';
 import { productPath } from '../lib/slug';
 import { usePageTitle } from '../lib/usePageTitle';
@@ -25,6 +26,7 @@ const HomePage = () => {
 
   return (
     <>
+      <CampaignHero />
       {/* ================= HERO ================= */}
       <section className="hero-stage">
         <div className="hero-texture" aria-hidden="true"></div>

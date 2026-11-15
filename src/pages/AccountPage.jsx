@@ -25,6 +25,8 @@ import { useCartStore } from '../store/useCartStore';
 import { useShopStore, useDiscordUrl } from '../store/useShopStore';
 import OrderDelivery from '../components/Account/OrderDelivery';
 import { LoaderTab, HwidTab } from '../components/Account/LoaderHwid';
+import Tickets from '../components/Support/Tickets';
+import ReviewForm from '../components/Reviews/ReviewForm';
 import GoogleIcon from '../components/GoogleIcon';
 import { useT, planLabel } from '../i18n';
 import '../components/Account/AccountModal.css';
@@ -80,6 +82,7 @@ const OrderCard = ({ o }) => {
         ))}
       </ul>
       <OrderDelivery delivery={o.delivery} />
+      {o.status === 'Completed' && <ReviewForm order={o} />}
       <div className="acc-order-foot">
         <span>{date}</span>
         <strong>{fmtMoney(o.total_amount, o.currency || 'USD')}</strong>
@@ -233,12 +236,14 @@ const DiscordTab = () => {
   );
 };
 
-const Support = () => {
+const Support = ({ user }) => {
   const { t } = useT();
   const url = useDiscordUrl();
+  const products = useShopStore((st) => st.products);
   return (
     <>
       <div className="ap-section-head"><div><h2>{t('acc.tabs.support')}</h2><p>{t('acc.supportSub')}</p></div></div>
+      <Tickets user={user} products={products} />
       <div className="ap-cards-2">
         <a className="ap-panel ap-link-card" href={url} target="_blank" rel="noopener noreferrer">
           <LifeBuoy size={22} />
@@ -480,7 +485,7 @@ const AccountPage = () => {
           {current === 'orders' && <Orders orders={orders} />}
           {current === 'keys' && <Keys orders={orders} />}
           {current === 'discord' && <DiscordTab />}
-          {current === 'support' && <Support />}
+          {current === 'support' && <Support user={user} />}
           {current === 'security' && <Security user={user} />}
           {current === 'loader' && <LoaderTab orders={orders} />}
           {current === 'hwid' && <HwidTab user={user} orders={orders} />}

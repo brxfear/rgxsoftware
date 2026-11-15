@@ -6,7 +6,7 @@ import { signOut } from 'firebase/auth';
 import { toast } from 'react-hot-toast';
 import {
   LayoutDashboard, Package, Plus, KeyRound, Wallet, ArrowLeftRight, BookOpen, Gavel, MessageCircle, User, Cpu, LogIn,
-  Copy, Check, Search, ExternalLink, Loader2, Sparkles, CalendarClock, TrendingUp, ShieldCheck, LogOut, Download, PackageCheck,
+  Copy, Check, Search, ExternalLink, Loader2, Sparkles, CalendarClock, TrendingUp, ShieldCheck, LogOut, Download, PackageCheck, Video, Hourglass,
 } from 'lucide-react';
 import { auth, db } from '../../lib/firebase';
 import { toDate } from '../../lib/db';
@@ -35,7 +35,11 @@ const L = {
     create: 'Oluştur', creating: 'Oluşturuluyor…', created: '{n} key oluşturuldu', copyAll: 'Hepsini kopyala', copied: 'Kopyalandı',
     limitNote: 'Günlük limit: {d} · Aylık limit: {m}', choose: 'Ürün seç', searchPh: 'Key, ürün ya da not ara…',
     date: 'Tarih', price: 'Fiyat', amount: 'Tutar', balAfter: 'Sonraki bakiye', noTx: 'Henüz işlem yok.',
-    txTypes: { topup: 'Yükleme', purchase: 'Key alımı', adjust: 'Düzeltme' },
+    txTypes: { topup: 'Yükleme', purchase: 'Key alımı', adjust: 'Düzeltme', media: 'Medya' },
+    media: 'Medya keyleri', mediaRole: 'MEDYA', mediaPanel: 'MEDYA PANEL', mediaLeft: 'Bu hafta {n} / {max} key hakkın kaldı', mediaSub: 'Ücretsiz medya keylerin her pazartesi yenilenir. Videolarında RGX’i göstermeyi unutma.', mediaTake: 'Key çıkar', noMedia: 'Medya programında değilsin.', noMediaItems: 'Sana henüz ürün atanmadı. Ekip atayınca burada görünecek.',
+    pendingTitle: 'Başvurun inceleniyor', rejectedTitle: 'Başvurun onaylanmadı',
+    roleReseller: 'Bayi', roleResellerSub: 'Bakiye yükle, keyleri bayi fiyatıyla al, sat', roleMedia: 'Medya / içerik üreticisi', roleMediaSub: 'Video çek, haftalık ücretsiz key al',
+    discordUser: 'Discord kullanıcı adın', channelUrl: 'Kanal / profil linkin', aboutMedia: 'Kanalın hakkında (izlenme, içerik türü)', aboutReseller: 'Nasıl satış yapacaksın? (opsiyonel)',
     topupTitle: 'Shopier ile bakiye yükle', topupSub: 'Kredi/banka kartıyla öde; ödeme onaylanınca bakiyene otomatik eklenir.',
     custom: 'Özel tutar', pay: 'Öde', minTop: 'En az {n}', chargedTry: 'Kartından yaklaşık {amount} çekilir (güncel kur).',
     waiting: 'Ödeme bekleniyor… Shopier penceresinde ödemeyi tamamla.', paid: 'Bakiye yüklendi!', reopen: 'Ödeme penceresini aç',
@@ -49,10 +53,10 @@ const L = {
     allUp: 'Tüm ürünler aktif', someDown: '{n} üründe bakım var',
     preorder: 'Stok yok · sipariş verilebilir', backorderNote: 'Stokta {n} key var. Sipariş verirsen bakiyen şimdi düşer, ekibimiz keyleri kısa sürede teslim eder (Lisanslarım’da görünür). Teslim edilemezse tutar iade edilir.',
     orderBtn: 'Sipariş ver', ordered: 'Siparişin alındı! Keyler teslim edilince Lisanslarım’da görünecek.', orderPending: 'Teslim bekliyor', orderCanceled: 'İptal · iade edildi',
-    signupTitle: 'RGX bayisi ol', signupSub: 'Bayi hesabını hemen aç: bakiye yükle, keyleri bayi fiyatıyla çıkar, kendi müşterilerine sat.',
+    signupTitle: 'RGX bayisi ya da medya ortağı ol', signupSub: 'Bayi hesabını hemen aç: bakiye yükle, keyleri bayi fiyatıyla çıkar, kendi müşterilerine sat.',
     signupPerks: ['Satış fiyatının altında bayi fiyatları', 'Anında key çıkarma, stok ve limitler panelde', 'Shopier ile kartla bakiye yükleme', 'HWID reset ve destek tek yerden'],
     signupName: 'Bayi adın', signupNamePh: 'ör. Mağaza ya da Discord adın', signupAccept: 'Bayi kurallarını okudum ve kabul ediyorum.',
-    signupBtn: 'Bayiliğimi oluştur', signupDone: 'Bayi hesabın açıldı!', signupClosed: 'Bayi başvuruları şu an kapalı. Bilgi için Discord’dan yazabilirsin.',  },
+    signupBtn: 'Başvur', signupDone: 'Başvurun alındı! Onaylanınca panelin açılacak.', signupClosed: 'Bayi başvuruları şu an kapalı. Bilgi için Discord’dan yazabilirsin.',  },
   en: {
     title: 'Reseller panel', sell: 'Sell', money: 'Money', help: 'Help', account: 'Account',
     dashboard: 'Dashboard', products: 'Products & prices', generate: 'Generate', licenses: 'Licenses', wallet: 'Wallet',
@@ -67,7 +71,11 @@ const L = {
     create: 'Generate', creating: 'Generating…', created: '{n} keys generated', copyAll: 'Copy all', copied: 'Copied',
     limitNote: 'Daily limit: {d} · Monthly limit: {m}', choose: 'Choose a product', searchPh: 'Search key, product or note…',
     date: 'Date', price: 'Price', amount: 'Amount', balAfter: 'Balance after', noTx: 'No transactions yet.',
-    txTypes: { topup: 'Top up', purchase: 'Key purchase', adjust: 'Adjustment' },
+    txTypes: { topup: 'Top up', purchase: 'Key purchase', adjust: 'Adjustment', media: 'Media' },
+    media: 'Media keys', mediaRole: 'MEDIA', mediaPanel: 'MEDIA PANEL', mediaLeft: '{n} / {max} keys left this week', mediaSub: 'Your free media keys refresh every Monday. Remember to feature RGX in your videos.', mediaTake: 'Get key', noMedia: 'You are not in the media program.', noMediaItems: 'No products assigned yet. They will appear here once the team assigns them.',
+    pendingTitle: 'Your application is under review', rejectedTitle: 'Your application was not approved',
+    roleReseller: 'Reseller', roleResellerSub: 'Top up, buy keys at reseller prices, resell', roleMedia: 'Media / content creator', roleMediaSub: 'Make videos, get free weekly keys',
+    discordUser: 'Your Discord username', channelUrl: 'Channel / profile link', aboutMedia: 'About your channel (views, content type)', aboutReseller: 'How will you sell? (optional)',
     topupTitle: 'Top up with Shopier', topupSub: 'Pay by card; your balance updates automatically once the payment is confirmed.',
     custom: 'Custom amount', pay: 'Pay', minTop: 'Min {n}', chargedTry: 'About {amount} will be charged to your card (live rate).',
     waiting: 'Waiting for payment… complete it in the Shopier window.', paid: 'Balance topped up!', reopen: 'Open payment window',
@@ -81,18 +89,20 @@ const L = {
     allUp: 'All products online', someDown: '{n} products under maintenance',
     preorder: 'Out of stock · order available', backorderNote: 'Only {n} keys in stock. If you order, your balance is charged now and our team delivers the keys shortly (shown in Licenses). If we cannot deliver, you get a refund.',
     orderBtn: 'Place order', ordered: 'Order received! Keys appear in Licenses once delivered.', orderPending: 'Awaiting delivery', orderCanceled: 'Canceled · refunded',
-    signupTitle: 'Become an RGX reseller', signupSub: 'Open your reseller account now: top up, generate keys at reseller prices and sell to your own customers.',
+    signupTitle: 'Become an RGX reseller or media partner', signupSub: 'Open your reseller account now: top up, generate keys at reseller prices and sell to your own customers.',
     signupPerks: ['Reseller prices below retail', 'Instant key generation, stock and limits in your panel', 'Top up by card via Shopier', 'HWID resets and support in one place'],
     signupName: 'Reseller name', signupNamePh: 'e.g. your shop or Discord name', signupAccept: 'I have read and accept the reseller rules.',
-    signupBtn: 'Create my reseller account', signupDone: 'Your reseller account is ready!', signupClosed: 'Reseller sign-ups are closed right now. Message us on Discord.',  },
+    signupBtn: 'Apply', signupDone: 'Application received! Your panel opens once approved.', signupClosed: 'Reseller sign-ups are closed right now. Message us on Discord.',  },
 };
 
-const NAV = [
-  ['sell', [['dashboard', LayoutDashboard], ['products', Package], ['generate', Plus], ['licenses', KeyRound]]],
-  ['money', [['wallet', Wallet], ['transactions', ArrowLeftRight]]],
-  ['help', [['hwid', Cpu], ['guides', BookOpen], ['rules', Gavel]]],
-  ['account', [['account', User]]],
-];
+// Menü role göre: bayi (satış), medya (haftalık ücretsiz key) ya da ikisi
+const navFor = (role) => {
+  const help = ['help', [['hwid', Cpu], ['guides', BookOpen], ['rules', Gavel]]];
+  const account = ['account', [['account', User]]];
+  if (role === 'media') return [['sell', [['media', Video], ['licenses', KeyRound]]], help, account];
+  const sell = [['dashboard', LayoutDashboard], ['products', Package], ['generate', Plus], ...(role === 'both' ? [['media', Video]] : []), ['licenses', KeyRound]];
+  return [['sell', sell], ['money', [['wallet', Wallet], ['transactions', ArrowLeftRight]]], help, account];
+};
 
 const api = async (method, action, body, params = '') => {
   const token = await auth.currentUser?.getIdToken();
@@ -214,7 +224,21 @@ const ResellerPage = () => {
   if (!me) return <div className="page container"><div className="empty-state"><Loader2 className="spin" size={20} /></div></div>;
 
   const r = me.reseller;
-  const current = NAV.flatMap(([, items]) => items).some(([k]) => k === tab) ? tab : 'dashboard';
+  if (r.status !== 'active') {
+    return (
+      <div className="page container">
+        <div className="ap-login">
+          <span className="rs-pending-ico"><Hourglass size={30} /></span>
+          <h1>{r.status === 'pending' ? s.pendingTitle : r.status === 'rejected' ? s.rejectedTitle : s.suspended}</h1>
+          <p>{r.message}</p>
+          <a className="btn-primary" href={discordUrl} target="_blank" rel="noopener noreferrer"><MessageCircle size={16} /> Discord</a>
+        </div>
+      </div>
+    );
+  }
+  const NAV = navFor(r.role);
+  const home = r.role === 'media' ? 'media' : 'dashboard';
+  const current = NAV.flatMap(([, items]) => items).some(([k]) => k === tab) ? tab : home;
   const go = (t) => navigate(t === 'dashboard' ? '/reseller' : `/reseller/${t}`);
   const ctx = { s, f, me, r, keys, txs, reqs, orders, load, go, user, discordUrl };
 
@@ -223,7 +247,7 @@ const ResellerPage = () => {
       <aside className="rs-side">
         <div className="rs-brand">
           <img src="/logo.webp" alt="" />
-          <div><strong>RGX</strong><span>{s.reseller} PANEL</span></div>
+          <div><strong>RGX</strong><span>{r.role === 'media' ? s.mediaPanel : `${s.reseller} PANEL`}</span></div>
         </div>
         {NAV.map(([group, items]) => (
           <div key={group} className="rs-group">
@@ -240,22 +264,25 @@ const ResellerPage = () => {
         ))}
         <div className="rs-me">
           <span className="rs-avatar">{(r.display_name || '?')[0].toUpperCase()}</span>
-          <div><strong>{r.display_name}</strong><small>{usd(r.balance_usd)}</small></div>
+          <div><strong>{r.display_name}</strong><small>{r.role === 'media' ? s.mediaRole : usd(r.balance_usd)}</small></div>
         </div>
       </aside>
 
       <main className="rs-main">
         <header className="rs-top">
           <h1>{s[current === 'account' ? 'accountTab' : current]}</h1>
-          <div className="rs-top-actions">
-            <button className="rs-btn rs-btn-red" onClick={() => go('generate')}><Plus size={15} /> {s.create}</button>
-            <button className="rs-btn rs-btn-ghost" onClick={() => go('wallet')}><Wallet size={15} /> {usd(r.balance_usd)}</button>
-          </div>
+          {r.role !== 'media' && (
+            <div className="rs-top-actions">
+              <button className="rs-btn rs-btn-red" onClick={() => go('generate')}><Plus size={15} /> {s.create}</button>
+              <button className="rs-btn rs-btn-ghost" onClick={() => go('wallet')}><Wallet size={15} /> {usd(r.balance_usd)}</button>
+            </div>
+          )}
         </header>
 
         {current === 'dashboard' && <Dashboard {...ctx} />}
         {current === 'products' && <Products {...ctx} />}
         {current === 'generate' && <Generate {...ctx} />}
+        {current === 'media' && <MediaTab {...ctx} />}
         {current === 'licenses' && <Licenses {...ctx} />}
         {current === 'wallet' && <WalletTab {...ctx} />}
         {current === 'transactions' && <Transactions {...ctx} />}
@@ -273,6 +300,10 @@ const Signup = ({ s, discordUrl, onDone }) => {
   const user = useShopStore((st) => st.user);
   const [info, setInfo] = useState(null);
   const [name, setName] = useState(user?.displayName || '');
+  const [role, setRole] = useState(() => (new URLSearchParams(window.location.search).get('apply') === 'media' ? 'media' : 'reseller'));
+  const [discord, setDiscord] = useState('');
+  const [channel, setChannel] = useState('');
+  const [about, setAbout] = useState('');
   const [accept, setAccept] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -284,7 +315,7 @@ const Signup = ({ s, discordUrl, onDone }) => {
     e.preventDefault();
     setBusy(true);
     try {
-      await api('POST', 'signup', { display_name: name, accept_rules: accept });
+      await api('POST', 'signup', { display_name: name, role, discord, channel_url: channel, about, accept_rules: accept });
       toast.success(s.signupDone);
       onDone();
     } catch (err) {
@@ -314,21 +345,108 @@ const Signup = ({ s, discordUrl, onDone }) => {
           </div>
         ) : (
           <form className="rs-card rs-gen" onSubmit={submit}>
+            <div className="rs-role-pick">
+              <button type="button" className={role === 'reseller' ? 'on' : ''} onClick={() => setRole('reseller')}><Package size={18} /><strong>{s.roleReseller}</strong><small>{s.roleResellerSub}</small></button>
+              <button type="button" className={role === 'media' ? 'on' : ''} onClick={() => setRole('media')}><Video size={18} /><strong>{s.roleMedia}</strong><small>{s.roleMediaSub}</small></button>
+            </div>
             <label className="rs-field">
               <span>{s.signupName}</span>
               <input value={name} maxLength={40} minLength={2} required onChange={(e) => setName(e.target.value)} placeholder={s.signupNamePh} />
             </label>
-            {info.rules && <div className="rs-signup-rules">{info.rules}</div>}
+            <label className="rs-field">
+              <span>{s.discordUser}</span>
+              <input value={discord} maxLength={60} required onChange={(e) => setDiscord(e.target.value)} placeholder="kullaniciadi" />
+            </label>
+            {role === 'media' && (
+              <label className="rs-field">
+                <span>{s.channelUrl}</span>
+                <input value={channel} maxLength={200} required onChange={(e) => setChannel(e.target.value)} placeholder="https://youtube.com/@kanal" />
+              </label>
+            )}
+            <label className="rs-field">
+              <span>{role === 'media' ? s.aboutMedia : s.aboutReseller}</span>
+              <textarea className="rs-textarea" rows={3} maxLength={600} value={about} onChange={(e) => setAbout(e.target.value)} />
+            </label>
+            {(role === 'media' ? info.media_rules || info.rules : info.rules) && <div className="rs-signup-rules">{role === 'media' ? info.media_rules || info.rules : info.rules}</div>}
             <label className="rs-check">
               <input type="checkbox" checked={accept} onChange={(e) => setAccept(e.target.checked)} />
               <span>{s.signupAccept}</span>
             </label>
-            <button className="rs-btn rs-btn-red rs-btn-lg" disabled={busy || !accept || name.trim().length < 2}>
+            <button className="rs-btn rs-btn-red rs-btn-lg" disabled={busy || !accept || name.trim().length < 2 || discord.trim().length < 2 || (role === 'media' && !/^https?:\/\//i.test(channel))}>
               {busy ? <Loader2 size={16} className="spin" /> : <Sparkles size={16} />} {s.signupBtn}
             </button>
           </form>
         )}
       </div>
+    </div>
+  );
+};
+
+/* ---------------- Medya ---------------- */
+const MediaTab = ({ s, f, me, load }) => {
+  const m = me.media;
+  const [qty, setQty] = useState({});
+  const [busy, setBusy] = useState(null);
+  const [result, setResult] = useState(null);
+  if (!m) return <div className="rs-empty"><Video size={22} /><p>{s.noMedia}</p></div>;
+  const left = Math.max(0, m.weekly_limit - m.usage.count);
+
+  const take = async (it) => {
+    setBusy(`${it.product_id}:${it.plan_id}`);
+    try {
+      const out = await api('POST', 'media-generate', { product_id: it.product_id, plan_id: it.plan_id, quantity: qty[`${it.product_id}:${it.plan_id}`] || 1 });
+      setResult(out.keys);
+      toast.success(f('created', { n: out.keys.length }));
+      load();
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <div className="rs-stack">
+      <section className="rs-hero rs-hero-sm">
+        <div className="rs-hero-art"><Video size={30} /></div>
+        <div className="rs-hero-text">
+          <span className="rs-eyebrow">{s.mediaRole}</span>
+          <h2>{f('mediaLeft', { n: left, max: m.weekly_limit })}</h2>
+          <p>{s.mediaSub}</p>
+        </div>
+      </section>
+      {!m.items.length ? (
+        <div className="rs-empty"><Video size={22} /><p>{s.noMediaItems}</p></div>
+      ) : (
+        <div className="rs-media-grid">
+          {m.items.map((it) => {
+            const k = `${it.product_id}:${it.plan_id}`;
+            const n = qty[k] || 1;
+            return (
+              <div key={k} className="rs-card rs-media-card">
+                <img src={it.image_url || '/logo.webp'} alt="" />
+                <strong>{it.name}</strong>
+                <span className="rs-muted">{it.plan_label} · {it.stock ? `${s.stock}: ${it.stock}` : s.outOfStock}</span>
+                <div className="rs-media-actions">
+                  <input type="number" min={1} max={Math.max(1, left)} value={n} onChange={(e) => setQty((q) => ({ ...q, [k]: Math.max(1, Math.min(Math.max(1, left), parseInt(e.target.value, 10) || 1)) }))} />
+                  <button className="rs-btn rs-btn-red" disabled={!left || !it.stock || busy === k || n > left} onClick={() => take(it)}>
+                    {busy === k ? <Loader2 size={15} className="spin" /> : <KeyRound size={15} />} {s.mediaTake}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      {result && (
+        <section className="rs-card rs-result">
+          <div className="rs-result-head">
+            <strong><ShieldCheck size={16} /> {f('created', { n: result.length })}</strong>
+            <CopyBtn text={result.map((k) => k.key).join('\n')} label={s.copyAll} />
+          </div>
+          {result.map((k) => <div key={k.id} className="rs-result-key"><code>{k.key}</code><CopyBtn text={k.key} /></div>)}
+        </section>
+      )}
     </div>
   );
 };

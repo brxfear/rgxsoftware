@@ -7,6 +7,7 @@ import { translate } from '../i18n';
 
 export const completeCheckout = async ({ data, items, user, lang, fromCart }) => {
   const currency = currencyForLang(lang);
+  const off = data.coupon ? 1 - data.coupon.percent / 100 : 1;
 
   // ---- Kart: Shopier (sunucu fiyatı hesaplar, sipariş için geçici Shopier ödeme sayfası açar)
   if (data.payment_method === 'shopier') {
@@ -20,6 +21,7 @@ export const completeCheckout = async ({ data, items, user, lang, fromCart }) =>
           currency,
           lang,
           buyer: { name: data.name, email: data.email },
+          ...(data.coupon ? { coupon: data.coupon.code } : {}),
         }),
       });
       const out = await res.json().catch(() => null);
@@ -47,15 +49,16 @@ export const completeCheckout = async ({ data, items, user, lang, fromCart }) =>
     plan_id: String(i.duration),
     durationLabel: i.durationLabel || '',
     quantity: i.quantity,
-    price_usd: i.price,
-    price: toCur(i.price),
-    subtotal: toCur(i.price) * i.quantity,
+    price_usd: roundUsd(i.price * off),
+    price: toCur(roundUsd(i.price * off)),
+    subtotal: toCur(roundUsd(i.price * off)) * i.quantity,
   }));
   try {
     const ref = await createManualOrder({
       user_id: user?.uid || null,
       total_amount: roundUsd(detailed.reduce((s, i) => s + i.subtotal, 0)),
-      total_usd: roundUsd(items.reduce((s, i) => s + i.price * i.quantity, 0)),
+      total_usd: roundUsd(items.reduce((s, i) => s + roundUsd(i.price * off) * i.quantity, 0)),
+      ...(data.coupon ? { coupon: data.coupon.code, coupon_percent: data.coupon.percent } : {}),
       ...(rate ? { fx_rate: rate } : {}),
       currency,
       items: detailed,

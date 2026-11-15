@@ -9,7 +9,30 @@ import { createShopierProduct, cleanupExpired } from './_lib/shopierPay.js';
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const newOrderId = () => 'RGX' + Date.now().toString(36).toUpperCase() + crypto.randomBytes(2).toString('hex').toUpperCase();
 
+/** Kupon kontrolü: coupons/{KOD} { percent, active, ends_at, max_uses, uses } */
+const findCoupon = async (db, raw) => {
+  const code = String(raw || '').trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 30);
+  if (!code) return null;
+  const snap = await db.collection('coupons').doc(code).get();
+  if (!snap.exists) return null;
+  const c = snap.data();
+  const now = Date.now();
+  if (c.active === false) return null;
+  if (c.starts_at?.toMillis && c.starts_at.toMillis() > now) return null;
+  if (c.ends_at?.toMillis && c.ends_at.toMillis() < now) return null;
+  if (Number(c.max_uses) > 0 && Number(c.uses || 0) >= Number(c.max_uses)) return null;
+  const percent = Math.min(90, Math.max(1, Number(c.percent) || 0));
+  return { code, percent, ref: snap.ref };
+};
+
 export default async function handler(req, res) {
+  // GET ?coupon=KOD → kupon geçerli mi (ödeme ekranındaki 'Uygula' düğmesi)
+  if (req.method === 'GET') {
+    const q = req.query || Object.fromEntries(new URL(req.url, 'http://x').searchParams);
+    const c = await findCoupon(adminDb(), q.coupon).catch(() => null);
+    res.setHeader('Cache-Control', 'no-store');
+    return c ? res.status(200).json({ code: c.code, percent: c.percent }) : res.status(404).json({ error: 'Kod geçersiz ya da süresi dolmuş.' });
+  }
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Method not allowed' });
@@ -40,6 +63,9 @@ export default async function handler(req, res) {
       }
     }
 
+    const coupon = body.coupon ? await findCoupon(db, body.coupon) : null;
+    if (body.coupon && !coupon) return res.status(400).json({ error: 'İndirim kodu geçersiz ya da süresi dolmuş.' });
+    const off = coupon ? 1 - coupon.percent / 100 : 1;
     const rate = currency === 'TRY' ? await getUsdTry() : null;
     const toCur = (usd) => (rate ? usdToTry(usd, rate) : roundUsd(usd));
 
@@ -53,14 +79,14 @@ export default async function handler(req, res) {
       const product = snap.data();
       const plan = findPlan(product, it.plan_id);
       if (!plan) return res.status(400).json({ error: `${product.name} için seçilen plan bulunamadı.` });
-      const price = toCur(plan.price_usd);
+      const price = toCur(roundUsd(plan.price_usd * off));
       detailed.push({
         product_id: snap.id,
         name: product.name,
         plan_id: String(plan.id),
         durationLabel: plan.label,
         quantity: qty,
-        price_usd: roundUsd(plan.price_usd),
+        price_usd: roundUsd(plan.price_usd * off),
         price,
         subtotal: roundUsd(price * qty),
       });
@@ -89,6 +115,7 @@ export default async function handler(req, res) {
       ...(rate ? { fx_rate: rate } : {}),
       lang,
       display_currency: displayCurrency,
+      ...(coupon ? { coupon: coupon.code, coupon_percent: coupon.percent } : {}),
       items: detailed,
       payment_method: 'shopier',
       status: 'pending_payment',
@@ -109,6 +136,8 @@ export default async function handler(req, res) {
       payment_id: shopierProduct.id,
       message: `Ödeme başlatıldı: ${summary} (${email})`.slice(0, 500),
     });
+
+    if (coupon) await coupon.ref.update({ uses: FieldValue.increment(1), last_used_at: FieldValue.serverTimestamp() }).catch(() => {});
 
     // Eski, ödenmemiş geçici ürünleri arka planda temizle (yanıtı bekletmeden)
     cleanupExpired(db).catch((err) => console.warn('cleanup', err.message));

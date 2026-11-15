@@ -4,7 +4,7 @@ import { collection, doc, getDoc, limit, onSnapshot, orderBy, query, where, serv
 import { toast } from 'react-hot-toast';
 import { Plus, Pencil, Wallet, X, KeyRound, ArrowLeftRight } from 'lucide-react';
 import { auth, db } from '../../lib/firebase';
-import { toDate } from '../../lib/db';
+import { toDate, getPlans } from '../../lib/db';
 import { loggedWrite } from '../../lib/adminLog';
 
 const api = async (action, body) => {
@@ -22,7 +22,18 @@ const api = async (action, body) => {
 const usd = (n) => `$${(Number(n) || 0).toFixed(2)}`;
 const istanbulDay = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Istanbul' });
 
-const ResellerForm = ({ initial, onClose }) => {
+const STATUS = { active: ['Aktif', 'ok'], suspended: ['Askıda', 'bad'], pending: ['Başvuru bekliyor', 'warn'], rejected: ['Reddedildi', 'muted'] };
+const ROLE = { reseller: 'Bayi', media: 'Medya', both: 'Bayi + Medya' };
+
+/** Mevcut kaydı admin-save'e gönderilecek biçime çevirir (hızlı onay/red için) */
+const payloadFrom = (r, over = {}) => ({
+  uid: r.uid, display_name: r.display_name, status: r.status, role: r.role || 'reseller', discount_pct: r.discount_pct || 0,
+  daily_limit: r.daily_limit || 0, monthly_limit: r.monthly_limit || 0, notes: r.notes || '', is_test: !!r.is_test,
+  media: { enabled: r.media?.enabled !== false, weekly_limit: r.media?.weekly_limit || 0, allowed: r.media?.allowed || [] },
+  ...over,
+});
+
+const ResellerForm = ({ initial, products, onClose }) => {
   const isNew = !initial?.uid;
   const [f, setF] = useState({
     email: initial?.email || '',
@@ -34,7 +45,10 @@ const ResellerForm = ({ initial, onClose }) => {
     initial_balance: 0,
     notes: initial?.notes || '',
     is_test: !!initial?.is_test,
+    role: initial?.role || 'reseller',
+    media: { enabled: initial?.media?.enabled !== false, weekly_limit: initial?.media?.weekly_limit ?? 3, allowed: initial?.media?.allowed || [] },
   });
+  const toggleAllowed = (k) => setF((x) => ({ ...x, media: { ...x.media, allowed: x.media.allowed.includes(k) ? x.media.allowed.filter((a) => a !== k) : [...x.media.allowed, k] } }));
   const [busy, setBusy] = useState(false);
   const set = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.value }));
   const save = async (e) => {
@@ -74,7 +88,9 @@ const ResellerForm = ({ initial, onClose }) => {
               <span className="adm-label">Durum</span>
               <select className="adm-input" value={f.status} onChange={set('status')}>
                 <option value="active">Aktif</option>
+                <option value="pending">Başvuru bekliyor</option>
                 <option value="suspended">Askıda (key çıkaramaz)</option>
+                <option value="rejected">Reddedildi</option>
               </select>
             </label>
             <label className="adm-field">
@@ -97,6 +113,57 @@ const ResellerForm = ({ initial, onClose }) => {
               <span className="adm-label">Açılış bakiyesi ($)</span>
               <input className="adm-input" type="number" min={0} step="0.01" value={f.initial_balance} onChange={set('initial_balance')} />
             </label>
+          )}
+          {initial?.application && (
+            <div className="adm-app-box">
+              <strong>Başvuru</strong>
+              <span>Discord: <code>{initial.application.discord}</code></span>
+              {initial.application.channel_url && <span>Kanal: <a href={initial.application.channel_url} target="_blank" rel="noopener noreferrer">{initial.application.channel_url}</a></span>}
+              {initial.application.about && <p>{initial.application.about}</p>}
+            </div>
+          )}
+          <label className="adm-field">
+            <span className="adm-label">Rol</span>
+            <select className="adm-input" value={f.role} onChange={set('role')}>
+              <option value="reseller">Bayi (bakiye yükler, key satın alır)</option>
+              <option value="media">Medya (sadece haftalık ücretsiz key)</option>
+              <option value="both">Bayi + Medya</option>
+            </select>
+          </label>
+          {f.role !== 'reseller' && (
+            <div className="adm-media-box">
+              <div className="adm-grid-2">
+                <label className="adm-field">
+                  <span className="adm-label">Haftalık ücretsiz key hakkı</span>
+                  <input className="adm-input" type="number" min={0} max={100} value={f.media.weekly_limit} onChange={(e) => setF((x) => ({ ...x, media: { ...x.media, weekly_limit: e.target.value } }))} />
+                </label>
+                <label className="adm-switch" style={{ alignSelf: 'end', marginBottom: 10 }}>
+                  <input type="checkbox" checked={f.media.enabled} onChange={(e) => setF((x) => ({ ...x, media: { ...x.media, enabled: e.target.checked } }))} />
+                  <span className="adm-switch-track"><span /></span>
+                  Medya kotası açık
+                </label>
+              </div>
+              <span className="adm-label">Hangi ürün/planlardan çıkarabilir (sadece bunlar görünür)</span>
+              <div className="adm-media-allowed">
+                {(products || []).filter((p) => !p.test_only || f.is_test).map((p) => (
+                  <div key={p.id} className="adm-media-prod">
+                    <strong>{p.name}</strong>
+                    <div>
+                      {getPlans(p).map((pl) => {
+                        const k = `${p.id}:${pl.id}`;
+                        return (
+                          <label key={k} className={`adm-chip ${f.media.allowed.includes(k) ? 'on' : ''}`}>
+                            <input type="checkbox" checked={f.media.allowed.includes(k)} onChange={() => toggleAllowed(k)} hidden />
+                            {pl.label}
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="adm-muted adm-help">Ör. haftada 3 adet “3 Gün”: hakkı 3 yap, sadece External’ın 3 Gün planını seç. Hak her pazartesi yenilenir; keyler stoktan ücretsiz çekilir.</p>
+            </div>
           )}
           <label className="adm-switch">
             <input type="checkbox" checked={f.is_test} onChange={(e) => setF((x) => ({ ...x, is_test: e.target.checked }))} />
@@ -198,7 +265,7 @@ const ResellerSettings = ({ me }) => {
   useEffect(() => {
     getDoc(doc(db, 'settings', 'reseller')).then((s) => {
       const d = s.exists() ? s.data() : {};
-      setForm({ rules: d.rules || '', guide: d.guide || '', min_topup_usd: d.min_topup_usd ?? 5, signup_open: d.signup_open !== false, default_daily_limit: d.default_daily_limit ?? 20, default_monthly_limit: d.default_monthly_limit ?? 300, default_discount_pct: d.default_discount_pct ?? 0 });
+      setForm({ rules: d.rules || '', guide: d.guide || '', min_topup_usd: d.min_topup_usd ?? 5, signup_open: d.signup_open !== false, default_daily_limit: d.default_daily_limit ?? 20, default_monthly_limit: d.default_monthly_limit ?? 300, default_discount_pct: d.default_discount_pct ?? 0, auto_approve: d.auto_approve === true, media_rules: d.media_rules || '' });
     });
   }, []);
   if (!form) return null;
@@ -211,6 +278,8 @@ const ResellerSettings = ({ me }) => {
           guide: form.guide,
           min_topup_usd: Math.max(1, Number(form.min_topup_usd) || 5),
           signup_open: !!form.signup_open,
+          auto_approve: !!form.auto_approve,
+          media_rules: form.media_rules || '',
           default_daily_limit: Math.max(0, parseInt(form.default_daily_limit, 10) || 0),
           default_monthly_limit: Math.max(0, parseInt(form.default_monthly_limit, 10) || 0),
           default_discount_pct: Math.min(90, Math.max(0, Number(form.default_discount_pct) || 0)),
@@ -231,7 +300,16 @@ const ResellerSettings = ({ me }) => {
       <label className="adm-switch">
         <input type="checkbox" checked={form.signup_open} onChange={(e) => setForm((x) => ({ ...x, signup_open: e.target.checked }))} />
         <span className="adm-switch-track"><span /></span>
-        Herkes bayilik açabilsin (sitede /reseller → “Bayiliğimi oluştur”)
+        Başvurular açık (sitede /reseller ve /media → “Başvur”)
+      </label>
+      <label className="adm-switch">
+        <input type="checkbox" checked={form.auto_approve} onChange={(e) => setForm((x) => ({ ...x, auto_approve: e.target.checked }))} />
+        <span className="adm-switch-track"><span /></span>
+        Başvuruları otomatik onayla (kapalıyken sen onaylarsın — önerilen)
+      </label>
+      <label className="adm-field">
+        <span className="adm-label">Medya programı kuralları (başvuru formunda görünür)</span>
+        <textarea className="adm-input" rows={4} value={form.media_rules} onChange={(e) => setForm((x) => ({ ...x, media_rules: e.target.value }))} placeholder="- Haftada en az 1 video&#10;- Videoda rgx.wtf linki…" />
       </label>
       <div className="adm-grid-2">
         <label className="adm-field">
@@ -265,7 +343,7 @@ const ResellerSettings = ({ me }) => {
   );
 };
 
-const AdminResellers = ({ me }) => {
+const AdminResellers = ({ me, products }) => {
   const [list, setList] = useState(null);
   const [editing, setEditing] = useState(null);
   const [balanceFor, setBalanceFor] = useState(null);
@@ -283,13 +361,52 @@ const AdminResellers = ({ me }) => {
   );
 
   const totalBal = (list || []).reduce((s, r) => s + (r.balance_usd || 0), 0);
+  const pending = (list || []).filter((r) => r.status === 'pending');
+  const decide = async (r, status) => {
+    try {
+      await api('admin-save', payloadFrom(r, { status }));
+      toast.success(status === 'active' ? `${r.display_name} onaylandı` : `${r.display_name} reddedildi`);
+    } catch (err) {
+      toast.error(err.message);
+    }
+  };
 
   return (
     <div className="adm-stack">
+      {pending.length > 0 && (
+        <section className="adm-card">
+          <div className="adm-card-head adm-card-pad">
+            <div>
+              <h2 className="adm-card-title">Bekleyen başvurular ({pending.length})</h2>
+              <p className="adm-muted">Onaylarsan paneli açılır. Medya başvurularında onaydan önce “Düzenle”den haftalık hakkı ve ürünleri seç.</p>
+            </div>
+          </div>
+          <ul className="adm-ann-list adm-hwid-list">
+            {pending.map((r) => (
+              <li key={r.uid}>
+                <div className="adm-hwid-main">
+                  <div className="adm-hwid-top">
+                    <span className="adm-pill adm-pill-info">{ROLE[r.role] || 'Bayi'}</span>
+                    <strong>{r.display_name}</strong>
+                    <span className="adm-muted">{r.email} · Discord: {r.application?.discord || '—'}</span>
+                  </div>
+                  {r.application?.channel_url && <a href={r.application.channel_url} target="_blank" rel="noopener noreferrer">{r.application.channel_url}</a>}
+                  {r.application?.about && <p className="adm-muted">{r.application.about}</p>}
+                </div>
+                <div className="adm-ann-actions">
+                  <button className="adm-btn adm-btn-ghost" onClick={() => setEditing(r)}><Pencil size={14} /> Düzenle</button>
+                  <button className="adm-btn adm-btn-primary" onClick={() => decide(r, 'active')}>Onayla</button>
+                  <button className="adm-btn adm-btn-ghost" onClick={() => decide(r, 'rejected')}>Reddet</button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       <section className="adm-card">
         <div className="adm-card-head adm-card-pad">
           <div>
-            <h2 className="adm-card-title">Bayiler</h2>
+            <h2 className="adm-card-title">Bayiler & medya</h2>
             <p className="adm-muted">{list ? `${list.length} bayi · toplam bakiye ${usd(totalBal)}` : 'Yükleniyor…'}</p>
           </div>
           <button className="adm-btn adm-btn-primary" onClick={() => setEditing({})}><Plus size={15} /> Yeni bayi</button>
@@ -310,7 +427,7 @@ const AdminResellers = ({ me }) => {
                     <React.Fragment key={r.uid}>
                       <tr className="adm-row-click" onClick={() => setOpen(open === r.uid ? null : r.uid)}>
                         <td><strong>{r.display_name}</strong>{r.self_signup && <> <span className="adm-pill adm-pill-muted">kendi açtı</span></>}{r.is_test && <> <span className="adm-pill adm-pill-info">TEST</span></>}<br /><small className="adm-muted">{r.email}</small></td>
-                        <td><span className={`adm-pill adm-pill-${r.status === 'active' ? 'ok' : 'bad'}`}>{r.status === 'active' ? 'Aktif' : 'Askıda'}</span></td>
+                        <td><span className={`adm-pill adm-pill-${STATUS[r.status]?.[1] || 'muted'}`}>{STATUS[r.status]?.[0] || r.status}</span>{r.role && r.role !== 'reseller' && <> <span className="adm-pill adm-pill-info">{ROLE[r.role]}</span></>}</td>
                         <td><strong>{usd(r.balance_usd)}</strong></td>
                         <td>{day}{r.daily_limit ? ` / ${r.daily_limit}` : ' / ∞'}</td>
                         <td>{month}{r.monthly_limit ? ` / ${r.monthly_limit}` : ' / ∞'}</td>
@@ -336,7 +453,7 @@ const AdminResellers = ({ me }) => {
         Bayi key çıkarınca keyler Ürünler → Key stoğu’ndan düşer (stok bayi ve müşteriler için ortaktır). Bayi fiyatlarını ürün düzenleme ekranındaki planlarda “Bayi $” alanından gir.
       </p>
       <ResellerSettings me={me} />
-      {editing && <ResellerForm initial={editing.uid ? editing : null} onClose={() => setEditing(null)} />}
+      {editing && <ResellerForm initial={editing.uid ? editing : null} products={products} onClose={() => setEditing(null)} />}
       {balanceFor && <BalanceForm reseller={balanceFor} onClose={() => setBalanceFor(null)} />}
     </div>
   );
