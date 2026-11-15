@@ -4,6 +4,8 @@ import { Link } from 'react-router-dom';
 import { Copy, Check, ArrowRight, Timer } from 'lucide-react';
 import { useShopStore, useDiscordUrl } from '../../store/useShopStore';
 import { useT } from '../../i18n';
+import PromoBox from '../ProductPromo/PromoBox';
+import { hasPromo } from '../../lib/promo';
 import './campaign.css';
 
 const useCountdown = (endIso) => {
@@ -47,6 +49,43 @@ export const CampaignBar = () => {
       <span>{t('campaign.barText', { n: c.percent })}</span>
       {c.code && <code>{c.code}</code>}
       {cd.end > 0 && <span className="cp-bar-time"><Timer size={12} /> {cd.d}g {cd.h}s {cd.m}d {cd.s}sn</span>}
+    </div>
+  );
+};
+
+// Kıvılcımlar: sabit (her çizimde aynı) konum / süre değerleri
+const EMBERS = Array.from({ length: 18 }, (_, i) => ({
+  '--x': `${(i * 37 + 11) % 100}%`,
+  '--s': `${2 + (i % 3)}px`,
+  '--t': `${5 + ((i * 7) % 6)}s`,
+  '--dl': `${-((i * 1.3) % 9).toFixed(1)}s`,
+  '--dx': `${((i % 5) - 2) * 14}px`,
+}));
+
+/** Sağdaki sahne: dev yüzde, spot ışıkları, dönen halka, yörüngeler, logo, 3D kutular, kıvılcımlar */
+const CampaignArt = ({ percent }) => {
+  const products = useShopStore((s) => s.products);
+  const boxes = products.filter(hasPromo).slice(0, 2);
+  return (
+    <div className="cp-hero-art" aria-hidden="true">
+      <div className="cp-art-percent">%{percent}</div>
+      <div className="cp-art-beam cp-art-beam-1" />
+      <div className="cp-art-beam cp-art-beam-2" />
+      <div className="cp-art-orbit cp-art-orbit-1"><i /></div>
+      <div className="cp-art-orbit cp-art-orbit-2"><i /></div>
+      <div className="cp-art-halo" />
+      <div className="cp-art-ring" />
+      <img src="/logo.webp" alt="" className="cp-art-logo" />
+      {boxes.map((p, i) => (
+        <div key={p.id} className={`cp-art-boxwrap ${i ? 'is-r' : 'is-l'}`}>
+          <PromoBox product={p} />
+        </div>
+      ))}
+      <div className="cp-art-tag"><strong>-%{percent}</strong><small>OFF</small></div>
+      <div className="cp-pedestal"><i /><i /></div>
+      <div className="cp-art-embers">
+        {EMBERS.map((st, i) => <i key={i} style={st} />)}
+      </div>
     </div>
   );
 };
@@ -97,10 +136,7 @@ export const CampaignHero = () => {
             <a href={discordUrl} target="_blank" rel="noopener noreferrer" className="btn-secondary">{t('hero.discord')}</a>
           </div>
         </div>
-        <div className="cp-hero-art" aria-hidden="true">
-          <img src="/logo.webp" alt="" />
-          <div className="cp-pedestal" />
-        </div>
+        <CampaignArt percent={c.percent} />
       </div>
     </section>
   );

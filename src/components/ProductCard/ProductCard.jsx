@@ -5,6 +5,8 @@ import { ArrowRight, Star } from 'lucide-react';
 import { getPlans, getStartPrice } from '../../lib/db';
 import Price from '../Price';
 import StatusPill from '../StatusPill';
+import ProductPromo from '../ProductPromo/ProductPromo';
+import { hasPromo } from '../../lib/promo';
 import './ProductCard.css';
 
 /** Ürün kartı: tıklanınca ürün sayfasına (/products/oyun/urun) gider. */
@@ -18,17 +20,21 @@ const ProductCard = ({ product, to, categoryName, highlight = false }) => {
     <Link to={to} className={`product-card glass-card ${highlight ? 'is-highlight' : ''}`}>
       <div className="product-card-top">
         <div className="product-image-wrap">
-          <img
-            src={image || '/logo.webp'}
-            alt={product.name}
-            loading="lazy"
-            className={`product-img ${image ? '' : 'product-img-fallback'}`}
-            onError={(e) => {
-              e.currentTarget.onerror = null;
-              e.currentTarget.src = '/logo.webp';
-              e.currentTarget.classList.add('product-img-fallback');
-            }}
-          />
+          {hasPromo(product) ? (
+            <ProductPromo product={product} compact />
+          ) : (
+            <img
+              src={image || '/logo.webp'}
+              alt={product.name}
+              loading="lazy"
+              className={`product-img ${image ? '' : 'product-img-fallback'}`}
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = '/logo.webp';
+                e.currentTarget.classList.add('product-img-fallback');
+              }}
+            />
+          )}
           <div className="product-floating-badges">
             {highlight && <span className="badge-recommended"><Star size={11} fill="currentColor" /> {t('card.recommended')}</span>}
             <StatusPill product={product} className="st-pill-sm" />

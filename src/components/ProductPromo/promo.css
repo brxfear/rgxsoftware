@@ -142,7 +142,7 @@
   padding: 0 1.2cqw;
   text-align: center;
 }
-.promo .pb-logo {
+.promo-box .pb-logo {
   width: 36%;
   height: auto;
   object-fit: contain;
@@ -235,6 +235,11 @@
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+}
+
+/* Dar kartlarda en fazla 2 özellik satırı */
+@container (max-width: 340px) {
+  .promo-copy > :nth-child(n + 4) { display: none; }
 }
 
 /* Küçük kartlarda yazılar ve kutu biraz büyür */

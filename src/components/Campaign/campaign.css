@@ -50,13 +50,97 @@
 .cp-code strong { font-family: var(--font-display); font-size: 30px; letter-spacing: 0.04em; }
 .cp-copy, .cp-copy-big { display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 14px; border-radius: 999px; border: none; cursor: pointer; font: inherit; font-weight: 700; font-size: 13px; color: #111; background: #f5f5f6; }
 .cp-ctas { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
-.cp-hero-art { position: relative; display: flex; justify-content: center; align-items: center; min-height: 360px; }
-.cp-hero-art img { position: relative; z-index: 1; width: min(80%, 360px); filter: drop-shadow(0 0 40px rgba(224, 38, 47, 0.55)); animation: cp-float 6s ease-in-out infinite; }
-.cp-pedestal { position: absolute; bottom: 10px; width: 70%; height: 46px; border-radius: 50%; border: 1px solid rgba(255, 90, 96, 0.6); background: radial-gradient(ellipse, rgba(224, 38, 47, 0.35), transparent 70%); box-shadow: 0 0 40px rgba(224, 38, 47, 0.45); }
 @keyframes cp-float { 50% { transform: translateY(-14px); } }
 @media (max-width: 900px) {
   .cp-hero { padding-top: 130px; }
   .cp-hero-inner { grid-template-columns: 1fr; }
-  .cp-hero-art { min-height: 220px; order: -1; }
 }
-@media (prefers-reduced-motion: reduce) { .cp-hero-art img { animation: none; } }
+
+/* ---------- Kampanya sahnesi (sağ taraf) ---------- */
+.cp-hero-art {
+  position: relative; display: flex; justify-content: center; align-items: center;
+  min-height: 460px; container-type: inline-size; perspective: 900px; isolation: isolate;
+}
+/* Arkada dev yüzde */
+.cp-art-percent {
+  position: absolute; z-index: -2; top: 50%; left: 50%; transform: translate(-50%, -54%);
+  font-family: var(--font-display); font-weight: 900; font-size: 52cqw; line-height: 1; letter-spacing: -0.02em; white-space: nowrap;
+  color: transparent; -webkit-text-stroke: 1.5px rgba(255, 255, 255, 0.09);
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 70, 80, 0.22) 48%, transparent 66%) 0 0 / 250% 100%;
+  -webkit-background-clip: text; background-clip: text;
+  animation: cp-shine 6s linear infinite;
+}
+/* Gezinen spot ışıkları */
+.cp-art-beam {
+  position: absolute; z-index: -1; top: -38%; left: 50%; width: 46cqw; height: 150%; margin-left: -23cqw;
+  transform-origin: 50% 0; clip-path: polygon(47% 0, 53% 0, 100% 100%, 0 100%); filter: blur(10px); mix-blend-mode: screen;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.04) 60%, transparent 85%);
+  animation: cp-beam 7s ease-in-out infinite alternate;
+}
+.cp-art-beam-2 { background: linear-gradient(180deg, rgba(255, 59, 71, 0.4), rgba(255, 59, 71, 0.06) 60%, transparent 85%); animation-duration: 9s; animation-direction: alternate-reverse; }
+/* Eğik yörüngeler */
+.cp-art-orbit {
+  position: absolute; width: 92cqw; aspect-ratio: 1; border-radius: 50%; border: 1px solid rgba(255, 80, 90, 0.28);
+  transform: rotateX(74deg) rotateZ(0); animation: cp-orbit 16s linear infinite;
+}
+.cp-art-orbit-2 { width: 70cqw; border-color: rgba(255, 255, 255, 0.12); animation-duration: 11s; animation-direction: reverse; }
+.cp-art-orbit i { position: absolute; top: -5px; left: 50%; width: 10px; height: 10px; border-radius: 50%; background: #fff; box-shadow: 0 0 12px #ff3b47, 0 0 26px #ff3b47; }
+/* Logonun arkasındaki ışıma ve dönen neon halka */
+.cp-art-halo { position: absolute; width: 70cqw; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(closest-side, rgba(224, 38, 47, 0.45), rgba(224, 38, 47, 0.08) 60%, transparent); animation: cp-pulse 3.2s ease-in-out infinite; }
+.cp-art-ring {
+  position: absolute; width: 64cqw; aspect-ratio: 1; border-radius: 50%;
+  background: conic-gradient(from 0deg, transparent 0 55%, rgba(255, 59, 71, 0.2) 70%, #ff3b47 88%, #fff 90%, transparent 91%);
+  -webkit-mask: radial-gradient(closest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+  mask: radial-gradient(closest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+  filter: drop-shadow(0 0 10px #ff3b47); animation: cp-spin 4.5s linear infinite;
+}
+.cp-art-logo { position: relative; z-index: 2; width: 52cqw; max-width: 320px; filter: drop-shadow(0 0 30px rgba(224, 38, 47, 0.7)) drop-shadow(0 18px 30px rgba(0, 0, 0, 0.8)); animation: cp-float 6s ease-in-out infinite; }
+/* Yanlarda 3D ürün kutuları */
+.cp-art-boxwrap { position: absolute; z-index: 3; perspective: 700px; animation: cp-float 5.5s ease-in-out infinite; }
+.cp-art-boxwrap .promo-box { --w: 19cqw; --h: 31cqw; --d: 5.4cqw; }
+.cp-art-boxwrap .pb-name { font-size: 2.6cqw; }
+.cp-art-boxwrap.is-l { left: 0; bottom: 12%; }
+.cp-art-boxwrap.is-r { right: 0; top: 6%; animation-delay: -2.7s; }
+.cp-art-boxwrap.is-r .promo-box { animation-name: cp-sway-r; }
+/* Cam indirim etiketi */
+.cp-art-tag {
+  position: absolute; z-index: 4; top: 8%; left: 6%; display: flex; flex-direction: column; align-items: center; padding: 10px 16px 8px;
+  border-radius: 16px; transform: rotate(-9deg); animation: cp-tag 4.5s ease-in-out infinite;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.03)); border: 1px solid rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(10px); box-shadow: 0 18px 40px -12px rgba(0, 0, 0, 0.8), inset 0 1px rgba(255, 255, 255, 0.25);
+}
+.cp-art-tag strong { font-family: var(--font-display); font-size: 34px; font-weight: 900; line-height: 1; background: linear-gradient(180deg, #ff8a90, #ff3b47 60%, #c4111b); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.cp-art-tag small { font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.3em; color: rgba(255, 255, 255, 0.75); }
+/* Kaide + dalgalar */
+.cp-pedestal { position: absolute; z-index: 1; bottom: 6%; width: 64cqw; height: 13cqw; border-radius: 50%; border: 1px solid rgba(255, 90, 96, 0.7); background: radial-gradient(ellipse, rgba(224, 38, 47, 0.45), transparent 70%); box-shadow: 0 0 50px rgba(224, 38, 47, 0.5), inset 0 0 30px rgba(224, 38, 47, 0.45); }
+.cp-pedestal i { position: absolute; inset: 0; border-radius: 50%; border: 1px solid rgba(255, 80, 90, 0.6); animation: cp-ripple 3s ease-out infinite; }
+.cp-pedestal i + i { animation-delay: 1.5s; }
+/* Yükselen kıvılcımlar */
+.cp-art-embers { position: absolute; inset: 0; z-index: 5; pointer-events: none; overflow: hidden; }
+.cp-art-embers i {
+  position: absolute; bottom: -10px; left: var(--x); width: var(--s); height: var(--s); border-radius: 50%;
+  background: #ffb0b4; box-shadow: 0 0 8px #ff3b47, 0 0 16px #ff3b47; opacity: 0;
+  animation: cp-ember var(--t) linear infinite; animation-delay: var(--dl);
+}
+
+@keyframes cp-shine { to { background-position: -250% 0; } }
+@keyframes cp-beam { from { transform: rotate(-16deg); } to { transform: rotate(14deg); } }
+@keyframes cp-orbit { to { transform: rotateX(74deg) rotateZ(360deg); } }
+@keyframes cp-spin { to { transform: rotate(360deg); } }
+@keyframes cp-pulse { 50% { transform: scale(1.08); opacity: 0.75; } }
+@keyframes cp-sway-r {
+  from { transform: rotateX(12deg) rotateY(-36deg) translateY(0); }
+  to { transform: rotateX(8deg) rotateY(-22deg) translateY(-1.4cqw); }
+}
+@keyframes cp-tag { 50% { transform: rotate(-5deg) translateY(-8px); } }
+@keyframes cp-ripple { from { transform: scale(1); opacity: 0.8; } to { transform: scale(1.6); opacity: 0; } }
+@keyframes cp-ember {
+  0% { transform: translate(0, 0); opacity: 0; }
+  12% { opacity: 1; }
+  80% { opacity: 0.8; }
+  100% { transform: translate(var(--dx), -480px); opacity: 0; }
+}
+@media (max-width: 900px) {
+  .cp-hero-art { min-height: 340px; order: -1; }
+}
+@media (prefers-reduced-motion: reduce) { .cp-hero-art, .cp-hero-art * { animation: none !important; } }
