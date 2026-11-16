@@ -9,6 +9,7 @@ import HowItWorksSection from '../components/HowItWorks/HowItWorksSection';
 import DiscordBanner from '../components/Discord/DiscordBanner';
 import VouchMarquee from '../components/Reviews/VouchMarquee';
 import CountUp from '../components/CountUp';
+import HeroStage from '../components/HeroStage/HeroStage';
 import { CampaignHero } from '../components/Campaign/Campaign';
 import { useShopStore, useDiscordUrl } from '../store/useShopStore';
 import { productPath } from '../lib/slug';
@@ -44,27 +45,7 @@ const HomePage = () => {
             <span className="hero-accent">{t('hero.title2')}</span>
           </h1>
 
-          <div className="hero-showcase">
-            <div className="showcase-topbar">
-              <span className="showcase-chip showcase-chip-live">UNDETECTED</span>
-              <span className="showcase-chip">{t('hero.support')}</span>
-              <span className="showcase-chip">{t('hero.games', { n: categories.length || '—' })}</span>
-              <span className="showcase-rec">
-                <span className="rec-dot"></span> RGX
-              </span>
-            </div>
-            <video
-              className="showcase-video"
-              src="/media/hero-loop.mp4"
-              poster="/media/hero-loop-poster.webp"
-              autoPlay
-              muted
-              loop
-              playsInline
-              preload="metadata"
-            />
-            <div className="showcase-vignette" aria-hidden="true"></div>
-          </div>
+          <HeroStage />
 
           <p className="hero-subtext">{t('hero.sub')}</p>
 
