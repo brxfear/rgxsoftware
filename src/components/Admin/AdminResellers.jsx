@@ -143,11 +143,11 @@ const ResellerForm = ({ initial, products, onClose }) => {
                   <span className="adm-label">Haftalık ücretsiz key hakkı</span>
                   <input className="adm-input" type="number" min={0} max={100} value={f.media.weekly_limit} onChange={(e) => setF((x) => ({ ...x, media: { ...x.media, weekly_limit: e.target.value } }))} />
                 </label>
-                <label className="adm-switch" style={{ alignSelf: 'end', marginBottom: 10 }}>
+                {f.role === 'both' && <label className="adm-switch" style={{ alignSelf: 'end', marginBottom: 10 }}>
                   <input type="checkbox" checked={f.media.enabled} onChange={(e) => setF((x) => ({ ...x, media: { ...x.media, enabled: e.target.checked } }))} />
                   <span className="adm-switch-track"><span /></span>
                   Medya kotası açık
-                </label>
+                </label>}
               </div>
               <span className="adm-label">Hangi ürün/planlardan çıkarabilir (sadece bunlar görünür)</span>
               <div className="adm-media-allowed">

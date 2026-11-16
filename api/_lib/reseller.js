@@ -54,7 +54,7 @@ export const STATUS_MSG = {
 
 /** role: 'reseller' (satış) | 'media' (sadece haftalık ücretsiz medya keyleri) | 'both' */
 export const canSell = (r) => (r.role || 'reseller') !== 'media';
-export const isMedia = (r) => (r.role === 'media' || r.role === 'both') && r.media?.enabled !== false;
+export const isMedia = (r) => r.role === 'media' || (r.role === 'both' && r.media?.enabled !== false);
 
 export const requireReseller = async (db, uid) => {
   const snap = await db.collection('resellers').doc(uid).get();

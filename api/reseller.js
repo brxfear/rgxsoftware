@@ -50,7 +50,8 @@ export default async function handler(req, res) {
         status: ['active', 'suspended', 'pending', 'rejected'].includes(b.status) ? b.status : 'active',
         role: ['reseller', 'media', 'both'].includes(b.role) ? b.role : 'reseller',
         media: {
-          enabled: b.media?.enabled !== false,
+          // Rolü Medya olan hesapta medya her zaman açık; anahtar sadece Bayi + Medya için anlamlı
+          enabled: b.role === 'media' || b.media?.enabled !== false,
           weekly_limit: int(b.media?.weekly_limit, 100),
           allowed: (Array.isArray(b.media?.allowed) ? b.media.allowed : []).map(String).filter((x) => /^[\w-]+:[\w-]+$/.test(x)).slice(0, 50),
         },
@@ -220,7 +221,7 @@ export default async function handler(req, res) {
           display_name: name,
           status: auto ? 'active' : 'pending',
           role,
-          media: { enabled: role === 'media', weekly_limit: 0, allowed: [] },
+          media: { enabled: true, weekly_limit: 0, allowed: [] },
           application: { discord, channel_url: channel, about, at: new Date().toISOString() },
           balance_usd: 0,
           discount_pct: Math.min(90, Math.max(0, Number(s.default_discount_pct) || 0)),
