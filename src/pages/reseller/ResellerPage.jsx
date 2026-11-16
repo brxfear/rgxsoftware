@@ -36,7 +36,7 @@ const L = {
     limitNote: 'Günlük limit: {d} · Aylık limit: {m}', choose: 'Ürün seç', searchPh: 'Key, ürün ya da not ara…',
     date: 'Tarih', price: 'Fiyat', amount: 'Tutar', balAfter: 'Sonraki bakiye', noTx: 'Henüz işlem yok.',
     txTypes: { topup: 'Yükleme', purchase: 'Key alımı', adjust: 'Düzeltme', media: 'Medya' },
-    media: 'Medya keyleri', mediaRole: 'MEDYA', mediaPanel: 'MEDYA PANEL', mediaTitle: 'Medya paneli', mediaLoginSub: 'Medya hesabınla giriş yap.', notMedia: 'Bu hesabın medya hesabı yok', notMediaSub: 'İçerik üreticisiysen medya programına başvurabilirsin.', applyMedia: 'Medya başvurusu yap', isMediaAcc: 'Bu hesap bir medya hesabı', isMediaAccSub: 'Medya keylerin ve bilgilerin Medya panelinde.', openMedia: 'Medya paneline git', mediaHint: 'İçerik üreticisi misin? Medya programına ayrıca başvur →', mediaLeft: 'Bu hafta {n} / {max} key hakkın kaldı', mediaSub: 'Ücretsiz medya keylerin her pazartesi yenilenir. Videolarında RGX’i göstermeyi unutma.', mediaTake: 'Key çıkar', noMedia: 'Medya programında değilsin.', noMediaItems: 'Sana henüz ürün atanmadı. Ekip atayınca burada görünecek.',
+    media: 'Medya keyleri', mediaRole: 'MEDYA', mediaPanel: 'MEDYA PANEL', mediaTitle: 'Medya paneli', signedInAs: 'Giriş yapılan hesap:', switchAcc: 'Başka hesapla giriş yap', mediaLoginSub: 'Medya hesabınla giriş yap.', notMedia: 'Bu hesabın medya hesabı yok', notMediaSub: 'İçerik üreticisiysen medya programına başvurabilirsin.', applyMedia: 'Medya başvurusu yap', isMediaAcc: 'Bu hesap bir medya hesabı', isMediaAccSub: 'Medya keylerin ve bilgilerin Medya panelinde.', openMedia: 'Medya paneline git', mediaHint: 'İçerik üreticisi misin? Medya programına ayrıca başvur →', mediaLeft: 'Bu hafta {n} / {max} key hakkın kaldı', mediaSub: 'Ücretsiz medya keylerin her pazartesi yenilenir. Videolarında RGX’i göstermeyi unutma.', mediaTake: 'Key çıkar', noMedia: 'Medya programında değilsin.', noMediaItems: 'Sana henüz ürün atanmadı. Ekip atayınca burada görünecek.',
     pendingTitle: 'Başvurun inceleniyor', rejectedTitle: 'Başvurun onaylanmadı',
     roleReseller: 'Bayi', roleResellerSub: 'Bakiye yükle, keyleri bayi fiyatıyla al, sat', roleMedia: 'Medya / içerik üreticisi', roleMediaSub: 'Video çek, haftalık ücretsiz key al',
     discordUser: 'Discord kullanıcı adın', channelUrl: 'Kanal / profil linkin', aboutMedia: 'Kanalın hakkında (izlenme, içerik türü)', aboutReseller: 'Nasıl satış yapacaksın? (opsiyonel)',
@@ -72,7 +72,7 @@ const L = {
     limitNote: 'Daily limit: {d} · Monthly limit: {m}', choose: 'Choose a product', searchPh: 'Search key, product or note…',
     date: 'Date', price: 'Price', amount: 'Amount', balAfter: 'Balance after', noTx: 'No transactions yet.',
     txTypes: { topup: 'Top up', purchase: 'Key purchase', adjust: 'Adjustment', media: 'Media' },
-    media: 'Media keys', mediaRole: 'MEDIA', mediaPanel: 'MEDIA PANEL', mediaTitle: 'Media panel', mediaLoginSub: 'Sign in with your media account.', notMedia: 'This account has no media account', notMediaSub: 'If you are a content creator you can apply to the media program.', applyMedia: 'Apply for media', isMediaAcc: 'This is a media account', isMediaAccSub: 'Your media keys and info live in the Media panel.', openMedia: 'Open media panel', mediaHint: 'Content creator? Apply to the media program instead →', mediaLeft: '{n} / {max} keys left this week', mediaSub: 'Your free media keys refresh every Monday. Remember to feature RGX in your videos.', mediaTake: 'Get key', noMedia: 'You are not in the media program.', noMediaItems: 'No products assigned yet. They will appear here once the team assigns them.',
+    media: 'Media keys', mediaRole: 'MEDIA', mediaPanel: 'MEDIA PANEL', mediaTitle: 'Media panel', signedInAs: 'Signed in as:', switchAcc: 'Sign in with another account', mediaLoginSub: 'Sign in with your media account.', notMedia: 'This account has no media account', notMediaSub: 'If you are a content creator you can apply to the media program.', applyMedia: 'Apply for media', isMediaAcc: 'This is a media account', isMediaAccSub: 'Your media keys and info live in the Media panel.', openMedia: 'Open media panel', mediaHint: 'Content creator? Apply to the media program instead →', mediaLeft: '{n} / {max} keys left this week', mediaSub: 'Your free media keys refresh every Monday. Remember to feature RGX in your videos.', mediaTake: 'Get key', noMedia: 'You are not in the media program.', noMediaItems: 'No products assigned yet. They will appear here once the team assigns them.',
     pendingTitle: 'Your application is under review', rejectedTitle: 'Your application was not approved',
     roleReseller: 'Reseller', roleResellerSub: 'Top up, buy keys at reseller prices, resell', roleMedia: 'Media / content creator', roleMediaSub: 'Make videos, get free weekly keys',
     discordUser: 'Your Discord username', channelUrl: 'Channel / profile link', aboutMedia: 'About your channel (views, content type)', aboutReseller: 'How will you sell? (optional)',
@@ -208,7 +208,11 @@ const ResellerPage = ({ mode = 'reseller' }) => {
         <span className="rs-pending-ico"><Icon size={30} /></span>
         <h1>{title}</h1>
         <p>{sub}</p>
-        <Link className="btn-primary" to={to}>{label}</Link>
+        <p className="rs-notice-acc">{s.signedInAs} <strong>{user.email || user.displayName || user.uid}</strong></p>
+        <div className="rs-notice-actions">
+          <Link className="btn-primary" to={to}>{label}</Link>
+          <button className="btn-secondary" onClick={async () => { await signOut(auth); useShopStore.getState().openAuth(); }}>{s.switchAcc}</button>
+        </div>
       </div>
     </div>
   );

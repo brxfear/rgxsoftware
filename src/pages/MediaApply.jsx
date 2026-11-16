@@ -101,7 +101,7 @@ const MediaApply = ({ lang }) => {
         {st === 'active' && <Link className="btn-primary" to="/media-panel">{s.open} <ArrowRight size={16} /></Link>}
       </div>
     );
-  } else if (info && info.open === false) {
+  } else if (info && (info.media_open ?? info.open) === false) {
     body = <div className="md-apply-state"><p>{s.closed}</p></div>;
   } else {
     const valid = accept && f.name.trim().length >= 2 && f.discord.trim().length >= 2 && /^https?:\/\//i.test(f.channel.trim());

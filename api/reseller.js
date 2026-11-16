@@ -195,12 +195,13 @@ export default async function handler(req, res) {
     if (action === 'signup' && req.method === 'GET') {
       const s = (await db.collection('settings').doc('reseller').get()).data() || {};
       const exists = (await db.collection('resellers').doc(user.uid).get()).exists;
-      return res.status(200).json({ open: s.signup_open !== false, exists, rules: s.rules || '', media_rules: s.media_rules || '' });
+      return res.status(200).json({ open: s.signup_open !== false, media_open: (s.media_signup_open ?? s.signup_open) !== false, exists, rules: s.rules || '', media_rules: s.media_rules || '' });
     }
     if (action === 'signup' && req.method === 'POST') {
       const s = (await db.collection('settings').doc('reseller').get()).data() || {};
-      if (s.signup_open === false) throw new HttpError(403, 'Bayi başvuruları şu an kapalı.');
       const b = body(req);
+      const isMediaApp = b.role === 'media';
+      if (isMediaApp ? (s.media_signup_open ?? s.signup_open) === false : s.signup_open === false) throw new HttpError(403, isMediaApp ? 'Medya başvuruları şu an kapalı.' : 'Bayi başvuruları şu an kapalı.');
       const name = String(b.display_name || '').trim().replace(/\s+/g, ' ').slice(0, 40);
       if (name.length < 2) throw new HttpError(400, 'Bayi adı en az 2 karakter olmalı.');
       if (!b.accept_rules) throw new HttpError(400, 'Kuralları kabul etmelisin.');
@@ -210,7 +211,7 @@ export default async function handler(req, res) {
       const about = String(b.about || '').trim().slice(0, 600);
       if (discord.length < 2) throw new HttpError(400, 'Discord kullanıcı adını yaz.');
       if (role === 'media' && !/^https?:\/\//i.test(channel)) throw new HttpError(400, 'Kanal / profil linkini yaz (https://…).');
-      const auto = s.auto_approve === true;
+      const auto = role === 'media' ? (s.media_auto_approve ?? s.auto_approve) === true : s.auto_approve === true;
       const ref = db.collection('resellers').doc(user.uid);
       await db.runTransaction(async (tx) => {
         if ((await tx.get(ref)).exists) throw new HttpError(409, 'Zaten bayi hesabın var.');

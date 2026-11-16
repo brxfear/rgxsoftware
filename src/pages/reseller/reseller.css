@@ -242,3 +242,6 @@
 @media (max-width: 560px) { .rs-role-pick { grid-template-columns: 1fr; } }
 .rs-media-hint { display: inline-flex; align-items: center; gap: 8px; padding: 10px 13px; border-radius: 12px; font-size: 13px; font-weight: 600; color: var(--text-muted); text-decoration: none; background: rgba(255, 255, 255, 0.03); border: 1px dashed rgba(255, 255, 255, 0.16); }
 .rs-media-hint:hover { color: #fff; border-color: rgba(224, 38, 47, 0.5); }
+.rs-notice-acc { font-size: 13px; color: var(--text-muted); }
+.rs-notice-acc strong { color: #fff; }
+.rs-notice-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }

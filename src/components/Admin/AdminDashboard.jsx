@@ -18,6 +18,7 @@ import {
   Activity,
   Megaphone,
   Briefcase,
+  Video,
   Cpu,
   LayoutDashboard,
   ShoppingBag,
@@ -1679,6 +1680,7 @@ const NAV = [
   { id: 'hero', label: 'Ana sayfa vitrini', icon: LayoutDashboard },
   { id: 'campaign', label: 'Kampanya & kodlar', icon: BadgePercent },
   { id: 'resellers', label: 'Bayiler', icon: Briefcase },
+  { id: 'media', label: 'Medya', icon: Video },
   { id: 'support', label: 'Destek', icon: LifeBuoy },
   { id: 'hwid', label: 'HWID istekleri', icon: Cpu },
   { id: 'payments', label: 'Ödemeler', icon: CreditCard },
@@ -1766,6 +1768,7 @@ const AdminDashboard = ({ admin }) => {
           {view === 'settings' && <SettingsView me={me} />}
           {view === 'announcements' && <AdminAnnouncements me={me} />}
           {view === 'resellers' && <AdminResellers me={me} products={products} />}
+          {view === 'media' && <AdminResellers me={me} products={products} kind="media" />}
           {view === 'hwid' && <AdminHwid me={me} />}
           {view === 'support' && <AdminSupport me={me} />}
           {view === 'campaign' && <AdminCampaign me={me} />}
