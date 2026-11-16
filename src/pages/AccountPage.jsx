@@ -45,7 +45,8 @@ const statusOf = (s = '', t) => {
 };
 const PAID = ['paid', 'Completed'];
 
-const maskEmail = (e = '') => {
+const maskEmail = (email) => {
+  const e = email || '';
   const [u, d = ''] = e.split('@');
   const [host, ...tld] = d.split('.');
   return `${u.slice(0, 2)}•••••@${host.slice(0, 1)}••••.${tld.join('.') || ''}`;

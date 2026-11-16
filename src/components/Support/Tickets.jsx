@@ -2,13 +2,15 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { collection, doc, limit, onSnapshot, orderBy, query, serverTimestamp, where, writeBatch } from 'firebase/firestore';
 import { toast } from 'react-hot-toast';
-import { ArrowLeft, Loader2, MessageSquarePlus, Send, LifeBuoy, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Loader2, MessageSquarePlus, Send, LifeBuoy, CheckCircle2, Wrench, CreditCard, Cpu, Briefcase, CircleHelp, Clock, ChevronRight } from 'lucide-react';
 import { db } from '../../lib/firebase';
 import { toDate } from '../../lib/db';
 import { useT } from '../../i18n';
+import { useDiscordUrl } from '../../store/useShopStore';
 import './tickets.css';
 
 const CATS = ['product', 'payment', 'hwid', 'reseller', 'other'];
+const CAT_ICON = { product: Wrench, payment: CreditCard, hwid: Cpu, reseller: Briefcase, other: CircleHelp };
 
 export const Thread = ({ ticketId, viewer, onSend }) => {
   const { t, lang } = useT();
@@ -50,10 +52,13 @@ export const Thread = ({ ticketId, viewer, onSend }) => {
           <Loader2 className="spin" size={18} />
         ) : (
           msgs.map((m) => (
-            <div key={m.id} className={`tk-msg ${m.from === viewer ? 'mine' : ''} from-${m.from}`}>
-              <span className="tk-msg-who">{m.from === 'admin' ? `RGX · ${m.nick || t('support.team')}` : t('support.you')}</span>
-              <p>{m.text}</p>
-              <time>{toDate(m.at)?.toLocaleString(lang === 'tr' ? 'tr-TR' : 'en-GB', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) || '…'}</time>
+            <div key={m.id} className={`tk-row ${m.from === viewer ? 'mine' : ''}`}>
+              {m.from === 'admin' && <img src="/logo.webp" alt="" className="tk-avatar" />}
+              <div className={`tk-msg ${m.from === viewer ? 'mine' : ''} from-${m.from}`}>
+                <span className="tk-msg-who">{m.from === 'admin' ? `RGX · ${m.nick || t('support.team')}` : t('support.you')}</span>
+                <p>{m.text}</p>
+                <time>{toDate(m.at)?.toLocaleString(lang === 'tr' ? 'tr-TR' : 'en-GB', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) || '…'}</time>
+              </div>
             </div>
           ))
         )}
@@ -67,9 +72,9 @@ export const Thread = ({ ticketId, viewer, onSend }) => {
   );
 };
 
-const NewTicket = ({ user, products, onCreated, onCancel }) => {
+const NewTicket = ({ user, products, initialCat, onCreated, onCancel }) => {
   const { t } = useT();
-  const [f, setF] = useState({ subject: '', category: 'product', product_name: '', order_ref: '', text: '' });
+  const [f, setF] = useState({ subject: '', category: initialCat || 'product', product_name: '', order_ref: '', text: '' });
   const [busy, setBusy] = useState(false);
   const set = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.value }));
   const submit = async (e) => {
@@ -105,24 +110,29 @@ const NewTicket = ({ user, products, onCreated, onCancel }) => {
   };
   return (
     <form className="ap-panel tk-new" onSubmit={submit}>
+      <div className="tk-cats tk-cats-sm" role="radiogroup" aria-label={t('support.category')}>
+        {CATS.map((c) => {
+          const Icon = CAT_ICON[c];
+          return (
+            <button type="button" key={c} role="radio" aria-checked={f.category === c} className={`tk-cat ${f.category === c ? 'on' : ''}`} onClick={() => setF((x) => ({ ...x, category: c }))}>
+              <Icon size={16} /> <span>{t(`support.cats.${c}`)}</span>
+            </button>
+          );
+        })}
+      </div>
       <div className="tk-new-grid">
-        <label className="acc-label">{t('support.category')}
-          <select className="acc-input" value={f.category} onChange={set('category')}>
-            {CATS.map((c) => <option key={c} value={c}>{t(`support.cats.${c}`)}</option>)}
-          </select>
-        </label>
         <label className="acc-label">{t('support.product')}
           <select className="acc-input" value={f.product_name} onChange={set('product_name')}>
             <option value="">—</option>
             {products.map((p) => <option key={p.id} value={p.name}>{p.name}</option>)}
           </select>
         </label>
+        <label className="acc-label">{t('support.orderRef')}
+          <input className="acc-input" value={f.order_ref} maxLength={40} onChange={set('order_ref')} placeholder="#A1B2C3D4" />
+        </label>
       </div>
       <label className="acc-label">{t('support.subject')}
         <input className="acc-input" value={f.subject} maxLength={120} required onChange={set('subject')} placeholder={t('support.subjectPh')} />
-      </label>
-      <label className="acc-label">{t('support.orderRef')}
-        <input className="acc-input" value={f.order_ref} maxLength={40} onChange={set('order_ref')} placeholder="#A1B2C3D4" />
       </label>
       <label className="acc-label">{t('support.message')}
         <textarea className="acc-input tk-textarea" rows={5} maxLength={3000} required value={f.text} onChange={set('text')} placeholder={t('support.messagePh')} />
@@ -140,7 +150,8 @@ const Tickets = ({ user, products }) => {
   const { t, lang } = useT();
   const [list, setList] = useState(null);
   const [open, setOpen] = useState(null);
-  const [creating, setCreating] = useState(false);
+  const [creating, setCreating] = useState(null);
+  const discordUrl = useDiscordUrl();
 
   useEffect(
     () =>
@@ -176,17 +187,20 @@ const Tickets = ({ user, products }) => {
 
   const ST = { open: ['warn', t('support.st.open')], answered: ['ok', t('support.st.answered')], closed: ['muted', t('support.st.closed')] };
 
-  if (creating) return <NewTicket user={user} products={products} onCancel={() => setCreating(false)} onCreated={(id) => { setCreating(false); setOpen(id); }} />;
+  if (creating) return <NewTicket user={user} products={products} initialCat={creating === true ? null : creating} onCancel={() => setCreating(null)} onCreated={(id) => { setCreating(null); setOpen(id); }} />;
 
   if (current) {
     return (
       <div className="tk-wrap">
+        <button className="tk-back" onClick={() => setOpen(null)}><ArrowLeft size={15} /> {t('support.back')}</button>
         <div className="tk-head">
-          <button className="ap-btn-ghost" onClick={() => setOpen(null)}><ArrowLeft size={15} /> {t('support.back')}</button>
-          <div>
+          <div className="tk-head-main">
             <strong>{current.subject}</strong>
-            <span className={`acc-pill acc-pill-${ST[current.status]?.[0]}`}>{ST[current.status]?.[1]}</span>
+            <small>
+              {t(`support.cats.${current.category}`)}{current.product_name ? ` · ${current.product_name}` : ''}{current.order_ref ? ` · ${t('support.orderShort')} ${current.order_ref}` : ''}
+            </small>
           </div>
+          <span className={`acc-pill acc-pill-${ST[current.status]?.[0]}`}>{ST[current.status]?.[1]}</span>
           {current.status !== 'closed' && <button className="ap-btn-ghost" onClick={close}><CheckCircle2 size={15} /> {t('support.close')}</button>}
         </div>
         <Thread ticketId={current.id} viewer="user" onSend={sendUser} />
@@ -196,24 +210,54 @@ const Tickets = ({ user, products }) => {
 
   return (
     <div className="tk-wrap">
-      <button className="ap-btn-primary tk-new-btn" onClick={() => setCreating(true)}><MessageSquarePlus size={16} /> {t('support.new')}</button>
+      <section className="tk-hero">
+        <div>
+          <h2>{t('support.helpTitle')}</h2>
+          <p>{t('support.helpSub')}</p>
+          <div className="tk-hero-actions">
+            <button className="ap-btn-primary" onClick={() => setCreating(true)}><MessageSquarePlus size={16} /> {t('support.new')}</button>
+            <a className="ap-btn-ghost" href={discordUrl} target="_blank" rel="noopener noreferrer">{t('support.discord')}</a>
+          </div>
+        </div>
+        <div className="tk-hero-meta"><Clock size={16} /><span>{t('support.reply')}</span><strong>{t('support.replyTime')}</strong></div>
+      </section>
+
+      <h3 className="tk-h3">{t('support.pick')}</h3>
+      <div className="tk-cats">
+        {CATS.map((c) => {
+          const Icon = CAT_ICON[c];
+          return (
+            <button key={c} className="tk-cat" onClick={() => setCreating(c)}>
+              <span className="tk-cat-ico"><Icon size={18} /></span>
+              <strong>{t(`support.cats.${c}`)}</strong>
+              <small>{t(`support.catSub.${c}`)}</small>
+            </button>
+          );
+        })}
+      </div>
+
+      <h3 className="tk-h3">{t('support.mine')}</h3>
       {list === null ? (
         <p className="acc-muted">{t('account.loading')}</p>
       ) : !list.length ? (
         <div className="ap-empty"><LifeBuoy size={22} /><p>{t('support.none')}</p></div>
       ) : (
         <div className="tk-list">
-          {list.map((x) => (
-            <button key={x.id} className={`tk-item ${x.unread_user ? 'unread' : ''}`} onClick={() => setOpen(x.id)}>
-              <span className={`acc-pill acc-pill-${ST[x.status]?.[0]}`}>{ST[x.status]?.[1]}</span>
-              <span className="tk-item-main">
-                <strong>{x.subject}</strong>
-                <small>{t(`support.cats.${x.category}`)}{x.product_name ? ` · ${x.product_name}` : ''}</small>
-              </span>
-              <time>{toDate(x.updated_at)?.toLocaleDateString(lang === 'tr' ? 'tr-TR' : 'en-GB') || '…'}</time>
-              {x.unread_user && <i className="tk-dot" />}
-            </button>
-          ))}
+          {list.map((x) => {
+            const Icon = CAT_ICON[x.category] || CircleHelp;
+            return (
+              <button key={x.id} className={`tk-item st-${x.status} ${x.unread_user ? 'unread' : ''}`} onClick={() => setOpen(x.id)}>
+                <span className="tk-item-ico"><Icon size={17} /></span>
+                <span className="tk-item-main">
+                  <strong>{x.subject}</strong>
+                  <small>{t(`support.cats.${x.category}`)}{x.product_name ? ` · ${x.product_name}` : ''} · {toDate(x.updated_at)?.toLocaleDateString(lang === 'tr' ? 'tr-TR' : 'en-GB') || '…'}</small>
+                </span>
+                <span className={`acc-pill acc-pill-${ST[x.status]?.[0]}`}>{ST[x.status]?.[1]}</span>
+                <ChevronRight size={16} className="tk-chev" />
+                {x.unread_user && <i className="tk-dot" />}
+              </button>
+            );
+          })}
         </div>
       )}
     </div>

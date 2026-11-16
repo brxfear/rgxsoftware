@@ -322,6 +322,9 @@ const en = {
     cats: { product: 'Product / setup', payment: 'Payment', hwid: 'HWID / license', reseller: 'Reseller / media', other: 'Other' },
     st: { open: 'Awaiting reply', answered: 'Answered', closed: 'Closed' },
     fab: 'Support',
+    helpTitle: 'How can we help?', helpSub: 'Pick a topic and open a ticket. Our team answers right here and you get a notification when they reply.',
+    reply: 'Avg. reply', replyTime: 'a few hours', discord: 'Chat on Discord', mine: 'My tickets', pick: 'Choose a topic', orderShort: 'Order',
+    catSub: { product: 'Setup, errors, updates', payment: 'Payment, transfer, orders', hwid: 'HWID reset, license', reseller: 'Reseller & media program', other: 'Anything else' },
   },  campaign: { barText: '{n}% off everything with code', sub: 'on everything in the store', useCode: 'USE CODE', copy: 'Copy', copied: 'Copied', shop: 'Shop products', days: 'DAYS', hours: 'HRS', mins: 'MIN', secs: 'SEC' },  rv: { leave: 'Review this order', ph: 'Share your experience (optional)', send: 'Submit review', saved: 'Thanks for your review!', thanks: 'Your review is live, thanks!' },
   marquee: { label: 'Live customer reviews from Discord' },
   rich: {

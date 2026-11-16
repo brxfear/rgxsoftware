@@ -316,12 +316,15 @@ const tr = {
     types: { update: 'Güncelleme', new: 'Yeni ürün', info: 'Bilgi', warning: 'Bakım / uyarı' },
   },
   support: {
-    team: 'Destek', you: 'Sen', replyPh: 'Mesajını yaz… (Ctrl+Enter ile gönder)', send: 'Gönder', new: 'Yeni destek talebi', none: 'Henüz destek talebin yok. Ürünle ilgili sorun ya da sorun için talep aç, ekibimiz buradan yanıtlasın.',
+    team: 'Destek', you: 'Sen', replyPh: 'Mesajını yaz… (Ctrl+Enter ile gönder)', send: 'Gönder', new: 'Yeni destek talebi', none: 'Henüz destek talebin yok. Bir sorun yaşarsan ya da soru sormak istersen talep aç, ekibimiz buradan yanıtlasın.',
     category: 'Konu', product: 'Ürün', subject: 'Başlık', subjectPh: 'ör. Loader açılmıyor', orderRef: 'Sipariş no (opsiyonel)', message: 'Mesaj', messagePh: 'Sorunu ya da sorunu detaylıca yaz…',
     created: 'Talebin oluşturuldu. Yanıt gelince burada görünecek.', back: 'Taleplerim', close: 'Talebi kapat', closed: 'Talep kapatıldı.',
     cats: { product: 'Ürün / kurulum', payment: 'Ödeme', hwid: 'HWID / lisans', reseller: 'Bayilik / medya', other: 'Diğer' },
     st: { open: 'Yanıt bekliyor', answered: 'Yanıtlandı', closed: 'Kapalı' },
     fab: 'Destek',
+    helpTitle: 'Size nasıl yardımcı olalım?', helpSub: 'Konunu seç, talebini aç. Ekibimiz Türkçe olarak buradan yanıtlar; yanıt gelince bildirim alırsın.',
+    reply: 'Ortalama yanıt', replyTime: 'birkaç saat', discord: 'Discord’dan yaz', mine: 'Taleplerim', pick: 'Konu seç', orderShort: 'Sipariş',
+    catSub: { product: 'Kurulum, hata, güncelleme', payment: 'Ödeme, havale, sipariş', hwid: 'HWID sıfırlama, lisans', reseller: 'Bayilik ve medya programı', other: 'Diğer sorular' },
   },  campaign: { barText: 'Tüm ürünlerde %{n} indirim — kod:', sub: 'tüm ürünlerde', useCode: 'KOD', copy: 'Kopyala', copied: 'Kopyalandı', shop: 'Ürünlere göz at', days: 'GÜN', hours: 'SAAT', mins: 'DAK', secs: 'SN' },  rv: { leave: 'Bu siparişi değerlendir', ph: 'Deneyimini birkaç kelimeyle yaz (opsiyonel)', send: 'Yorumu gönder', saved: 'Yorumun için teşekkürler!', thanks: 'Yorumun yayında, teşekkürler!' },
   marquee: { label: 'Discord’da canlı müşteri yorumları' },
   rich: {
