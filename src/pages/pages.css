@@ -530,4 +530,24 @@ a.product-card .select-btn { pointer-events: none; }
 .md-cta { margin-top: 44px; padding: 34px; border-radius: 24px; text-align: center; background: radial-gradient(ellipse at 50% 0%, rgba(224, 38, 47, 0.3), transparent 60%), rgba(20, 12, 14, 0.9); border: 1px solid rgba(224, 38, 47, 0.35); }
 .md-cta h2 { font-family: var(--font-display); font-size: 32px; }
 .md-cta p { color: var(--text-muted); margin: 8px 0 18px; }
-@media (max-width: 760px) { .md-cols { grid-template-columns: 1fr; } }
+/* Medya başvuru formu */
+.md-apply { scroll-margin-top: 110px; margin-top: 44px; padding: 30px; border-radius: 24px; background: radial-gradient(ellipse at 50% 0%, rgba(224, 38, 47, 0.26), transparent 60%), rgba(20, 12, 14, 0.9); border: 1px solid rgba(224, 38, 47, 0.35); }
+.md-apply-head { text-align: center; margin-bottom: 22px; }
+.md-apply-head h2 { font-family: var(--font-display); font-size: 34px; font-weight: 900; text-transform: uppercase; }
+.md-apply-head p { color: var(--text-muted); margin-top: 6px; }
+.md-apply-form { display: flex; flex-direction: column; gap: 14px; max-width: 760px; margin: 0 auto; }
+.md-apply-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.md-apply-form label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; }
+.md-apply-form input, .md-apply-form select, .md-apply-form textarea { padding: 11px 13px; border-radius: 12px; font: inherit; font-size: 14px; color: var(--text-main); background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.12); }
+.md-apply-form input:focus, .md-apply-form select:focus, .md-apply-form textarea:focus { outline: none; border-color: rgba(224, 38, 47, 0.6); }
+.md-apply-form textarea { resize: vertical; }
+.md-apply-form .md-apply-check { flex-direction: row; align-items: center; gap: 9px; font-weight: 500; }
+.md-apply-form button { align-self: center; }
+.md-apply-form button:disabled { opacity: 0.5; cursor: not-allowed; }
+.md-apply-rules { padding: 14px 16px; border-radius: 14px; font-size: 13px; line-height: 1.6; white-space: pre-wrap; color: var(--text-muted); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); max-height: 200px; overflow-y: auto; }
+.md-apply-rules strong { display: block; margin-bottom: 4px; color: var(--text-main); }
+.md-apply-state { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; padding: 10px 0; }
+.md-apply-state strong { font-size: 18px; }
+.md-apply-state p { color: var(--text-muted); max-width: 460px; }
+.md-apply-ok svg { color: #34d399; } .md-apply-warn svg { color: #fbbf24; } .md-apply-bad svg { color: #f87171; }
+@media (max-width: 760px) { .md-cols { grid-template-columns: 1fr; } .md-apply { padding: 20px; } .md-apply-grid { grid-template-columns: 1fr; } }

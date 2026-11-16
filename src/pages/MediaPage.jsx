@@ -4,6 +4,7 @@ import { Video, KeyRound, BadgePercent, Sparkles, CheckCircle2, ArrowRight, Send
 import { usePageTitle } from '../lib/usePageTitle';
 import { useDiscordUrl } from '../store/useShopStore';
 import { useT } from '../i18n';
+import MediaApply from './MediaApply';
 
 const TXT = {
   tr: {
@@ -68,7 +69,7 @@ const MediaPage = () => {
         <h1 className="page-title page-title-xl">{s.h1} <span className="hero-accent">{s.h2}</span></h1>
         <p className="page-sub">{s.sub}</p>
         <div className="cp-ctas">
-          <Link className="btn-primary" to="/reseller?apply=media">{s.apply} <ArrowRight size={16} /></Link>
+          <a className="btn-primary" href="#apply">{s.apply} <ArrowRight size={16} /></a>
           <a className="btn-secondary" href={discordUrl} target="_blank" rel="noopener noreferrer"><Send size={15} /> {s.discord}</a>
         </div>
       </section>
@@ -101,11 +102,7 @@ const MediaPage = () => {
         </div>
       </div>
 
-      <section className="md-cta">
-        <h2>{s.ctaTitle}</h2>
-        <p>{s.ctaSub}</p>
-        <Link className="btn-primary" to="/reseller?apply=media">{s.apply} <ArrowRight size={16} /></Link>
-      </section>
+      <MediaApply lang={lang} />
     </div>
   );
 };
