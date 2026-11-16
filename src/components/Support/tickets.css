@@ -33,13 +33,18 @@
 .spin { animation: tk-spin 0.8s linear infinite; }
 @keyframes tk-spin { to { transform: rotate(360deg); } }
 
-/* Sabit destek düğmesi */
+/* Sabit destek düğmesi: navbar ile aynı cam görünümlü hap */
 .support-fab {
-  position: fixed; right: 20px; bottom: 20px; z-index: 900; width: 54px; height: 54px; border-radius: 16px; border: none; cursor: pointer;
-  display: flex; align-items: center; justify-content: center; color: #fff;
-  background: linear-gradient(135deg, #ff3b47, #b3141c); box-shadow: 0 14px 34px -10px rgba(224, 38, 47, 0.9), inset 0 1px rgba(255, 255, 255, 0.3);
-  transition: transform 0.2s;
+  position: fixed; right: 20px; bottom: 20px; z-index: 900; display: flex; align-items: center; gap: 10px; padding: 7px 16px 7px 7px; border-radius: 999px; cursor: pointer; color: #fff;
+  background: linear-gradient(180deg, rgba(28, 20, 22, 0.88), rgba(14, 10, 11, 0.9)); border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(16px) saturate(160%); box-shadow: 0 16px 36px -14px rgba(0, 0, 0, 0.9), inset 0 1px rgba(255, 255, 255, 0.08);
+  transition: transform 0.2s, border-color 0.2s;
 }
-.support-fab:hover { transform: translateY(-2px) scale(1.04); }
-.support-fab i { position: absolute; top: -4px; right: -4px; width: 14px; height: 14px; border-radius: 50%; background: #fff; border: 3px solid #e0262f; }
-@media (max-width: 600px) { .tk-new-grid { grid-template-columns: 1fr; } .tk-msg { max-width: 92%; } .support-fab { right: 14px; bottom: 14px; } }
+.support-fab:hover { transform: translateY(-2px); border-color: rgba(224, 38, 47, 0.55); }
+.support-fab-ico { position: relative; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, #f0333c, #b3141c); box-shadow: 0 0 14px rgba(224, 38, 47, 0.5); }
+.support-fab-ico i { position: absolute; top: -2px; right: -2px; width: 11px; height: 11px; border-radius: 50%; background: #fff; border: 2px solid #b3141c; }
+.support-fab-text { display: flex; flex-direction: column; text-align: left; line-height: 1.1; }
+.support-fab-text strong { font-family: var(--font-tight); font-size: 13.5px; font-weight: 800; }
+.support-fab-text small { display: inline-flex; align-items: center; gap: 5px; margin-top: 2px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; color: var(--text-muted); }
+.support-fab-text small b { width: 6px; height: 6px; border-radius: 50%; background: #34d399; box-shadow: 0 0 8px #34d399; }
+@media (max-width: 600px) { .tk-new-grid { grid-template-columns: 1fr; } .tk-msg { max-width: 92%; } .support-fab { right: 14px; bottom: 14px; padding: 6px; } .support-fab-text { display: none; } }

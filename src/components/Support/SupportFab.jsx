@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { collection, limit, onSnapshot, query, where } from 'firebase/firestore';
-import { MessageSquareText } from 'lucide-react';
+import { Headset } from 'lucide-react';
 import { db } from '../../lib/firebase';
 import { useShopStore } from '../../store/useShopStore';
 import { useT } from '../../i18n';
@@ -33,8 +33,11 @@ const SupportFab = () => {
       title={t('support.fab')}
       onClick={() => (user ? navigate('/account/support') : useShopStore.getState().openAuth())}
     >
-      <MessageSquareText size={22} />
-      {user && unread && <i />}
+      <span className="support-fab-ico"><Headset size={17} />{user && unread && <i />}</span>
+      <span className="support-fab-text">
+        <strong>{t('support.fab')}</strong>
+        <small><b /> 7/24</small>
+      </span>
     </button>
   );
 };
