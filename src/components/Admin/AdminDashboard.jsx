@@ -62,6 +62,7 @@ import AdminStatus from './AdminStatus';
 import AdminKeys from './AdminKeys';
 import AdminSupport from './AdminSupport';
 import AdminCampaign from './AdminCampaign';
+import AdminHero from './AdminHero';
 import ProductPromo from '../ProductPromo/ProductPromo';
 import { PROMO_COLORS } from '../../lib/promo';
 import './AdminDashboard.css';
@@ -1675,6 +1676,7 @@ const NAV = [
   { id: 'status', label: 'Durum', icon: Activity },
   { id: 'keys', label: 'Key stoğu', icon: KeyRound },
   { id: 'announcements', label: 'Duyurular', icon: Megaphone },
+  { id: 'hero', label: 'Ana sayfa vitrini', icon: LayoutDashboard },
   { id: 'campaign', label: 'Kampanya & kodlar', icon: BadgePercent },
   { id: 'resellers', label: 'Bayiler', icon: Briefcase },
   { id: 'support', label: 'Destek', icon: LifeBuoy },
@@ -1767,6 +1769,7 @@ const AdminDashboard = ({ admin }) => {
           {view === 'hwid' && <AdminHwid me={me} />}
           {view === 'support' && <AdminSupport me={me} />}
           {view === 'campaign' && <AdminCampaign me={me} />}
+          {view === 'hero' && <AdminHero me={me} />}
           {view === 'status' && <AdminStatus products={products} categories={categories} me={me} />}
           {view === 'keys' && <AdminKeys products={products} categories={categories} me={me} />}
         </div>

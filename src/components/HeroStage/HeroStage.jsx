@@ -3,6 +3,7 @@ import { Zap, MessageCircle, CreditCard, ShieldCheck } from 'lucide-react';
 import PromoBox from '../ProductPromo/PromoBox';
 import { hasPromo } from '../../lib/promo';
 import { useShopStore } from '../../store/useShopStore';
+import { resolveHero } from '../../lib/heroMedia';
 import { useT } from '../../i18n';
 import './hero-stage.css';
 
@@ -27,9 +28,11 @@ const HeroStage = () => {
   const { t, lang } = useT();
   const categories = useShopStore((s) => s.categories);
   const products = useShopStore((s) => s.products);
+  const hero = useShopStore((s) => s.hero);
   const shot = products.map((p) => p.menu_image_url || p.extra_images?.[0]).find(Boolean);
-  const boxes = products.filter(hasPromo).slice(0, 2);
-  const feats = FEATURES[lang] || FEATURES.tr;
+  const media = resolveHero(hero, shot);
+  const boxes = hero?.show_boxes === false ? [] : products.filter(hasPromo).slice(0, 2);
+  const feats = hero?.show_cards === false ? [] : FEATURES[lang] || FEATURES.tr;
 
   return (
     <div className="hs">
@@ -42,8 +45,12 @@ const HeroStage = () => {
           <span className="showcase-chip">{t('hero.games', { n: categories.length || '—' })}</span>
           <span className="showcase-rec"><span className="rec-dot" /> RGX</span>
         </div>
-        {shot ? (
-          <img className="showcase-video" src={shot} alt="RGX menü" />
+        {media.kind === 'image' ? (
+          <img className="showcase-video" src={media.url} alt="RGX" />
+        ) : media.kind === 'embed' ? (
+          <iframe className="showcase-video hs-embed" src={media.url} title="RGX" allow="autoplay; encrypted-media" loading="lazy" />
+        ) : media.kind === 'video' ? (
+          <video className="showcase-video" src={media.url} poster={media.poster || undefined} autoPlay muted loop playsInline preload="metadata" />
         ) : (
           <video className="showcase-video" src="/media/hero-loop.mp4" poster="/media/hero-loop-poster.webp" autoPlay muted loop playsInline preload="metadata" />
         )}

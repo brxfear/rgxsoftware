@@ -38,3 +38,4 @@
   .hs-badge { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { .hs-card, .hs-badge, .hs-box { animation: none; } }
+.hs-embed { border: 0; pointer-events: none; }

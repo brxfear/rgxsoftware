@@ -15,6 +15,7 @@ export const useShopStore = create((set, get) => ({
   authReady: false,
   discord: { invite_url: DEFAULT_DISCORD },
   announcements: null,
+  hero: null, // settings/hero (vitrin ayarı)
   campaign: null, // settings/campaign (aktif ve süresi dolmamışsa)
   reseller: null, // giriş yapan kullanıcı bayiyse resellers/{uid} kaydı
 
@@ -39,7 +40,8 @@ export const useShopStore = create((set, get) => ({
 
   loadSettings: async () => {
     try {
-      const [s, c] = await Promise.all([getDoc(doc(db, 'settings', 'discord')), getDoc(doc(db, 'settings', 'campaign'))]);
+      const [s, c, hr] = await Promise.all([getDoc(doc(db, 'settings', 'discord')), getDoc(doc(db, 'settings', 'campaign')), getDoc(doc(db, 'settings', 'hero'))]);
+      if (hr.exists()) set({ hero: hr.data() });
       if (s.exists()) set({ discord: { invite_url: DEFAULT_DISCORD, ...s.data() } });
       const cd = c.exists() ? c.data() : null;
       const ends = cd?.ends_at ? new Date(cd.ends_at).getTime() : 0;
