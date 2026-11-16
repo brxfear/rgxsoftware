@@ -15,6 +15,7 @@ const en = {
     langLabel: 'Language',
     panel: 'Dashboard',
     resellerPanel: 'Reseller panel',
+    mediaPanel: 'Media panel',
     becomeReseller: 'Become a reseller',
     reseller: 'Resellers',
     media: 'Media program',
@@ -336,6 +337,7 @@ const en = {
     cta: 'View & Buy',
   },
   acc: {
+    panels: 'My panels',
     welcome: 'Welcome back',
     verified: 'Verified',
     since: 'Member since {date}',

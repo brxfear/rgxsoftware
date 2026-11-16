@@ -240,3 +240,5 @@
 .rs-media-actions input { width: 70px; height: 40px; padding: 0 10px; border-radius: 10px; font: inherit; color: #fff; background: rgba(0,0,0,0.35); border: 1px solid rgba(255,255,255,0.12); }
 .rs-media-actions .rs-btn { flex: 1; }
 @media (max-width: 560px) { .rs-role-pick { grid-template-columns: 1fr; } }
+.rs-media-hint { display: inline-flex; align-items: center; gap: 8px; padding: 10px 13px; border-radius: 12px; font-size: 13px; font-weight: 600; color: var(--text-muted); text-decoration: none; background: rgba(255, 255, 255, 0.03); border: 1px dashed rgba(255, 255, 255, 0.16); }
+.rs-media-hint:hover { color: #fff; border-color: rgba(224, 38, 47, 0.5); }

@@ -94,7 +94,7 @@ const PageFade = () => {
   const { pathname } = useLocation();
   return (
     // Panellerde (/account/…, /reseller/…) sekme değişince sayfa yeniden kurulmasın: anahtar ilk bölüm
-    <div key={/^\/(account|reseller)(\/|$)/.test(pathname) ? pathname.split('/')[1] : pathname} className="page-fade">
+    <div key={/^\/(account|reseller|media-panel)(\/|$)/.test(pathname) ? pathname.split('/')[1] : pathname} className="page-fade">
       <Outlet />
     </div>
   );
@@ -207,6 +207,7 @@ function App() {
           <Route path="media" element={<MediaPage />} />
           <Route path="account/:tab?" element={<AccountPage />} />
           <Route path="reseller/:tab?" element={<ResellerPage />} />
+          <Route path="media-panel/:tab?" element={<ResellerPage mode="media" />} />
         </Route>
         <Route
           path="/admin"

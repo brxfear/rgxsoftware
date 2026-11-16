@@ -40,7 +40,7 @@ const UserMenu = ({ user }) => {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const ref = useOutside(open, setOpen);
-  const isReseller = useShopStore((s) => !!s.reseller);
+  const role = useShopStore((s) => s.reseller?.role || null);
   const label = user.displayName?.split(' ')[0] || user.email?.split('@')[0] || t('nav.account');
   const go = (path) => {
     setOpen(false);
@@ -59,7 +59,9 @@ const UserMenu = ({ user }) => {
           <div className="user-dropdown-head">
             <strong>{user.displayName || label}</strong>
           </div>
-          <button role="menuitem" className="accent" onClick={() => go('/reseller')}><Briefcase size={15} /> {isReseller ? t('nav.resellerPanel') : t('nav.becomeReseller')}</button>
+          {(role === 'reseller' || role === 'both') && <button role="menuitem" className="accent" onClick={() => go('/reseller')}><Briefcase size={15} /> {t('nav.resellerPanel')}</button>}
+          {(role === 'media' || role === 'both') && <button role="menuitem" className="accent" onClick={() => go('/media-panel')}><Video size={15} /> {t('nav.mediaPanel')}</button>}
+          {!role && <button role="menuitem" className="accent" onClick={() => go('/reseller')}><Briefcase size={15} /> {t('nav.becomeReseller')}</button>}
           <button role="menuitem" onClick={() => go('/account')}><LayoutDashboard size={15} /> {t('nav.panel')}</button>
           <button role="menuitem" onClick={() => go('/account/orders')}><Package size={15} /> {t('nav.orders')}</button>
           <button role="menuitem" onClick={() => go('/account/keys')}><KeyRound size={15} /> {t('nav.keys')}</button>

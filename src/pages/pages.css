@@ -551,3 +551,8 @@ a.product-card .select-btn { pointer-events: none; }
 .md-apply-state p { color: var(--text-muted); max-width: 460px; }
 .md-apply-ok svg { color: #34d399; } .md-apply-warn svg { color: #fbbf24; } .md-apply-bad svg { color: #f87171; }
 @media (max-width: 760px) { .md-cols { grid-template-columns: 1fr; } .md-apply { padding: 20px; } .md-apply-grid { grid-template-columns: 1fr; } }
+/* Müşteri paneli: bayi / medya paneli bağlantıları */
+.ap-side-label { margin: 14px 0 4px; padding: 0 12px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-muted); }
+.ap-side a.ap-side-panel { color: #fff; background: linear-gradient(90deg, rgba(224, 38, 47, 0.12), rgba(224, 38, 47, 0.02)); border-color: rgba(224, 38, 47, 0.25); }
+.ap-side a.ap-side-panel svg:first-child { color: var(--red-bright); }
+.ap-side-chev { margin-left: auto; opacity: 0.6; }

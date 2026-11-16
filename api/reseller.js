@@ -310,7 +310,7 @@ export default async function handler(req, res) {
           created_at: r.created_at?.toDate?.()?.toISOString() || null,
         },
         catalog,
-        info: { rules: s.rules || '', guide: s.guide || '', min_topup_usd: Number(s.min_topup_usd) || 5 },
+        info: { rules: s.rules || '', media_rules: s.media_rules || '', guide: s.guide || '', min_topup_usd: Number(s.min_topup_usd) || 5 },
       });
     }
 

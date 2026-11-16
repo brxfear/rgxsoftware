@@ -98,7 +98,7 @@ const MediaApply = ({ lang }) => {
         <Icon size={28} />
         <strong>{title}</strong>
         {sub && <p>{sub}</p>}
-        {st === 'active' && <Link className="btn-primary" to="/reseller">{s.open} <ArrowRight size={16} /></Link>}
+        {st === 'active' && <Link className="btn-primary" to="/media-panel">{s.open} <ArrowRight size={16} /></Link>}
       </div>
     );
   } else if (info && info.open === false) {

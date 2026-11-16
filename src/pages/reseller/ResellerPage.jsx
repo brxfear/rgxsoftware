@@ -24,7 +24,7 @@ const L = {
   tr: {
     title: 'Bayi paneli', sell: 'Satış', money: 'Para', help: 'Yardım', account: 'Hesap',
     dashboard: 'Panel', products: 'Ürünler & fiyatlar', generate: 'Key oluştur', licenses: 'Lisanslarım', wallet: 'Cüzdan',
-    transactions: 'İşlemler', hwid: 'HWID reset', guides: 'Rehber', rules: 'Bayi kuralları', discord: 'Discord', accountTab: 'Hesap',
+    transactions: 'İşlemler', hwid: 'HWID reset', guides: 'Rehber', rules: 'Bayi kuralları', mediaRules: 'Medya şartları', discord: 'Discord', accountTab: 'Hesap',
     reseller: 'BAYİ', balance: 'Bakiye', topup: 'Bakiye yükle', genKeys: 'Key oluştur',
     morning: 'Günaydın', afternoon: 'İyi günler', evening: 'İyi akşamlar',
     soldWeek: 'Bu hafta {n} key çıkardın.', enoughFor: '{n} adet en ucuz key’e yeter', keysWeek: 'Bu hafta', today: 'Bugün', month: 'Bu ay',
@@ -36,7 +36,7 @@ const L = {
     limitNote: 'Günlük limit: {d} · Aylık limit: {m}', choose: 'Ürün seç', searchPh: 'Key, ürün ya da not ara…',
     date: 'Tarih', price: 'Fiyat', amount: 'Tutar', balAfter: 'Sonraki bakiye', noTx: 'Henüz işlem yok.',
     txTypes: { topup: 'Yükleme', purchase: 'Key alımı', adjust: 'Düzeltme', media: 'Medya' },
-    media: 'Medya keyleri', mediaRole: 'MEDYA', mediaPanel: 'MEDYA PANEL', mediaLeft: 'Bu hafta {n} / {max} key hakkın kaldı', mediaSub: 'Ücretsiz medya keylerin her pazartesi yenilenir. Videolarında RGX’i göstermeyi unutma.', mediaTake: 'Key çıkar', noMedia: 'Medya programında değilsin.', noMediaItems: 'Sana henüz ürün atanmadı. Ekip atayınca burada görünecek.',
+    media: 'Medya keyleri', mediaRole: 'MEDYA', mediaPanel: 'MEDYA PANEL', mediaTitle: 'Medya paneli', mediaLoginSub: 'Medya hesabınla giriş yap.', notMedia: 'Bu hesabın medya hesabı yok', notMediaSub: 'İçerik üreticisiysen medya programına başvurabilirsin.', applyMedia: 'Medya başvurusu yap', isMediaAcc: 'Bu hesap bir medya hesabı', isMediaAccSub: 'Medya keylerin ve bilgilerin Medya panelinde.', openMedia: 'Medya paneline git', mediaHint: 'İçerik üreticisi misin? Medya programına ayrıca başvur →', mediaLeft: 'Bu hafta {n} / {max} key hakkın kaldı', mediaSub: 'Ücretsiz medya keylerin her pazartesi yenilenir. Videolarında RGX’i göstermeyi unutma.', mediaTake: 'Key çıkar', noMedia: 'Medya programında değilsin.', noMediaItems: 'Sana henüz ürün atanmadı. Ekip atayınca burada görünecek.',
     pendingTitle: 'Başvurun inceleniyor', rejectedTitle: 'Başvurun onaylanmadı',
     roleReseller: 'Bayi', roleResellerSub: 'Bakiye yükle, keyleri bayi fiyatıyla al, sat', roleMedia: 'Medya / içerik üreticisi', roleMediaSub: 'Video çek, haftalık ücretsiz key al',
     discordUser: 'Discord kullanıcı adın', channelUrl: 'Kanal / profil linkin', aboutMedia: 'Kanalın hakkında (izlenme, içerik türü)', aboutReseller: 'Nasıl satış yapacaksın? (opsiyonel)',
@@ -53,14 +53,14 @@ const L = {
     allUp: 'Tüm ürünler aktif', someDown: '{n} üründe bakım var',
     preorder: 'Stok yok · sipariş verilebilir', backorderNote: 'Stokta {n} key var. Sipariş verirsen bakiyen şimdi düşer, ekibimiz keyleri kısa sürede teslim eder (Lisanslarım’da görünür). Teslim edilemezse tutar iade edilir.',
     orderBtn: 'Sipariş ver', ordered: 'Siparişin alındı! Keyler teslim edilince Lisanslarım’da görünecek.', orderPending: 'Teslim bekliyor', orderCanceled: 'İptal · iade edildi',
-    signupTitle: 'RGX bayisi ya da medya ortağı ol', signupSub: 'Bayi hesabını hemen aç: bakiye yükle, keyleri bayi fiyatıyla çıkar, kendi müşterilerine sat.',
+    signupTitle: 'RGX bayisi ol', signupSub: 'Bayi hesabını hemen aç: bakiye yükle, keyleri bayi fiyatıyla çıkar, kendi müşterilerine sat.',
     signupPerks: ['Satış fiyatının altında bayi fiyatları', 'Anında key çıkarma, stok ve limitler panelde', 'Shopier ile kartla bakiye yükleme', 'HWID reset ve destek tek yerden'],
     signupName: 'Bayi adın', signupNamePh: 'ör. Mağaza ya da Discord adın', signupAccept: 'Bayi kurallarını okudum ve kabul ediyorum.',
     signupBtn: 'Başvur', signupDone: 'Başvurun alındı! Onaylanınca panelin açılacak.', signupClosed: 'Bayi başvuruları şu an kapalı. Bilgi için Discord’dan yazabilirsin.',  },
   en: {
     title: 'Reseller panel', sell: 'Sell', money: 'Money', help: 'Help', account: 'Account',
     dashboard: 'Dashboard', products: 'Products & prices', generate: 'Generate', licenses: 'Licenses', wallet: 'Wallet',
-    transactions: 'Transactions', hwid: 'HWID reset', guides: 'Guides', rules: 'Reseller rules', discord: 'Discord', accountTab: 'Account',
+    transactions: 'Transactions', hwid: 'HWID reset', guides: 'Guides', rules: 'Reseller rules', mediaRules: 'Media terms', discord: 'Discord', accountTab: 'Account',
     reseller: 'RESELLER', balance: 'Balance', topup: 'Top up', genKeys: 'Generate keys',
     morning: 'Morning', afternoon: 'Afternoon', evening: 'Evening',
     soldWeek: 'You’ve generated {n} keys this week.', enoughFor: 'Enough for {n} of the cheapest key', keysWeek: 'This week', today: 'Today', month: 'This month',
@@ -72,7 +72,7 @@ const L = {
     limitNote: 'Daily limit: {d} · Monthly limit: {m}', choose: 'Choose a product', searchPh: 'Search key, product or note…',
     date: 'Date', price: 'Price', amount: 'Amount', balAfter: 'Balance after', noTx: 'No transactions yet.',
     txTypes: { topup: 'Top up', purchase: 'Key purchase', adjust: 'Adjustment', media: 'Media' },
-    media: 'Media keys', mediaRole: 'MEDIA', mediaPanel: 'MEDIA PANEL', mediaLeft: '{n} / {max} keys left this week', mediaSub: 'Your free media keys refresh every Monday. Remember to feature RGX in your videos.', mediaTake: 'Get key', noMedia: 'You are not in the media program.', noMediaItems: 'No products assigned yet. They will appear here once the team assigns them.',
+    media: 'Media keys', mediaRole: 'MEDIA', mediaPanel: 'MEDIA PANEL', mediaTitle: 'Media panel', mediaLoginSub: 'Sign in with your media account.', notMedia: 'This account has no media account', notMediaSub: 'If you are a content creator you can apply to the media program.', applyMedia: 'Apply for media', isMediaAcc: 'This is a media account', isMediaAccSub: 'Your media keys and info live in the Media panel.', openMedia: 'Open media panel', mediaHint: 'Content creator? Apply to the media program instead →', mediaLeft: '{n} / {max} keys left this week', mediaSub: 'Your free media keys refresh every Monday. Remember to feature RGX in your videos.', mediaTake: 'Get key', noMedia: 'You are not in the media program.', noMediaItems: 'No products assigned yet. They will appear here once the team assigns them.',
     pendingTitle: 'Your application is under review', rejectedTitle: 'Your application was not approved',
     roleReseller: 'Reseller', roleResellerSub: 'Top up, buy keys at reseller prices, resell', roleMedia: 'Media / content creator', roleMediaSub: 'Make videos, get free weekly keys',
     discordUser: 'Your Discord username', channelUrl: 'Channel / profile link', aboutMedia: 'About your channel (views, content type)', aboutReseller: 'How will you sell? (optional)',
@@ -89,7 +89,7 @@ const L = {
     allUp: 'All products online', someDown: '{n} products under maintenance',
     preorder: 'Out of stock · order available', backorderNote: 'Only {n} keys in stock. If you order, your balance is charged now and our team delivers the keys shortly (shown in Licenses). If we cannot deliver, you get a refund.',
     orderBtn: 'Place order', ordered: 'Order received! Keys appear in Licenses once delivered.', orderPending: 'Awaiting delivery', orderCanceled: 'Canceled · refunded',
-    signupTitle: 'Become an RGX reseller or media partner', signupSub: 'Open your reseller account now: top up, generate keys at reseller prices and sell to your own customers.',
+    signupTitle: 'Become an RGX reseller', signupSub: 'Open your reseller account now: top up, generate keys at reseller prices and sell to your own customers.',
     signupPerks: ['Reseller prices below retail', 'Instant key generation, stock and limits in your panel', 'Top up by card via Shopier', 'HWID resets and support in one place'],
     signupName: 'Reseller name', signupNamePh: 'e.g. your shop or Discord name', signupAccept: 'I have read and accept the reseller rules.',
     signupBtn: 'Apply', signupDone: 'Application received! Your panel opens once approved.', signupClosed: 'Reseller sign-ups are closed right now. Message us on Discord.',  },
@@ -145,13 +145,15 @@ const Meter = ({ label, used, max, s }) => {
 };
 
 /* ===================================================================== */
-const ResellerPage = () => {
+const ResellerPage = ({ mode = 'reseller' }) => {
+  const isMedia = mode === 'media';
+  const base = isMedia ? '/media-panel' : '/reseller';
   const { lang } = useT();
   const s = L[lang] || L.tr;
   const f = (k, vars = {}) => Object.entries(vars).reduce((str, [a, b]) => str.replace(`{${a}}`, b), s[k] || k);
-  const { tab = 'dashboard' } = useParams();
+  const { tab } = useParams();
   const navigate = useNavigate();
-  usePageTitle(s.title);
+  usePageTitle(isMedia ? s.mediaTitle : s.title);
   const user = useShopStore((st) => st.user);
   const authReady = useShopStore((st) => st.authReady);
   const discordUrl = useDiscordUrl();
@@ -193,14 +195,25 @@ const ResellerPage = () => {
       <div className="page container">
         <div className="ap-login">
           <img src="/logo.webp" alt="" width="72" height="72" />
-          <h1>{s.loginTitle}</h1>
-          <p>{s.loginSub}</p>
-          <button className="btn-primary" onClick={() => useShopStore.getState().openAuth()}><LogIn size={16} /> {s.loginTitle}</button>
+          <h1>{isMedia ? s.mediaTitle : s.loginTitle}</h1>
+          <p>{isMedia ? s.mediaLoginSub : s.loginSub}</p>
+          <button className="btn-primary" onClick={() => useShopStore.getState().openAuth()}><LogIn size={16} /> {isMedia ? s.mediaTitle : s.loginTitle}</button>
         </div>
       </div>
     );
   }
+  const notice = (Icon, title, sub, to, label) => (
+    <div className="page container">
+      <div className="ap-login">
+        <span className="rs-pending-ico"><Icon size={30} /></span>
+        <h1>{title}</h1>
+        <p>{sub}</p>
+        <Link className="btn-primary" to={to}>{label}</Link>
+      </div>
+    </div>
+  );
   if (err && err.status === 403 && !/askı|suspend/i.test(err.message)) {
+    if (isMedia) return notice(Video, s.notMedia, s.notMediaSub, '/media#apply', s.applyMedia);
     return (
       <Signup
         s={s}
@@ -224,6 +237,9 @@ const ResellerPage = () => {
   if (!me) return <div className="page container"><div className="empty-state"><Loader2 className="spin" size={20} /></div></div>;
 
   const r = me.reseller;
+  const hasMedia = r.role === 'media' || r.role === 'both';
+  if (isMedia && !hasMedia) return notice(Video, s.notMedia, s.notMediaSub, '/media#apply', s.applyMedia);
+  if (!isMedia && r.role === 'media') return notice(Video, s.isMediaAcc, s.isMediaAccSub, '/media-panel', s.openMedia);
   if (r.status !== 'active') {
     return (
       <div className="page container">
@@ -236,10 +252,10 @@ const ResellerPage = () => {
       </div>
     );
   }
-  const NAV = navFor(r.role);
-  const home = r.role === 'media' ? 'media' : 'dashboard';
+  const NAV = navFor(isMedia ? 'media' : 'reseller');
+  const home = isMedia ? 'media' : 'dashboard';
   const current = NAV.flatMap(([, items]) => items).some(([k]) => k === tab) ? tab : home;
-  const go = (t) => navigate(t === 'dashboard' ? '/reseller' : `/reseller/${t}`);
+  const go = (t) => navigate(t === home ? base : `${base}/${t}`);
   const ctx = { s, f, me, r, keys, txs, reqs, orders, load, go, user, discordUrl };
 
   return (
@@ -247,14 +263,14 @@ const ResellerPage = () => {
       <aside className="rs-side">
         <div className="rs-brand">
           <img src="/logo.webp" alt="" />
-          <div><strong>RGX</strong><span>{r.role === 'media' ? s.mediaPanel : `${s.reseller} PANEL`}</span></div>
+          <div><strong>RGX</strong><span>{isMedia ? s.mediaPanel : `${s.reseller} PANEL`}</span></div>
         </div>
         {NAV.map(([group, items]) => (
           <div key={group} className="rs-group">
             <span className="rs-group-label">{s[group]}</span>
             {items.map(([k, Icon]) => (
-              <NavLink key={k} to={k === 'dashboard' ? '/reseller' : `/reseller/${k}`} end className={() => (current === k ? 'on' : '')}>
-                <span className="rs-ico"><Icon size={16} /></span> {s[k === 'account' ? 'accountTab' : k]}
+              <NavLink key={k} to={k === home ? base : `${base}/${k}`} end className={() => (current === k ? 'on' : '')}>
+                <span className="rs-ico"><Icon size={16} /></span> {s[k === 'account' ? 'accountTab' : k === 'rules' && isMedia ? 'mediaRules' : k]}
               </NavLink>
             ))}
             {group === 'help' && (
@@ -264,14 +280,14 @@ const ResellerPage = () => {
         ))}
         <div className="rs-me">
           <span className="rs-avatar">{(r.display_name || '?')[0].toUpperCase()}</span>
-          <div><strong>{r.display_name}</strong><small>{r.role === 'media' ? s.mediaRole : usd(r.balance_usd)}</small></div>
+          <div><strong>{r.display_name}</strong><small>{isMedia ? s.mediaRole : usd(r.balance_usd)}</small></div>
         </div>
       </aside>
 
       <main className="rs-main">
         <header className="rs-top">
-          <h1>{s[current === 'account' ? 'accountTab' : current]}</h1>
-          {r.role !== 'media' && (
+          <h1>{s[current === 'account' ? 'accountTab' : current === 'rules' && isMedia ? 'mediaRules' : current]}</h1>
+          {!isMedia && (
             <div className="rs-top-actions">
               <button className="rs-btn rs-btn-red" onClick={() => go('generate')}><Plus size={15} /> {s.create}</button>
               <button className="rs-btn rs-btn-ghost" onClick={() => go('wallet')}><Wallet size={15} /> {usd(r.balance_usd)}</button>
@@ -288,7 +304,7 @@ const ResellerPage = () => {
         {current === 'transactions' && <Transactions {...ctx} />}
         {current === 'hwid' && <Hwid {...ctx} />}
         {current === 'guides' && <TextPage text={me.info.guide} empty={s.noGuide} />}
-        {current === 'rules' && <TextPage text={me.info.rules} empty={s.noRules} />}
+        {current === 'rules' && <TextPage text={isMedia ? me.info.media_rules || me.info.rules : me.info.rules} empty={s.noRules} />}
         {current === 'account' && <AccountTab {...ctx} />}
       </main>
     </div>
@@ -300,7 +316,7 @@ const Signup = ({ s, discordUrl, onDone }) => {
   const user = useShopStore((st) => st.user);
   const [info, setInfo] = useState(null);
   const [name, setName] = useState(user?.displayName || '');
-  const [role, setRole] = useState(() => (new URLSearchParams(window.location.search).get('apply') === 'media' ? 'media' : 'reseller'));
+  const role = 'reseller';
   const [discord, setDiscord] = useState('');
   const [channel, setChannel] = useState('');
   const [about, setAbout] = useState('');
@@ -345,10 +361,7 @@ const Signup = ({ s, discordUrl, onDone }) => {
           </div>
         ) : (
           <form className="rs-card rs-gen" onSubmit={submit}>
-            <div className="rs-role-pick">
-              <button type="button" className={role === 'reseller' ? 'on' : ''} onClick={() => setRole('reseller')}><Package size={18} /><strong>{s.roleReseller}</strong><small>{s.roleResellerSub}</small></button>
-              <button type="button" className={role === 'media' ? 'on' : ''} onClick={() => setRole('media')}><Video size={18} /><strong>{s.roleMedia}</strong><small>{s.roleMediaSub}</small></button>
-            </div>
+            <Link className="rs-media-hint" to="/media#apply"><Video size={15} /> {s.mediaHint}</Link>
             <label className="rs-field">
               <span>{s.signupName}</span>
               <input value={name} maxLength={40} minLength={2} required onChange={(e) => setName(e.target.value)} placeholder={s.signupNamePh} />

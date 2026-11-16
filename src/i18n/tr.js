@@ -15,6 +15,7 @@ const tr = {
     langLabel: 'Dil',
     panel: 'Müşteri paneli',
     resellerPanel: 'Bayi paneli',
+    mediaPanel: 'Medya paneli',
     becomeReseller: 'Bayi ol',
     reseller: 'Bayilik',
     media: 'Medya programı',
@@ -336,6 +337,7 @@ const tr = {
     cta: 'İncele & Satın al',
   },
   acc: {
+    panels: 'Panellerim',
     welcome: 'Tekrar hoş geldin',
     verified: 'Doğrulandı',
     since: 'Üyelik: {date}',

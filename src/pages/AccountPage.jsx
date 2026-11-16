@@ -13,7 +13,7 @@ import {
 import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import {
   LayoutDashboard, Package, KeyRound, MessageCircle, LifeBuoy, Shield, Settings, LogOut, Trash2, Eye, EyeOff, Download, Cpu,
-  BadgeCheck, Store, RefreshCw, ShoppingBag, Wallet, CalendarCheck, Copy, Check, ExternalLink, LogIn, ArrowRight,
+  BadgeCheck, Store, RefreshCw, ShoppingBag, Wallet, CalendarCheck, Copy, Check, ExternalLink, LogIn, ArrowRight, Briefcase, Video, ChevronRight,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { auth, db } from '../lib/firebase';
@@ -399,6 +399,7 @@ const AccountPage = () => {
   usePageTitle(t('account.title'));
   const user = useShopStore((s) => s.user);
   const authReady = useShopStore((s) => s.authReady);
+  const reseller = useShopStore((s) => s.reseller);
   const [orders, setOrders] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [showEmail, setShowEmail] = useState(false);
@@ -445,6 +446,11 @@ const AccountPage = () => {
 
   const name = user.displayName || user.email?.split('@')[0] || t('account.title');
   const current = TABS.some(([k]) => k === tab) ? tab : 'overview';
+  const role = reseller?.role;
+  const panels = [
+    (role === 'reseller' || role === 'both') && ['/reseller', t('nav.resellerPanel'), Briefcase],
+    (role === 'media' || role === 'both') && ['/media-panel', t('nav.mediaPanel'), Video],
+  ].filter(Boolean);
 
   return (
     <div className="page container ap">
@@ -479,6 +485,16 @@ const AccountPage = () => {
               {k === 'security' && !user.emailVerified && user.providerData?.some((p) => p.providerId === 'password') && <i className="ap-dot" />}
             </NavLink>
           ))}
+          {panels.length > 0 && (
+            <>
+              <span className="ap-side-label">{t('acc.panels')}</span>
+              {panels.map(([to, label, Icon]) => (
+                <Link key={to} to={to} className="ap-side-panel">
+                  <Icon size={17} /> <span>{label}</span> <ChevronRight size={15} className="ap-side-chev" />
+                </Link>
+              ))}
+            </>
+          )}
         </nav>
 
         <section className="ap-main">
