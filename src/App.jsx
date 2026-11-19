@@ -65,6 +65,9 @@ const Footer = () => {
       </div>
       <div className="container footer-bottom">
         <p>&copy; {new Date().getFullYear()} RGX SOFTWARE. {t('footer.rights')}</p>
+        <a className="footer-partner" href="https://cheatglobal.com" target="_blank" rel="noopener noreferrer" aria-label="CheatGlobal">
+          <img src="/cheatglobal.png" alt="CheatGlobal" height="26" loading="lazy" />
+        </a>
       </div>
     </footer>
   );

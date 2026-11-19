@@ -676,3 +676,6 @@ html.has-cursor-dot input, html.has-cursor-dot textarea { cursor: text; }
 .fx-dot.down { width: 6px; height: 6px; margin: -3px 0 0 -3px; }
 .fx-dot.hide { opacity: 0; }
 @media (prefers-reduced-motion: reduce) { .fx-dot { transition: none; } }
+.footer-partner { display: inline-flex; margin-top: 14px; opacity: 0.7; transition: opacity 0.2s, transform 0.2s; }
+.footer-partner:hover { opacity: 1; transform: translateY(-2px); }
+.footer-partner img { height: 26px; width: auto; display: block; }
